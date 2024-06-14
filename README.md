@@ -14,7 +14,6 @@ Docker images are published on [Docker Hub][docker-link].
 
 ## Status
 
-[![Release Status][release-status-shield]][actions-link]  
 [![Last Commit][last-commit-shield]][commit-link]  
 [![Last Build][last-build-shield]][actions-link]  
 [![Docker Status][docker-status-shield]][actions-link]  
@@ -123,6 +122,5 @@ docker compose --file ./Docker/Compose.yml down --volumes
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
 [license-link]: ./LICENSE
 [license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
-[release-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/BuildGitHubRelease.yml?logo=github&label=Releases%20Build
 [esphome-link]: https://esphome.io
 [esphome-docker-link]: https://hub.docker.com/r/esphome/esphome
