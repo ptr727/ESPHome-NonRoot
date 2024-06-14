@@ -25,13 +25,13 @@ jobs:
       SemVer2: ${{ steps.nbgv.outputs.SemVer2 }}
       # ESPHome version number
       ESPHomeVersion: ${{ steps.plv.outputs.version }}
-      # Push if not a pull request
+      # Push / release if not a pull request
+      # Test for strings not variables, e.g. needs.version.outputs.PushAction == 'true'
       PushAction: ${{ github.event_name != 'pull_request' }}
       # Tag as latest or develop
       TagName: ${{ endsWith(github.ref, 'refs/heads/main') && 'latest' || 'develop' }}
       # Docker image
       ImageName: docker.io/ptr727/esphome-nonroot
-
 
     steps:
 
@@ -109,6 +109,8 @@ jobs:
           context: .
           file: ./Docker/Dockerfile
           push: ${{ needs.version.outputs.PushAction == 'true' }}
+          cache-from: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache
+          cache-to: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache,mode=max
           # TODO: Only tag with ESPHome version if main build
           tags: |
             ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }}
@@ -191,12 +193,40 @@ jobs:
         short-description: ${{ github.event.repository.description }}
         readme-filepath: ${{ runner.temp }}/README.md
 
+  # Release
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [ buildpush, version ]
+    if: ${{ needs.version.outputs.PushAction == 'true' }}
+
+    permissions:
+      contents: write
+
+    steps:
+
+    # https://github.com/marketplace/actions/checkout
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # Create GitHub release
+    # https://github.com/marketplace/actions/gh-release
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        tag_name: ${{ needs.version.outputs.SemVer2 }}
+        prerelease: ${{ !endsWith(github.ref, 'refs/heads/main') }}
+
   # Create a custom badge to report the build date
   datebadge:
     name: Date badge
     runs-on: ubuntu-latest
-    needs: [buildpush, version]
+    needs: [release, version]
     if: ${{ needs.version.outputs.PushAction == 'true' }}
+
+    permissions:
+      contents: write
 
     steps:
 
