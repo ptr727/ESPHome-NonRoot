@@ -78,10 +78,10 @@ docker compose --file ./Docker/Compose.yml down --volumes
 ### Docker Run
 
 Run ESPHome with custom commandline arguments:  
-`docker run ptr727/esphome-nonroot:latest esphome version`
+`docker run --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest esphome version`
 
 Run a shell in the container:  
-`docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash`
+`docker run -it --rm --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest /bin/bash`
 
 ## Use Case
 
