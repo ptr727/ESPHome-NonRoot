@@ -197,6 +197,9 @@ jobs:
     needs: [ buildpush, version ]
     if: ${{ needs.version.outputs.PushAction == 'true' }}
 
+    permissions:
+      contents: write
+
     steps:
 
     # https://github.com/marketplace/actions/checkout
