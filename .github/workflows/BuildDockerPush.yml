@@ -31,6 +31,9 @@ jobs:
       PushAction: ${{ (github.event_name != 'pull_request') }}
       # Tag as latest or develop
       TagName: ${{ endsWith(github.ref, 'refs/heads/main') && 'latest' || 'develop' }}
+      # Docker image
+      ImageName: docker.io/ptr727/esphome-nonroot
+
 
     steps:
 
@@ -55,6 +58,7 @@ jobs:
 
       # TODO: It is possible that the package version gets updated between reading and installing
 
+      # TODO: Warning `set-output` command is deprecated, node 16 deprecated
       # Get package version
       # https://github.com/marketplace/actions/package-latest-version
       - name: Package Latest Version
@@ -115,9 +119,10 @@ jobs:
           context: .
           file: ./Docker/Dockerfile
           push: ${{ needs.version.outputs.PushAction }}
+          # TODO: Only tag with ESPHome version if main build
           tags: |
-            docker.io/ptr727/esphome-nonroot:${{ needs.version.outputs.TagName }}
-            docker.io/ptr727/esphome-nonroot:${{ needs.version.outputs.ESPHomeVersion }}
+            ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }}
+            ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.ESPHomeVersion }}
           platforms: linux/amd64,linux/arm64
           build-args: |
             LABEL_VERSION=${{ needs.version.outputs.SemVer2 }}
@@ -136,15 +141,15 @@ jobs:
     - name: Get image size
       run: |
         touch ${{ runner.temp }}/version.info
-        echo Image: docker.io/ptr727/esphome-nonroot:${{ needs.version.outputs.TagName }} >> ${{ runner.temp }}/version.info
-        echo Size: $(docker manifest inspect -v docker.io/ptr727/esphome-nonroot:${{ needs.version.outputs.TagName }} | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec) >> ${{ runner.temp }}/version.info
+        echo Image: ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }} >> ${{ runner.temp }}/version.info
+        echo Size: $(docker manifest inspect -v ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }} | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec) >> ${{ runner.temp }}/version.info
 
     # Get tool versions in container
     # https://github.com/marketplace/actions/docker-run-action
     - name: Write tool versions to file
       uses: addnab/docker-run-action@v3
       with:
-        image: docker.io/ptr727/plexcleaner:${{ needs.version.outputs.TagName }}
+        image: "${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }}"
         options: --volume ${{ runner.temp }}/version.info:/version.info
         run: |
           echo OS: $(. /etc/os-release; echo $PRETTY_NAME) >> /version.info
