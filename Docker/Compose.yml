@@ -1,0 +1,31 @@
+# Create nonroot user:
+# adduser --no-create-home --shell /bin/false --disabled-password --system --group users nonroot
+# Create a local test image:
+# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile .
+
+# Launch stach:
+# docker compose --file ./Docker/Compose.yml up --detach
+# Open browser: http://localhost:6052
+# Destroy stack:
+# docker compose --file ./Docker/Compose.yml down --volumes
+
+# Stack
+volumes:
+  esphome_config:
+  esphome_cache:
+
+services:
+  esphome:
+    # image: testing:latest
+    image: docker.io/ptr727/esphome:latest
+    container_name: esphome-test
+    restart: unless-stopped
+    user: 1001:100
+    environment:
+      - TZ=Americas/Los_Angeles
+    network_mode: bridge
+    ports:
+      - 6052:6052/tcp
+    volumes:
+      - esphome_config:/config
+      - esphome_cache:/cache

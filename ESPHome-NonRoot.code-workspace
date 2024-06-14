@@ -1,0 +1,38 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cSpell.words": [
+			"adduser",
+			"appdata",
+			"azuretools",
+			"changequote",
+			"davidanson",
+			"esphome",
+			"GLOBALLIB",
+			"gruntfuggly",
+			"nonroot",
+			"piolibs",
+			"platformio"
+		],
+		"files.trimTrailingWhitespace": true,
+		"[markdown]": {
+			"files.trimTrailingWhitespace": false
+		},
+		"[plaintext]": {
+			"files.trimTrailingWhitespace": false
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"davidanson.vscode-markdownlint",
+			"gruntfuggly.todo-tree",
+			"streetsidesoftware.code-spell-checker",
+			"redhat.vscode-yaml",
+			"ms-azuretools.vscode-docker"
+		]
+	}
+}
