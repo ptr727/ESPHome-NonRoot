@@ -177,10 +177,11 @@ jobs:
     - name: Download version artifacts
       uses: actions/download-artifact@v4
       with:
-        path: ${{ runner.temp }}/version.info
+        name: versions
+        path: ${{ runner.temp }}/versions
 
     - name: Create README.md from README.m4
-      run: m4 --include=${{ runner.temp }} ./Docker/README.m4 > ${{ runner.temp }}/README.md
+      run: m4 --include=${{ runner.temp }}/versions ./Docker/README.m4 > ${{ runner.temp }}/README.md
 
     # https://github.com/marketplace/actions/docker-hub-description
     - name: Update Docker Hub README.md
