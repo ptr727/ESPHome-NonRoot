@@ -111,8 +111,7 @@ jobs:
       - name: Docker build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Docker/Dockerfile
+          context: ./Docker
           push: ${{ needs.version.outputs.PushAction == 'true' }}
           cache-from: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache
           cache-to: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache,mode=max
