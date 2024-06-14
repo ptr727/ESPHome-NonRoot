@@ -24,7 +24,7 @@ jobs:
       # Build version number
       SemVer2: ${{ steps.nbgv.outputs.SemVer2 }}
       # ESPHome version number
-      ESPHomeVersion: ${{ steps.plv.outputs.latestVersion }}
+      ESPHomeVersion: ${{ steps.plv.outputs.version }}
       # Check if the branch is main
       MainBranch: ${{ endsWith(github.ref, 'refs/heads/main') }}
       # Push if not a pull request
@@ -51,22 +51,14 @@ jobs:
         id: nbgv
         uses: dotnet/nbgv@master
 
-      # TODO:
-      #   curl --silent https://api.github.com/repos/esphome/esphome/releases/latest | jq -r .tag_name
-      #   curl --silent https://pypi.org/pypi/esphome/json | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
-      #   curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version
-
+      # curl --silent https://api.github.com/repos/esphome/esphome/releases/latest | jq -r .tag_name
+      # curl --silent https://pypi.org/pypi/esphome/json | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
+      # curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version
       # TODO: It is possible that the package version gets updated between reading and installing
-
-      # TODO: Warning `set-output` command is deprecated, node 16 deprecated
-      # Get package version
-      # https://github.com/marketplace/actions/package-latest-version
-      - name: Package Latest Version
+      - name: Get ESPHome Package Latest Version
         id: plv
-        uses: Bruce17/ghaction-package-latest-version@v1.1.2
-        with:
-          package: esphome
-          language: python
+        run: |
+          echo "version=$(curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version)" >> $GITHUB_OUTPUT
 
   # Build and push docker images
   buildpush:
