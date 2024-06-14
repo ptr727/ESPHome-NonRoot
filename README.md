@@ -59,7 +59,7 @@ services:
       - TZ=Americas/Los_Angeles
     network_mode: bridge
     ports:
-      - 6052:6052/tcp
+      - 6052:6052
     volumes:
       - /data/esphome/config:/config
       - esphome_cache:/cache
