@@ -15,8 +15,8 @@ Docker images are published on [Docker Hub][docker-link].
 ## Status
 
 [![Last Commit][last-commit-shield]][commit-link]  
+[![Workflow Status][workflow-status-shield]][actions-link]  
 [![Last Build][last-build-shield]][actions-link]  
-[![Docker Status][docker-status-shield]][actions-link]  
 [![Docker Latest][docker-latest-version-shield]][docker-link]
 
 ## Release Notes
@@ -116,7 +116,7 @@ docker compose --file ./Docker/Compose.yml down --volumes
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
-[docker-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/BuildDockerPush.yml?logo=github&label=Docker%20Status
+[workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/BuildDockerPush.yml?logo=github&label=Workflow%20Status
 [github-link]: https://github.com/ptr727/ESPHome-NonRoot
 [last-build-shield]: https://byob.yarr.is/ptr727/ESPHome-NonRoot/lastbuild
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
