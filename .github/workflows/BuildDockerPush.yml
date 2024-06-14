@@ -30,6 +30,8 @@ jobs:
       PushAction: ${{ github.event_name != 'pull_request' }}
       # Tag as latest or develop
       TagName: ${{ endsWith(github.ref, 'refs/heads/main') && 'latest' || 'develop' }}
+      # Tag list for docker build
+      TagList: ${{ steps.tags.outputs.tags }}
       # Docker image
       ImageName: docker.io/ptr727/esphome-nonroot
 
@@ -57,6 +59,16 @@ jobs:
         id: plv
         run: |
           echo "version=$(curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version)" >> $GITHUB_OUTPUT
+
+      # Create tags as comma separated list
+      - name: Get tag list
+        id: tags
+        run: |
+          if [[ "${{ endsWith(github.ref, 'refs/heads/main') }}" == "true" ]]; then
+            echo "tags=docker.io/ptr727/esphome-nonroot:latest,docker.io/ptr727/esphome-nonroot:${{ steps.plv.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=docker.io/ptr727/esphome-nonroot:develop" >> $GITHUB_OUTPUT
+          fi
 
   # Build and push docker images
   buildpush:
@@ -94,7 +106,6 @@ jobs:
       # Login to Docker Hub
       # https://github.com/marketplace/actions/docker-login
       - name: Login to Docker Hub
-        if: ${{ needs.version.outputs.PushAction == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: docker.io
@@ -111,10 +122,7 @@ jobs:
           push: ${{ needs.version.outputs.PushAction == 'true' }}
           cache-from: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache
           cache-to: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache,mode=max
-          # TODO: Only tag with ESPHome version if main build
-          tags: |
-            ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }}
-            ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.ESPHomeVersion }}
+          tags: ${{ needs.version.outputs.TagList }}
           platforms: linux/amd64,linux/arm64
           build-args: |
             LABEL_VERSION=${{ needs.version.outputs.SemVer2 }}
