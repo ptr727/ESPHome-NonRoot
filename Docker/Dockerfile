@@ -20,7 +20,7 @@
 # Test linux/amd64 target
 # docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile .
 # docker run -it --rm --name Testing --entrypoint /bin/bash testing:latest
-# docker run -it --rm --name Testing --publish 6052:6052/tcp testing:latest
+# docker run -it --rm --name Testing --publish 6052:6052 testing:latest
 # docker exec -it Testing /bin.bash
 
 # Builder
@@ -132,7 +132,7 @@ RUN pip install --no-cache --no-index --find-links /wheels esphome \
     && rm -rf /wheels
 
 # Dashboard runs on TCP port 6052
-EXPOSE 6052/tcp
+EXPOSE 6052
 
 # Config volume for project files
 VOLUME /config
@@ -151,4 +151,4 @@ HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || ex
 
 # Launch dashboard using /config directory
 WORKDIR /config
-ENTRYPOINT ["esphome", "dashboard", "/config" ]
+ENTRYPOINT ["esphome", "--verbose", "dashboard", "/config" ]
