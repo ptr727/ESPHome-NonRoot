@@ -42,7 +42,9 @@ Docker images are published on [Docker Hub][docker-link].
   - Make sure the container user has permissions to the mapped volumes.
     - `sudo chown -R nonroot:users /data/esphome`
     - `sudo chmod -R ugo=rwx /data/esphome`
-- `ESPHOME_VERBOSE` : By setting the `ESPHOME_VERBOSE` environment variable ESPHome will be launched with the [`--verbose`](https://esphome.io/guides/cli.html#cmdoption-v-verbose) option.
+- `environment` :
+  - `ESPHOME_VERBOSE` (Optional) : Add the ESPHome [`--verbose`](https://esphome.io/guides/cli.html#cmdoption-v-verbose) option when running the dashboard.
+  - `TZ` (Optional) : Sets the timezone, e.g. `America/Los_Angeles`, default is `Etc/UTC`.
 
 ### Docker Compose
 
@@ -57,7 +59,7 @@ services:
     restart: unless-stopped
     user: 1001:100
     environment:
-      - TZ=Americas/Los_Angeles
+      - TZ=America/Los_Angeles
       - ESPHOME_VERBOSE=true
     network_mode: bridge
     ports:
