@@ -76,12 +76,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: version
 
-    strategy:
-      # Keep building even if a job fails, expedites troubleshooting multiple issues
-      fail-fast: false
-      # Limit number of concurrent builds, avoid github timeout errors
-      max-parallel: 4
-
     steps:
 
       # Checkout code
