@@ -64,7 +64,7 @@ jobs:
       - name: Get tag list
         id: tags
         run: |
-          if [[ ${{ endsWith(github.ref, 'refs/heads/main') }} == 'true' ]]; then
+          if [[ "${{ endsWith(github.ref, 'refs/heads/main') }}" == "true" ]]; then
             echo "tags=docker.io/ptr727/esphome-nonroot:latest,docker.io/ptr727/esphome-nonroot:${{ steps.plv.outputs.version }}" >> $GITHUB_OUTPUT
           else
             echo "tags=docker.io/ptr727/esphome-nonroot:develop" >> $GITHUB_OUTPUT
