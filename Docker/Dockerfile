@@ -8,20 +8,20 @@
 # --no-cache
 
 # Test image in shell:
-# docker run -it --rm --pull always --name Testing --entrypoint /bin/bash python:slim
-# docker run -it --rm --pull always --name Testing --entrypoint /bin/bash ptr727/esphome-nonroot:latest
+# docker run -it --rm --pull always --name Testing python:slim /bin/bash
+# docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
 # export DEBIAN_FRONTEND=noninteractive
 # apt upate && apt upgrade -y
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Dockerfile .
+# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile .
-# docker run -it --rm --name Testing --entrypoint /bin/bash testing:latest
+# docker buildx build --load --platform linux/amd64 --tag testing:latest ./Docker
+# docker run -it --rm --name Testing testing:latest /bin/bash
 # docker run -it --rm --name Testing --publish 6052:6052 testing:latest
-# docker exec -it Testing /bin.bash
+# docker exec -it Testing /bin/bash
 
 # Builder
 FROM python:slim as builder
@@ -137,18 +137,15 @@ EXPOSE 6052
 # Config volume for project files
 VOLUME /config
 
-# Cache volume
-# /cache/pio for $PLATFORMIO_CORE_DIR
-# /cache/build for $ESPHOME_BUILD_PATH
-# /cache/data for $ESPHOME_DATA_DIR
-# TODO: pip and home should not get used if all settings are correct and honored
-# /cache/pip for $PIP_CACHE_DIR
-# /cache/home for $HOME
+# Cache volume, subdirectories are created in entrypoint.sh
 VOLUME /cache
 
 # Healthcheck ping the dashboard
 HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || exit 1
 
-# Launch dashboard using /config directory
+# Default entrypoint command will run dashboard
 WORKDIR /config
-ENTRYPOINT ["esphome", "--verbose", "dashboard", "/config" ]
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["entrypoint"]

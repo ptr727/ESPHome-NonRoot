@@ -42,6 +42,7 @@ Docker images are published on [Docker Hub][docker-link].
   - Make sure the container user has permissions to the mapped volumes.
     - `sudo chown -R nonroot:users /data/esphome`
     - `sudo chmod -R ugo=rwx /data/esphome`
+- `ESPHOME_VERBOSE` : By setting the `ESPHOME_VERBOSE` environment variable ESPHome will be launched with the [`--verbose`](https://esphome.io/guides/cli.html#cmdoption-v-verbose) option.
 
 ### Docker Compose
 
@@ -57,6 +58,7 @@ services:
     user: 1001:100
     environment:
       - TZ=Americas/Los_Angeles
+      - ESPHOME_VERBOSE=true
     network_mode: bridge
     ports:
       - 6052:6052
@@ -72,6 +74,14 @@ docker compose --file ./Docker/Compose.yml up --detach
 # destroy stack
 docker compose --file ./Docker/Compose.yml down --volumes
 ```
+
+### Docker Run
+
+Run ESPHome with custom commandline arguments:  
+`docker run --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest esphome version`
+
+Run a shell in the container:  
+`docker run -it --rm --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest /bin/bash`
 
 ## Use Case
 
