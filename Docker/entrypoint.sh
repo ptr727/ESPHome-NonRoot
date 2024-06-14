@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Default command is esphome
-if [ "$1" = 'esphome' ]; then
+# Default command from Dockerfile is entrypoint
+if [ "$1" = 'entrypoint' ]; then
 
     # Create /cache subdirectories
     # TODO: pip and home should not get used if all settings are correct and honored
@@ -20,7 +20,7 @@ if [ "$1" = 'esphome' ]; then
         exec esphome dashboard /config
     fi
 
+else
+    # Run passed command
+    exec "$@"
 fi
-
-# Run passed command
-exec "$@"

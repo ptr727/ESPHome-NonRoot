@@ -15,13 +15,13 @@
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Dockerfile .
+# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile .
-# docker run -it --rm --name Testing --entrypoint /bin/bash testing:latest
+# docker buildx build --load --platform linux/amd64 --tag testing:latest ./Docker
+# docker run -it --rm --name Testing testing:latest /bin/bash
 # docker run -it --rm --name Testing --publish 6052:6052 testing:latest
-# docker exec -it Testing /bin.bash
+# docker exec -it Testing /bin/bash
 
 # Builder
 FROM python:slim as builder
@@ -148,4 +148,4 @@ WORKDIR /config
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["esphome"]
+CMD ["entrypoint"]
