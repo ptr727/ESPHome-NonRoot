@@ -1,11 +1,11 @@
 changequote(`{{', `}}')
 # ESPHome-NonRoot
 
-[ESPHome][https://esphome.io] docker container that supports non-root operation.
+[ESPHome](https://esphome.io) docker container that supports non-root operation.
 
 ## License
 
-Licensed under the [MIT License](https://github.com/ptr727/ESPHome-NonRoot/LICENSE)
+Licensed under the [MIT License](https://github.com/ptr727/ESPHome-NonRoot/LICENSE)  
 ![GitHub License](https://img.shields.io/github/license/ptr727/ESPHome-NonRoot)
 
 ## Project
@@ -33,4 +33,4 @@ include({{version.info}})
 
 ## Usage
 
-Refer to [GitHub](https://github.com/ptr727/ESPHome-NonRoot).
+Refer to [GitHub](https://github.com/ptr727/ESPHome-NonRoot/tree/main?tab=readme-ov-file#usage).
