@@ -101,7 +101,6 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      # TODO: Add cache
       # Docker build and push
       # https://github.com/marketplace/actions/build-and-push-docker-images
       - name: Docker build and push
