@@ -1,31 +1,47 @@
-# Create nonroot user:
-# adduser --no-create-home --shell /bin/false --disabled-password --system --group users nonroot
-# Create a local test image:
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile .
-
-# Launch stach:
-# docker compose --file ./Docker/Compose.yml up --detach
+# Launch stack: docker compose --file ./Docker/Compose.yml up --detach
 # Open browser: http://localhost:6052
-# Destroy stack:
-# docker compose --file ./Docker/Compose.yml down --volumes
+# Attach shell: docker exec -it --user 1001:100 esphome-test /bin/bash
+# Destroy stack: docker compose --file ./Docker/Compose.yml down --volumes
 
 # Stack
 volumes:
+  # Create volumes for test purposes only
+  # Permissions need to be corrected on first use
   esphome_config:
   esphome_cache:
 
 services:
+  # Set non-root permissions on created volumes
+  # For testing only, not required if external volumes are used
+  fix-volume-permissions:
+    image: python:slim
+    user: root
+    command: bash -c "
+      chown -R 1001:100 /config
+      && chmod -R ugo=rwx /config
+      && chown -R 1001:100 /cache
+      && chmod -R ugo=rwx /cache"
+    volumes:
+      - esphome_config:/config
+      - esphome_cache:/cache
+
   esphome:
     # image: testing:latest
     image: docker.io/ptr727/esphome:latest
     container_name: esphome-test
     restart: unless-stopped
+    depends_on:
+      # Fix volume permissions before starting
+      - fix-volume-permissions
+    # Change the user to match the host configuration
     user: 1001:100
     environment:
+      - ESPHOME_VERBOSE=true
       - TZ=Americas/Los_Angeles
     network_mode: bridge
     ports:
       - 6052:6052
     volumes:
+      # Use persisted volumes in production
       - esphome_config:/config
       - esphome_cache:/cache

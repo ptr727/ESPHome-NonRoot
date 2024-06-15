@@ -49,13 +49,10 @@ Docker images are published on [Docker Hub][docker-link].
 ### Docker Compose
 
 ```yaml
-volumes:
-  esphome_cache:
-
 services:
   esphome:
     image: docker.io/ptr727/esphome-nonroot:latest
-    container_name: esphome-nonroot-test
+    container_name: esphome-test
     restart: unless-stopped
     user: 1001:100
     environment:
@@ -66,24 +63,48 @@ services:
       - 6052:6052
     volumes:
       - /data/esphome/config:/config
-      - esphome_cache:/cache
+      - /data/esphome/cache:/cache
 ```
 
 ```console
 # Launch stack
 docker compose --file ./Docker/Compose.yml up --detach
-# Open browser http://localhost:6052
-# destroy stack
+# Open browser: http://localhost:6052
+# Attach shell: docker exec -it --user 1001:100 esphome-test /bin/bash
+# Destroy stack
 docker compose --file ./Docker/Compose.yml down --volumes
 ```
 
 ### Docker Run
 
-Run ESPHome with custom commandline arguments:  
-`docker run --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest esphome version`
+Run ESPHome with custom commandline `esphome version`:
 
-Run a shell in the container:  
-`docker run -it --rm --pull always --name Testing -v ${PWD}:/config ptr727/esphome-nonroot:latest /bin/bash`
+```console
+$ mkdir -p ./config ./cache
+$ docker run --rm --pull always --name esphome-test -v ${PWD}/config:/config -v ${PWD}/cache:/cache ptr727/esphome-nonroot:latest esphome version
+latest: Pulling from ptr727/esphome-nonroot
+Digest: sha256:8f32848551446d0420390477fccb8c833d879b640b95533f443cb623882e9688
+Status: Image is up to date for ptr727/esphome-nonroot:latest
+Version: 2024.5.5
+```
+
+Run interactive `/bin/bash` shell in the container as `1001:100` user:
+
+```console
+$ mkdir -p ./config ./cache
+$ sudo chown -R nonroot:users ./config && sudo chmod -R ugo=rwx ./config
+$ sudo chown -R nonroot:users ./cache && sudo chmod -R ugo=rwx ./cache
+$ sudo id -u nonroot && sudo id -g nonroot
+1001
+100
+$ docker run --rm --user 1001:100 -it --pull always --name esphome-test -v ${PWD}/config:/config -v ${PWD}/cache:/cache ptr727/esphome-nonroot:latest /bin/bash
+latest: Pulling from ptr727/esphome-nonroot
+Digest: sha256:8f32848551446d0420390477fccb8c833d879b640b95533f443cb623882e9688
+Status: Image is up to date for ptr727/esphome-nonroot:latest
+I have no name!@012d4b62d376:/config$ id
+uid=1001 gid=100(users) groups=100(users)
+I have no name!@012d4b62d376:/config$
+```
 
 ## Use Case
 
@@ -123,6 +144,8 @@ Run a shell in the container:
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
 - Build [wheel](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install from the generated wheel packages in the final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic content in `/cache` volumes.
+- Refer to [`Dockerfile`](./Docker/Dockerfile) for container details.
+- Refer to [`BuildDockerPush.yml`](./.github/workflows/BuildDockerPush.yml) for pipeline details.
 
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
