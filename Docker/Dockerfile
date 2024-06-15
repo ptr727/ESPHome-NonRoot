@@ -70,6 +70,7 @@ LABEL name="ESPHome" \
     description="ESPHome docker container that supports non-root operation" \
     maintainer="Pieter Viljoen <ptr727@users.noreply.github.com>"
 
+# TODO: Keep in sync with cache.sh
 # Environment
 ENV \
     # No python bytecode generation
@@ -90,8 +91,10 @@ ENV \
     ESPHOME_DATA_DIR=/cache/data \
     # Set pip cache directory, default is "~/.cache/pip"
     PIP_CACHE_DIR=/cache/pip \
-    # TODO: PIO using espressif32=6.7.0 and espidf=5.2.1 error with ComponentManager when $HOME does not exists
-    HOME=/cache/home
+    # Set shell home / ~ directory, default is "/home/[username]"
+    HOME=/cache/home \
+    # Set temp directory, default is "/tmp"
+    TMPDIR=/cache/tmp
 
 # Install
 RUN \
@@ -145,7 +148,6 @@ HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || ex
 
 # Default entrypoint command will run dashboard
 WORKDIR /config
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+COPY ./entrypoint /entrypoint
+ENTRYPOINT ["/entrypoint/entrypoint.sh"]
 CMD ["entrypoint"]
