@@ -10,7 +10,8 @@ Licensed under the [MIT License][license-link]
 ## Build
 
 Code and Pipeline is on [GitHub][github-link].  
-Docker images are published on [Docker Hub][docker-link].
+Docker image is published on [Docker Hub][docker-link].  
+Image is rebuilt weekly picking up the latest ESPHome release and upstream container updates.
 
 ## Status
 
@@ -105,6 +106,10 @@ I have no name!@012d4b62d376:/config$ id
 uid=1001 gid=100(users) groups=100(users)
 I have no name!@012d4b62d376:/config$
 ```
+
+### DevContainer
+
+For an example refer to [ESPHome-Config](https://github.com/ptr727/ESPHome-Config) and [`devcontainer.json`](https://github.com/ptr727/ESPHome-Config/blob/main/.devcontainer/devcontainer.json).
 
 ## Use Case
 
