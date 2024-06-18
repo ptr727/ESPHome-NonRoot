@@ -101,6 +101,7 @@ jobs:
       # https://github.com/marketplace/actions/docker-login
       - name: Login to Docker Hub
         uses: docker/login-action@v3
+        if: ${{ needs.version.outputs.PushAction == 'true' }}
         with:
           registry: docker.io
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
@@ -113,8 +114,6 @@ jobs:
         with:
           context: ./Docker
           push: ${{ needs.version.outputs.PushAction == 'true' }}
-          cache-from: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache
-          cache-to: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache,mode=max
           tags: ${{ needs.version.outputs.TagList }}
           platforms: linux/amd64,linux/arm64
           build-args: |
