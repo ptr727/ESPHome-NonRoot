@@ -31,16 +31,15 @@ Image is rebuilt weekly picking up the latest ESPHome release and upstream conta
 
 - `volumes` :
   - `/config` : Volume mapping to project files, e.g. `/data/esphome/config:/config`.
-  - `/cache` (Optional) : Volume mapping to runtime generated content, e.g. `/data/esphome/cache:/cache`.
-    - Omitting the `/cache` volume will create an unnamed docker volume.
+  - `/cache` : Volume mapping to runtime generated content, e.g. `/data/esphome/cache:/cache`.
 - `user` (Optional) : Run the container under the specified user account.
   - Use the `uid:gid` notation, e.g. `user: 1001:100`.
     - Get the `uid` : `sudo id -u nonroot`.
     - Get the `gid` : `sudo id -g nonroot`.
-  - Use an existing user or create a system account.
+  - Use an existing user or create a system account on the host.
     - `adduser --no-create-home --shell /bin/false --disabled-password --system --group users nonroot`.
   - Omitting the `user` option will run under default `root` account.
-  - Make sure the container user has permissions to the mapped volumes.
+  - Make sure the container user has permissions to the mapped `/config` and `/cache` volumes.
     - `sudo chown -R nonroot:users /data/esphome`
     - `sudo chmod -R ugo=rwx /data/esphome`
 - `environment` :
