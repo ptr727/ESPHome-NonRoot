@@ -109,7 +109,7 @@ jobs:
       # Docker build and push
       # https://github.com/marketplace/actions/build-and-push-docker-images
       - name: Docker build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./Docker
           push: ${{ needs.version.outputs.PushAction == 'true' }}
