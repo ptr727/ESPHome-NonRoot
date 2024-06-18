@@ -114,8 +114,6 @@ jobs:
         with:
           context: ./Docker
           push: ${{ needs.version.outputs.PushAction == 'true' }}
-          cache-from: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache
-          cache-to: type=registry,ref=${{ needs.version.outputs.ImageName }}:buildcache,mode=max
           tags: ${{ needs.version.outputs.TagList }}
           platforms: linux/amd64,linux/arm64
           build-args: |
