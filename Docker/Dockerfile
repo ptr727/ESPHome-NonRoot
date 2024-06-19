@@ -132,7 +132,7 @@ ENV \
 # Copy wheels from builder
 COPY --from=builder /builder/wheels /wheels
 
-# Install all packes from wheels archives
+# Install all packages from wheels archives
 RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
     && rm -rf /home \
