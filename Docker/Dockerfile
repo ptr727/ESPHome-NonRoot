@@ -56,6 +56,7 @@ WORKDIR /builder
 
 # Build wheel archives
 RUN \
+    # TODO: There is a slim chance that the github release is out of sync with pypi release
     # Get requirements files
     wget --no-verbose --output-document=/builder/requirements.txt https://raw.githubusercontent.com/esphome/esphome/release/requirements.txt \
     && wget --no-verbose --output-document=/builder/requirements_optional.txt https://raw.githubusercontent.com/esphome/esphome/release/requirements_optional.txt \
