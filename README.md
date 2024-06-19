@@ -141,6 +141,8 @@ For an example refer to [ESPHome-Config](https://github.com/ptr727/ESPHome-Confi
 - [`PLATFORMIO_CORE_DIR`](https://docs.platformio.org/en/latest/envvars.html#envvar-PLATFORMIO_CORE_DIR) PlatformIO [`core_dir`](https://docs.platformio.org/en/latest/projectconf/sections/platformio/options/directory/core_dir.html#projectconf-pio-core-dir) option is not set and defaults to `~/.platformio`.
 - [`PIP_CACHE_DIR`](https://pip.pypa.io/en/stable/topics/caching/#pip-cache-dir) is not set and defaults to `~/.cache/pip`.
 - `HOME` (`~`) is not set and defaults to e.g. `/home/[username]` or `/` or `/nonexistent` that either does not exists or the executing user does not have write permissions.
+- Display and font use [requires](https://github.com/esphome/esphome/blob/2024.5.5/esphome/components/font/__init__.py#L104) the `pillow` and `cairosvg` packages to be installed, they are not installed as default dependencies of `esphome`, are version pinned, and listed in [`requirements_optional.txt`](https://github.com/esphome/esphome/blob/2024.5.5/requirements_optional.txt#L2).
+  - When using `pip` the packages have to be installed by hand.
 
 ## Project Design
 
