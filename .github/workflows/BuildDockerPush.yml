@@ -54,7 +54,7 @@ jobs:
       # curl --silent https://api.github.com/repos/esphome/esphome/releases/latest | jq -r .tag_name
       # curl --silent https://pypi.org/pypi/esphome/json | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
       # curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version
-      # TODO: It is possible that the package version gets updated between reading and installing
+      # TODO: There is a slim chance that the github release is out of sync with pypi release
       - name: Get ESPHome Package Latest Version
         id: plv
         run: |
