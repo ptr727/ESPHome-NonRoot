@@ -11,7 +11,7 @@ Licensed under the [MIT License][license-link]
 
 Code and Pipeline is on [GitHub][github-link].  
 Docker image is published on [Docker Hub][docker-link].  
-Image is rebuilt weekly picking up the latest ESPHome release and upstream container updates.
+Image is rebuilt daily if the ESPHome version changed, and weekly picking up the latest ESPHome release and upstream container updates.
 
 ## Status
 
@@ -22,6 +22,8 @@ Image is rebuilt weekly picking up the latest ESPHome release and upstream conta
 
 ## Release Notes
 
+- Version 1.1:
+  - Added daily actions job to trigger a build if the ESPHome version changed.
 - Version 1.0:
   - Initial public release.
 
