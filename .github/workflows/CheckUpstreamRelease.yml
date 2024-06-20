@@ -1,0 +1,59 @@
+name: Check for new upstream release
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily 2am
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # Get version information
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+
+    outputs:
+      # ESPHome PyPi version number
+      PyPiVersion: ${{ steps.plv.outputs.version }}
+      # ESPHome Docker version number
+      DockerVersion: ${{ steps.dlv.outputs.version }}
+
+    steps:
+
+      # curl --silent https://api.github.com/repos/esphome/esphome/releases/latest | jq -r .tag_name
+      # curl --silent https://pypi.org/pypi/esphome/json | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
+      # curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version
+      # TODO: There is a slim chance that the github release is out of sync with pypi release
+      - name: Get ESPHome Package Latest Version
+        id: plv
+        run: |
+          VERSION=$(curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version)
+          echo "version=$(VERSION)" >> $GITHUB_OUTPUT
+
+     # curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags/latest | jq -r .digest
+     # curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags | jq -r '.results[] | select(.name == "latest") | .digest'
+     # curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags | jq -r '.results[] | select(.digest == "sha256:775e9fbad9f7958be65525333e0215b58976dbb7f685017e401e02e89fac39e0") | select(.name != "latest") | .name' | sort --version-sort | tail -n 1
+      - name: Get ESPHome Docker Latest Version
+        id: dlv
+        run: |
+          DIGEST=$(curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags/latest | jq -r .digest)
+          VERSION=$(curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags | jq -r --arg DIGEST "$DIGEST" '.results[] | select(.digest == $DIGEST) | select(.name != "latest") | .name' | sort --version-sort | tail -n 1)
+          echo "version=$(VERSION)" >> $GITHUB_OUTPUT
+
+  # Trigger build
+  buildpush:
+    name: Trigger build
+    runs-on: ubuntu-latest
+    needs: version
+
+    steps:
+
+      # Trigger workflow if docker and pypi versions don't match
+      - name: Trigger workflow
+        if: ${{ needs.version.outputs.DockerVersion != needs.version.outputs.PyPiVersion }}
+        run: gh workflow run BuildDockerPush.yml
