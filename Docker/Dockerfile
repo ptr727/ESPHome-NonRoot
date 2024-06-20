@@ -56,12 +56,8 @@ WORKDIR /builder
 
 # Build wheel archives
 RUN \
-    # TODO: There is a slim chance that the github release is out of sync with pypi release
-    # Get requirements files
-    wget --no-verbose --output-document=/builder/requirements.txt https://raw.githubusercontent.com/esphome/esphome/release/requirements.txt \
-    && wget --no-verbose --output-document=/builder/requirements_optional.txt https://raw.githubusercontent.com/esphome/esphome/release/requirements_optional.txt \
-    # Build wheel archives of esphome and requirements.txt and requirements_optional.txt
-    & pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels esphome -r /builder/requirements.txt -r /builder/requirements_optional.txt
+    # esphome package with optional displays packages and all dependencies
+    pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels esphome[displays]
 
 # Final
 FROM python:slim
