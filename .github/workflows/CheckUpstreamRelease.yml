@@ -33,7 +33,7 @@ jobs:
         id: plv
         run: |
           VERSION=$(curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version)
-          echo "version=$(VERSION)" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
      # curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags/latest | jq -r .digest
      # curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags | jq -r '.results[] | select(.name == "latest") | .digest'
@@ -43,7 +43,7 @@ jobs:
         run: |
           DIGEST=$(curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags/latest | jq -r .digest)
           VERSION=$(curl --silent https://registry.hub.docker.com/v2/repositories/ptr727/esphome-nonroot/tags | jq -r --arg DIGEST "$DIGEST" '.results[] | select(.digest == $DIGEST) | select(.name != "latest") | .name' | sort --version-sort | tail -n 1)
-          echo "version=$(VERSION)" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   # Trigger build
   buildpush:
