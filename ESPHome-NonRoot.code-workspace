@@ -17,6 +17,7 @@
 			"esphome",
 			"GLOBALLIB",
 			"gruntfuggly",
+			"macvlan",
 			"nonroot",
 			"piolibs",
 			"platformio"
