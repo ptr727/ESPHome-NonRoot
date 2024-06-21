@@ -46,7 +46,7 @@ Image is rebuilt daily if the ESPHome version changed, and weekly picking up the
     - `sudo chmod -R ugo=rwx /data/esphome`
 - `environment` :
   - `ESPHOME_VERBOSE` (Optional) : Add the [`--verbose`](https://esphome.io/guides/cli.html#cmdoption-v-verbose) option when running the dashboard, e.g. `ESPHOME_VERBOSE=true`.
-  - `ESPHOME_DASHBOARD_USE_PING` (optional) : Use [`ping` instead of `mDNS`](https://github.com/esphome/issues/issues/641#issuecomment-534156628) to test if nodes are up, set this when e.g. not using `host` or `macvlan` networking, e.g. `ESPHOME_DASHBOARD_USE_PING=true`.
+  - `ESPHOME_DASHBOARD_USE_PING` (Optional) : Use [`ping` instead of `mDNS`](https://github.com/esphome/issues/issues/641#issuecomment-534156628) to test if nodes are up, e.g. `ESPHOME_DASHBOARD_USE_PING=true`.
   - `TZ` (Optional) : Sets the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
 
 ### Docker Compose
