@@ -50,8 +50,14 @@ jobs:
     name: Trigger build
     runs-on: ubuntu-latest
     needs: version
+
     # Trigger workflow if docker and pypi versions don't match
     if: ${{ needs.version.outputs.DockerVersion != needs.version.outputs.PyPiVersion }}
+
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
 
     steps:
 
