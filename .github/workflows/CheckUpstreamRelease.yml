@@ -54,10 +54,8 @@ jobs:
     # Trigger workflow if docker and pypi versions don't match
     if: ${{ needs.version.outputs.DockerVersion != needs.version.outputs.PyPiVersion }}
 
-    permissions:
-      contents: write
-      pull-requests: write
-      repository-projects: write
+    # Permissions to launch workflow
+    permissions: write-all
 
     steps:
 
