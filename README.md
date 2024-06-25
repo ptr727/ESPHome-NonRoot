@@ -71,10 +71,17 @@ services:
 ```
 
 ```console
-# Launch stack
+# Prepare directory for use by nonroot:users (1001:100)
+mkdir -p /data/esphome/config /data/esphome/cache
+sudo chown -R nonroot:users /data/esphome
+sudo chmod -R ugo=rwx /data/esphome
+
+# Launch stack:
 docker compose --file ./Docker/Compose.yml up --detach
+
 # Open browser: http://localhost:6052
 # Attach shell: docker exec -it --user 1001:100 esphome-test /bin/bash
+
 # Destroy stack
 docker compose --file ./Docker/Compose.yml down --volumes
 ```
@@ -84,8 +91,7 @@ docker compose --file ./Docker/Compose.yml down --volumes
 Run ESPHome with custom commandline `esphome version`:
 
 ```console
-$ mkdir -p ./config ./cache
-$ docker run --rm --pull always --name esphome-test -v ${PWD}/config:/config -v ${PWD}/cache:/cache ptr727/esphome-nonroot:latest esphome version
+$ docker run --rm --pull always --name esphome-test -v /data/esphome/config:/config -v /data/esphome/cache:/cache ptr727/esphome-nonroot:latest esphome version
 latest: Pulling from ptr727/esphome-nonroot
 Digest: sha256:8f32848551446d0420390477fccb8c833d879b640b95533f443cb623882e9688
 Status: Image is up to date for ptr727/esphome-nonroot:latest
@@ -95,13 +101,7 @@ Version: 2024.5.5
 Run interactive `/bin/bash` shell in the container as `1001:100` user:
 
 ```console
-$ mkdir -p ./config ./cache
-$ sudo chown -R nonroot:users ./config && sudo chmod -R ugo=rwx ./config
-$ sudo chown -R nonroot:users ./cache && sudo chmod -R ugo=rwx ./cache
-$ sudo id -u nonroot && sudo id -g nonroot
-1001
-100
-$ docker run --rm --user 1001:100 -it --pull always --name esphome-test -v ${PWD}/config:/config -v ${PWD}/cache:/cache ptr727/esphome-nonroot:latest /bin/bash
+$ docker run --rm --user 1001:100 -it --pull always --name esphome-test -v /data/esphome/config:/config -v /data/esphome/cache:/cache ptr727/esphome-nonroot:latest /bin/bash
 latest: Pulling from ptr727/esphome-nonroot
 Digest: sha256:8f32848551446d0420390477fccb8c833d879b640b95533f443cb623882e9688
 Status: Image is up to date for ptr727/esphome-nonroot:latest
