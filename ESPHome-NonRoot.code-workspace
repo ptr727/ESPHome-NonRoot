@@ -12,6 +12,7 @@
 			"cairosvg",
 			"changequote",
 			"commandline",
+			"cpptools",
 			"davidanson",
 			"devcontainer",
 			"devcontainers",
@@ -21,7 +22,8 @@
 			"macvlan",
 			"nonroot",
 			"piolibs",
-			"platformio"
+			"platformio",
+			"pylint"
 		],
 		"files.trimTrailingWhitespace": true,
 		"[markdown]": {
