@@ -24,7 +24,7 @@
 # docker exec -it Testing /bin/bash
 
 # Builder
-FROM python:slim as builder
+FROM python:slim AS builder
 
 # Environment
 ENV \

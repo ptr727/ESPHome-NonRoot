@@ -1,0 +1,19 @@
+// https://aka.ms/devcontainer.json
+{
+	"name": "ESPHome-NonRoot",
+	"build": {
+		"dockerfile": "../Docker/Dockerfile",
+		"context": "../Docker"
+	},
+	"containerEnv": {
+		"ESPHOME_VERBOSE": "true",
+		"ESPHOME_DASHBOARD_USE_PING": "1",
+		"TZ": "Americas/Los_Angeles"
+	},
+	"forwardPorts": [
+		6052
+	],
+	"overrideCommand": false
+	// containerUser: "nonroot",
+	// "remoteUser": "root"
+}
