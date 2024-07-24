@@ -1,0 +1,17 @@
+{
+    // https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ESPHome Dashboard",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "esphome",
+            "args": [
+                "--verbose",
+                "dashboard",
+                "/config"
+            ]
+        }
+    ]
+}

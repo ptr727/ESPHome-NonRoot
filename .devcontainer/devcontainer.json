@@ -13,7 +13,37 @@
 	"forwardPorts": [
 		6052
 	],
-	"overrideCommand": false
-	// containerUser: "nonroot",
-	// "remoteUser": "root"
+	"overrideCommand": true,
+	"postStartCommand": [
+		"/entrypoint/cache.sh"
+	],
+	"customizations": {
+		"vscode": {
+			"folders": [
+				{
+					"path": "."
+				},
+				{
+					"path": "../../usr/local/lib/python3.12/site-packages"
+				},
+				{
+					"path": "../../config"
+				},
+				{
+					"path": "../../cache"
+				}
+			],
+			"extensions": [
+				"davidanson.vscode-markdownlint",
+				"gruntfuggly.todo-tree",
+				"ms-python.black-formatter",
+				"ms-python.flake8",
+				"ms-python.pylint",
+				"ms-python.python",
+				"ms-vscode.cpptools",
+				"redhat.vscode-yaml",
+				"streetsidesoftware.code-spell-checker"
+			]
+		}
+	}
 }
