@@ -10,15 +10,13 @@
 		"ESPHOME_DASHBOARD_USE_PING": "1",
 		"TZ": "Americas/Los_Angeles"
 	},
-	"forwardPorts": [
-		6052
-	],
 	"overrideCommand": true,
 	"postStartCommand": [
 		"/entrypoint/cache.sh"
 	],
 	"customizations": {
 		"vscode": {
+			// TODO: Folders do not seem to be working
 			"folders": [
 				{
 					"path": "."
@@ -36,6 +34,7 @@
 			"extensions": [
 				"davidanson.vscode-markdownlint",
 				"gruntfuggly.todo-tree",
+				"ms-azuretools.vscode-docker",
 				"ms-python.black-formatter",
 				"ms-python.flake8",
 				"ms-python.pylint",

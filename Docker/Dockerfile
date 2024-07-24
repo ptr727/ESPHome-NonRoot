@@ -96,7 +96,9 @@ ENV \
     # Set shell home / ~ directory, default is "/home/[username]"
     HOME=/cache/home \
     # Set temp directory, default is "/tmp"
-    TMPDIR=/cache/tmp
+    TMPDIR=/cache/tmp \
+    TEMP=/cache/tmp \
+    TMP=/cache/tmp
 
 # Install
 RUN \

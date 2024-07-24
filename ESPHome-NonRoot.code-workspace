@@ -2,6 +2,15 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../../usr/local/lib/python3.12/site-packages"
+		},
+		{
+			"path": "../../config"
+		},
+		{
+			"path": "../../cache"
 		}
 	],
 	"settings": {
