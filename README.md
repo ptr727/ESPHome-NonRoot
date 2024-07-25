@@ -23,8 +23,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 ## Release Notes
 
 - Version 1.2:
-  - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) to be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
   - Delete temp directory contents and prune PIO cached content on startup.
+  - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
 - Version 1.1:
   - Added daily actions job to trigger a build if the ESPHome version changed.
 - Version 1.0:
