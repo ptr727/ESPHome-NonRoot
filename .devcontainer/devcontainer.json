@@ -1,6 +1,9 @@
 // https://aka.ms/devcontainer.json
+// https://containers.dev/features
+// https://containers.dev/guide/dockerfile
+// https://aka.ms/dev-containers-non-root
 {
-	"name": "ESPHome-NonRoot",
+	"name": "ESPHome-NonRoot Dev Container",
 	"build": {
 		"dockerfile": "../Docker/Dockerfile",
 		"context": "../Docker"
@@ -10,13 +13,15 @@
 		"ESPHOME_DASHBOARD_USE_PING": "1",
 		"TZ": "Americas/Los_Angeles"
 	},
+	// Do not run default entrypoint
 	"overrideCommand": true,
+	// Create cache sub-directories
 	"postStartCommand": [
 		"/entrypoint/cache.sh"
 	],
 	"customizations": {
 		"vscode": {
-			// TODO: Folders do not seem to be working
+			// TODO: Folders do not seem to be working, add to workspace settings
 			"folders": [
 				{
 					"path": "."

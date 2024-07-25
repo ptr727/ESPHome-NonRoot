@@ -25,7 +25,9 @@
 			"davidanson",
 			"devcontainer",
 			"devcontainers",
+			"eamodio",
 			"esphome",
+			"extensionpack",
 			"GLOBALLIB",
 			"gruntfuggly",
 			"macvlan",
@@ -40,15 +42,30 @@
 		},
 		"[plaintext]": {
 			"files.trimTrailingWhitespace": false
-		}
+		},
+		"editor.renderWhitespace": "boundary",
+		"diffEditor.ignoreTrimWhitespace": false,
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"yaml.customTags": [
+			"!secret scalar",
+			"!lambda scalar",
+			"!extend scalar",
+			"!remove scalar",
+			"!include_dir_named scalar",
+			"!include_dir_list scalar",
+			"!include_dir_merge_list scalar",
+			"!include_dir_merge_named scalar"
+		]
 	},
 	"extensions": {
 		"recommendations": [
 			"davidanson.vscode-markdownlint",
+			"eamodio.gitlens",
 			"gruntfuggly.todo-tree",
-			"streetsidesoftware.code-spell-checker",
+			"ms-azuretools.vscode-docker",
+			"ms-vscode-remote.vscode-remote-extensionpack",
 			"redhat.vscode-yaml",
-			"ms-azuretools.vscode-docker"
+			"streetsidesoftware.code-spell-checker"
 		]
 	}
 }
