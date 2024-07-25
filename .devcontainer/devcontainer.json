@@ -39,7 +39,7 @@
 				"ms-python.flake8",
 				"ms-python.pylint",
 				"ms-python.python",
-				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
 				"redhat.vscode-yaml",
 				"streetsidesoftware.code-spell-checker"
 			]

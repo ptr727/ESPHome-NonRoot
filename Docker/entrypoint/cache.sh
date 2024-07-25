@@ -10,3 +10,10 @@ set -e
 # /cache/home for $HOME
 # /cache/tmp for $TMPDIR
 mkdir -p /cache/pio /cache/build /cache/data /cache/pip /cache/home /cache/tmp
+
+# Clear temporary files
+rm -rf /tmp
+rm -rf /cache/tmp/{*,.*}
+
+# Prune PIO files
+pio system prune --force
