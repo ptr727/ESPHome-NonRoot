@@ -1,16 +1,29 @@
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://containers.dev/guide/dependabot
+
 version: 2
 updates:
 
   # main
 - package-ecosystem: "github-actions"
+  target-branch: "main"
   directory: "/"
   schedule:
-    interval: "daily"
+    interval: "weekly"
+- package-ecosystem: "devcontainers"
+  target-branch: "main"
+  directory: "/"
+  schedule:
+     interval: "weekly"
 
-  # develop
+     # develop
 - package-ecosystem: "github-actions"
-  directory: "/"
   target-branch: "develop"
+  directory: "/"
   schedule:
-    interval: "daily"
+    interval: "weekly"
+- package-ecosystem: "devcontainers"
+  target-branch: "develop"
+  directory: "/"
+  schedule:
+     interval: "weekly"
