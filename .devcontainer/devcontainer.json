@@ -1,0 +1,53 @@
+// https://aka.ms/devcontainer.json
+// https://containers.dev/features
+// https://containers.dev/guide/dockerfile
+// https://aka.ms/dev-containers-non-root
+{
+	"name": "ESPHome-NonRoot Dev Container",
+	"build": {
+		"dockerfile": "../Docker/Dockerfile",
+		"context": "../Docker"
+	},
+	"containerEnv": {
+		"ESPHOME_VERBOSE": "true",
+		"ESPHOME_DASHBOARD_USE_PING": "1",
+		"TZ": "Americas/Los_Angeles"
+	},
+	// Do not run default entrypoint
+	"overrideCommand": true,
+	// Create cache sub-directories
+	"postStartCommand": [
+		"/entrypoint/cache.sh"
+	],
+	"customizations": {
+		"vscode": {
+			// TODO: Folders do not seem to be working, add to workspace settings
+			"folders": [
+				{
+					"path": "."
+				},
+				{
+					"path": "../../usr/local/lib/python3.12/site-packages"
+				},
+				{
+					"path": "../../config"
+				},
+				{
+					"path": "../../cache"
+				}
+			],
+			"extensions": [
+				"davidanson.vscode-markdownlint",
+				"gruntfuggly.todo-tree",
+				"ms-azuretools.vscode-docker",
+				"ms-python.black-formatter",
+				"ms-python.flake8",
+				"ms-python.pylint",
+				"ms-python.python",
+				"ms-vscode.cpptools-extension-pack",
+				"redhat.vscode-yaml",
+				"streetsidesoftware.code-spell-checker"
+			]
+		}
+	}
+}
