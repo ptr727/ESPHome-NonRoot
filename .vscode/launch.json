@@ -1,0 +1,19 @@
+{
+    // https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // https://code.visualstudio.com/docs/python/debugging
+            "name": "ESPHome Dashboard",
+            "type": "debugpy",
+            "justMyCode": false,
+            "request": "launch",
+            "module": "esphome",
+            "args": [
+                "--verbose",
+                "dashboard",
+                "/config"
+            ]
+        }
+    ]
+}

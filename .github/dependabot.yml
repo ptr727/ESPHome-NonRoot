@@ -1,8 +1,10 @@
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://containers.dev/guide/dependabot
+
 version: 2
 updates:
 
-  # main
+# main
 - package-ecosystem: "github-actions"
   target-branch: "main"
   directory: "/"
@@ -13,7 +15,7 @@ updates:
       patterns:
         - "*"
 
-  # develop
+# develop
 - package-ecosystem: "github-actions"
   target-branch: "develop"
   directory: "/"
