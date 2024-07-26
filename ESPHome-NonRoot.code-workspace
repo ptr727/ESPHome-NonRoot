@@ -28,7 +28,9 @@
 		},
 		"[plaintext]": {
 			"files.trimTrailingWhitespace": false
-		}
+		},
+		"diffEditor.ignoreTrimWhitespace": false,
+		"editor.renderWhitespace": "trailing"
 	},
 	"extensions": {
 		"recommendations": [
