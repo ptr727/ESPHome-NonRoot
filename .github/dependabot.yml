@@ -4,26 +4,24 @@
 version: 2
 updates:
 
-  # main
+# main
 - package-ecosystem: "github-actions"
   target-branch: "main"
   directory: "/"
   schedule:
-    interval: "weekly"
-- package-ecosystem: "devcontainers"
-  target-branch: "main"
-  directory: "/"
-  schedule:
-     interval: "weekly"
+    interval: "daily"
+  groups:
+    actions-deps:
+      patterns:
+        - "*"
 
-     # develop
+# develop
 - package-ecosystem: "github-actions"
   target-branch: "develop"
   directory: "/"
   schedule:
-    interval: "weekly"
-- package-ecosystem: "devcontainers"
-  target-branch: "develop"
-  directory: "/"
-  schedule:
-     interval: "weekly"
+    interval: "daily"
+  groups:
+    actions-deps:
+      patterns:
+        - "*"
