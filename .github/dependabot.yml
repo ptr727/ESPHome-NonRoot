@@ -4,13 +4,22 @@ updates:
 
   # main
 - package-ecosystem: "github-actions"
+  target-branch: "main"
   directory: "/"
   schedule:
     interval: "daily"
+  groups:
+    actions-deps:
+      patterns:
+        - "*"
 
   # develop
 - package-ecosystem: "github-actions"
-  directory: "/"
   target-branch: "develop"
+  directory: "/"
   schedule:
     interval: "daily"
+  groups:
+    actions-deps:
+      patterns:
+        - "*"
