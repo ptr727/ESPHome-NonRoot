@@ -2,6 +2,15 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../../usr/local/lib/python3.12/site-packages"
+		},
+		{
+			"path": "../../config"
+		},
+		{
+			"path": "../../cache"
 		}
 	],
 	"settings": {
@@ -12,15 +21,20 @@
 			"cairosvg",
 			"changequote",
 			"commandline",
+			"cpptools",
 			"davidanson",
 			"devcontainer",
+			"devcontainers",
+			"eamodio",
 			"esphome",
+			"extensionpack",
 			"GLOBALLIB",
 			"gruntfuggly",
 			"macvlan",
 			"nonroot",
 			"piolibs",
-			"platformio"
+			"platformio",
+			"pylint"
 		],
 		"files.trimTrailingWhitespace": true,
 		"[markdown]": {
@@ -29,16 +43,29 @@
 		"[plaintext]": {
 			"files.trimTrailingWhitespace": false
 		},
+		"editor.renderWhitespace": "boundary",
 		"diffEditor.ignoreTrimWhitespace": false,
-		"editor.renderWhitespace": "trailing"
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"yaml.customTags": [
+			"!secret scalar",
+			"!lambda scalar",
+			"!extend scalar",
+			"!remove scalar",
+			"!include_dir_named scalar",
+			"!include_dir_list scalar",
+			"!include_dir_merge_list scalar",
+			"!include_dir_merge_named scalar"
+		]
 	},
 	"extensions": {
 		"recommendations": [
 			"davidanson.vscode-markdownlint",
+			"eamodio.gitlens",
 			"gruntfuggly.todo-tree",
-			"streetsidesoftware.code-spell-checker",
+			"ms-azuretools.vscode-docker",
+			"ms-vscode-remote.vscode-remote-extensionpack",
 			"redhat.vscode-yaml",
-			"ms-azuretools.vscode-docker"
+			"streetsidesoftware.code-spell-checker"
 		]
 	}
 }

@@ -24,7 +24,7 @@
 # docker exec -it Testing /bin/bash
 
 # Builder
-FROM python:slim as builder
+FROM python:slim AS builder
 
 # Environment
 ENV \
@@ -56,8 +56,8 @@ WORKDIR /builder
 
 # Build wheel archives
 RUN \
-    # esphome package with optional displays packages and all dependencies
-    pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels esphome[displays]
+    pip install --no-cache --upgrade pip \
+    && pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels esphome[displays]
 
 # Final
 FROM python:slim
@@ -96,7 +96,9 @@ ENV \
     # Set shell home / ~ directory, default is "/home/[username]"
     HOME=/cache/home \
     # Set temp directory, default is "/tmp"
-    TMPDIR=/cache/tmp
+    TMPDIR=/cache/tmp \
+    TEMP=/cache/tmp \
+    TMP=/cache/tmp
 
 # Install
 RUN \
@@ -129,7 +131,8 @@ ENV \
 COPY --from=builder /builder/wheels /wheels
 
 # Install all packages from wheels archives
-RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
+RUN pip install --no-cache --upgrade pip \
+    && pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
     && rm -rf /home \
     && rm -rf /root \
