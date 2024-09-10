@@ -54,10 +54,10 @@ RUN \
 # Builder
 WORKDIR /builder
 
-# Build wheel archives
+# Build wheel archives for setuptools and esphome with optional display components
 RUN \
     pip install --no-cache --upgrade pip \
-    && pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels esphome[displays]
+    && pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
 FROM python:slim
