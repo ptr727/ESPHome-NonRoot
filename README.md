@@ -22,6 +22,9 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
+- Version 1.3:
+  - Added dedicated Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) file that maps `config` and `cache` volumes volumes.
+  - Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine.
 - Version 1.2:
   - Delete temp directory contents and prune PIO cached content on startup.
   - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
@@ -155,7 +158,7 @@ I have no name!@012d4b62d376:/config$
 
 ## Project Design
 
-- Use the `python:slim` Debian based Python docker image as a base image simplifying use for Python in a container environment.
+- Use the `python:alpine` Alpine based Python docker image as a base image simplifying use for Python in a container environment.
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
 - Build [wheel](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install from the generated wheel packages in the final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
@@ -166,8 +169,7 @@ I have no name!@012d4b62d376:/config$
 
 The [included](./.devcontainer/devcontainer.json) [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) can be used for [ESPHome Python](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO C++](https://docs.platformio.org/en/latest/plus/debugging.html) debugging in VSCode.
 
-TODO:  
-Detailed debug setup details are beyond the scope of this document, refer to my [ESPHome-Config](https://github.com/ptr727/ESPHome-Config) project for slightly more complete debugging setup instructions.
+Detailed debug setup details are beyond the scope of this project, refer to my [ESPHome-Config](https://github.com/ptr727/ESPHome-Config) project for slightly more complete debugging setup instructions.
 
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
