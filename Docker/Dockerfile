@@ -1,17 +1,23 @@
 # Description: ESPHome docker container that supports non-root operation.
-# Based on: python:slim
+# Based on: python:alpine
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
+
+# Get compressed image size from manifest:
+# docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
+# Get uncompressed size, requires downloading:
+# docker pull ptr727/esphome-nonroot:latest
+# docker image inspect --format json ptr727/esphome-nonroot:latest | jq '.[] | select(.Architecture=="amd64") | [.Size] | add' | numfmt --to=iec
 
 # Docker build debugging:
 # --progress=plain
 # --no-cache
 
 # Test image in shell:
-# docker run -it --rm --pull always --name Testing python:slim /bin/bash
+# docker run -it --rm --pull always --name Testing python:alpine /bin/bash
 # docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
 # export DEBIAN_FRONTEND=noninteractive
-# apt upate && apt upgrade -y
+# apk upate && apk upgrade
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
@@ -23,8 +29,13 @@
 # docker run -it --rm --name Testing --publish 6052:6052 testing:latest
 # docker exec -it Testing /bin/bash
 
+# Cleanup unused Docker resources:
+# docker image prune --all --force
+# docker volume prune --all --force
+# docker network prune --force
+
 # Builder
-FROM python:slim AS builder
+FROM python:alpine AS builder
 
 # Environment
 ENV \
@@ -38,18 +49,14 @@ ENV \
 # Install
 RUN \
     # Update repos and upgrade
-    apt update && apt-get upgrade -y \
+    apk update && apk upgrade \
     # Install dependencies
-    && apt install -y --no-install-recommends \
-        build-essential \
+    && apk add --no-cache \
+        build-base \
         curl \
         git \
         python3-dev \
-        wget \
-    # Cleanup
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        wget
 
 # Builder
 WORKDIR /builder
@@ -60,7 +67,7 @@ RUN \
     && pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:slim
+FROM python:alpine
 
 # Label
 ARG \
@@ -103,22 +110,15 @@ ENV \
 # Install
 RUN \
     # Update repos and upgrade
-    apt-get update && apt-get upgrade -y \
+    apk update && apk upgrade \
     # Install dependencies
-    && apt-get install -y --no-install-recommends \
+    # TODO: Are image libs/tools installed in ESPHome Dockerfile actually required at runtime?
+    && apk add --no-cache \
+        bash \
         curl \
         git \
-        locales \
-        locales-all \
-        tzdata \
-    # Generate locale
-    && locale-gen --no-purge en_US en_US.UTF-8 \
     # Avoid git error when directory owners don't match
-    && git config --system --add safe.directory '*' \
-    # Cleanup
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && git config --system --add safe.directory '*'
 
 # Environment
 ENV \
@@ -154,5 +154,6 @@ HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || ex
 # Default entrypoint command will run dashboard
 WORKDIR /config
 COPY ./entrypoint /entrypoint
+RUN chmod +x /entrypoint/*.sh
 ENTRYPOINT ["/entrypoint/entrypoint.sh"]
 CMD ["entrypoint"]

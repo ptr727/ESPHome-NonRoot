@@ -133,9 +133,10 @@ jobs:
     # Get image size
     - name: Get image size
       run: |
+        docker pull ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }}
         touch ${{ runner.temp }}/version.info
         echo Image: ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }} >> ${{ runner.temp }}/version.info
-        echo Size: $(docker manifest inspect -v ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }} | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec) >> ${{ runner.temp }}/version.info
+        echo Size: $(docker image inspect --format json ${{ needs.version.outputs.ImageName }}:${{ needs.version.outputs.TagName }} | jq '.[] | select(.Architecture=="amd64") | [.Size] | add' | numfmt --to=iec) >> ${{ runner.temp }}/version.info
 
     # Get tool versions in container
     # https://github.com/marketplace/actions/docker-run-action
