@@ -23,8 +23,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 ## Release Notes
 
 - Version 1.3:
-  - Added dedicated Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) file that maps `config` and `cache` volumes volumes.
-  - Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine.
+  - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
+  - Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine, uncompressed image size reduced from ~650MB to ~280MB.
 - Version 1.2:
   - Delete temp directory contents and prune PIO cached content on startup.
   - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.

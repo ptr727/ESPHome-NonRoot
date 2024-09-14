@@ -3,6 +3,12 @@
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
+# Get compressed image size from manifest:
+# docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
+# Get uncompressed size, requires downloading:
+# docker pull ptr727/esphome-nonroot:latest
+# docker image inspect --format json ptr727/esphome-nonroot:latest | jq '.[] | select(.Architecture=="amd64") | [.Size] | add' | numfmt --to=iec
+
 # Docker build debugging:
 # --progress=plain
 # --no-cache
@@ -15,13 +21,18 @@
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Alpine.Dockerfile ./Docker
+# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Alpine.Dockerfile ./Docker
+# docker buildx build --load --platform linux/amd64 --tag testing:latest ./Docker
 # docker run -it --rm --name Testing testing:latest /bin/bash
 # docker run -it --rm --name Testing --publish 6052:6052 testing:latest
 # docker exec -it Testing /bin/bash
+
+# Cleanup unused Docker resources:
+# docker image prune --all --force
+# docker volume prune --all --force
+# docker network prune --force
 
 # Builder
 FROM python:alpine AS builder
@@ -101,6 +112,7 @@ RUN \
     # Update repos and upgrade
     apk update && apk upgrade \
     # Install dependencies
+    # TODO: Are image libs/tools installed in ESPHome Dockerfile actually required at runtime?
     && apk add --no-cache \
         bash \
         curl \
