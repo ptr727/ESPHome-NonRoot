@@ -22,6 +22,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
+- Version 1.4:
+  - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
 - Version 1.3:
   - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
   - Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine, uncompressed image size reduced from ~650MB to ~280MB.
@@ -45,13 +47,13 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
     - Get the `uid` : `sudo id -u nonroot`.
     - Get the `gid` : `sudo id -g nonroot`.
   - Use an existing user or create a system account on the host.
-    - `adduser --no-create-home --shell /bin/false --disabled-password --system --group users nonroot`.
+    - `adduser --no-create-home --disabled-password --system --group users nonroot`.
   - Omitting the `user` option will run under default `root` account.
   - Make sure the container user has permissions to the mapped `/config` and `/cache` volumes.
     - `sudo chown -R nonroot:users /data/esphome`
-    - `sudo chmod -R ugo=rwx /data/esphome`
+    - `sudo chmod -R ug=rwx,o=rx /data/esphome`
 - `environment` :
-  - `ESPHOME_VERBOSE` (Optional) : Add the [`--verbose`](https://esphome.io/guides/cli.html#cmdoption-v-verbose) option when running the dashboard, e.g. `ESPHOME_VERBOSE=true`.
+  - `ESPHOME_VERBOSE` (Optional) : Enables [verbose](https://esphome.io/guides/cli.html#cmdoption-v-verbose) log output, e.g. `ESPHOME_VERBOSE=true`.
   - `ESPHOME_DASHBOARD_USE_PING` (Optional) : Use [`ping` instead of `mDNS`](https://github.com/esphome/issues/issues/641#issuecomment-534156628) to test if nodes are up, e.g. `ESPHOME_DASHBOARD_USE_PING=true`.
   - `TZ` (Optional) : Sets the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
 
@@ -80,14 +82,14 @@ services:
 
 ```shell
 # Create nonroot user
-adduser --no-create-home --shell /bin/false --disabled-password --system --group users nonroot
+adduser --no-create-home --disabled-password --system --group users nonroot
 id nonroot
 # uid=1001(nonroot) gid=100(users) groups=100(users)
 
 # Prepare directories for use by nonroot:users
 mkdir -p /data/esphome/config /data/esphome/cache
 sudo chown -R nonroot:users /data/esphome
-sudo chmod -R ugo=rwx /data/esphome
+sudo chmod -R ug=rwx,o=rx /data/esphome
 
 # Launch stack
 docker compose --file ./Docker/Compose.yml up --detach
