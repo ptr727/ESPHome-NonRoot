@@ -21,21 +21,6 @@
 	],
 	"customizations": {
 		"vscode": {
-			// TODO: Folders do not seem to be working, add to workspace settings
-			"folders": [
-				{
-					"path": "."
-				},
-				{
-					"path": "../../usr/local/lib/python3.12/site-packages"
-				},
-				{
-					"path": "../../config"
-				},
-				{
-					"path": "../../cache"
-				}
-			],
 			"extensions": [
 				"davidanson.vscode-markdownlint",
 				"gruntfuggly.todo-tree",
