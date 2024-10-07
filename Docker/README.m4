@@ -5,7 +5,8 @@ changequote(`{{', `}}')
 
 ## License
 
-Licensed under the [MIT License](https://github.com/ptr727/ESPHome-NonRoot/LICENSE)  
+Licensed under the [MIT License](https://github.com/ptr727/ESPHome-NonRoot/LICENSE)
+
 ![GitHub License](https://img.shields.io/github/license/ptr727/ESPHome-NonRoot)
 
 ## Project
