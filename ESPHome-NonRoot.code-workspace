@@ -9,6 +9,7 @@
 			"adduser",
 			"appdata",
 			"azuretools",
+			"buildpush",
 			"cairosvg",
 			"changequote",
 			"commandline",
@@ -23,6 +24,7 @@
 			"gruntfuggly",
 			"macvlan",
 			"nonroot",
+			"numfmt",
 			"piolibs",
 			"platformio",
 			"pylint"

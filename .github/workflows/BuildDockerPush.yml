@@ -114,6 +114,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./Docker
+          file: ./Docker/Debian.Dockerfile
           push: ${{ needs.version.outputs.PushAction == 'true' }}
           tags: ${{ needs.version.outputs.TagList }}
           platforms: linux/amd64,linux/arm64
