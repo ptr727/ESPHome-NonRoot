@@ -1,7 +1,9 @@
 # Description: ESPHome docker container that supports non-root operation.
-# Based on: python:alpine
+# Based on: python:3.12-slim
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
+
+# TODO: ESPHome install fails on Python 3.13, pin to 3.12
 
 # Get compressed image size from manifest:
 # docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
@@ -14,17 +16,15 @@
 # --no-cache
 
 # Test image in shell:
-# docker run -it --rm --pull always --name Testing python:alpine /bin/bash
+# docker run -it --rm --pull always --name Testing python:3.12-slim /bin/bash
 # docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
-# export DEBIAN_FRONTEND=noninteractive
-# apk upate && apk upgrade
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest ./Docker
+# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Debian.Dockerfile ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest ./Docker
+# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Debian.Dockerfile ./Docker
 # docker run -it --rm --name Testing testing:latest /bin/bash
 # docker run -it --rm --name Testing --publish 6052:6052 testing:latest
 # docker exec -it Testing /bin/bash
@@ -35,7 +35,7 @@
 # docker network prune --force
 
 # Builder
-FROM python:alpine AS builder
+FROM python:3.12-slim AS builder
 
 # Environment
 ENV \
@@ -49,25 +49,27 @@ ENV \
 # Install
 RUN \
     # Update repos and upgrade
-    apk update && apk upgrade \
+    apt update && apt upgrade -y \
     # Install dependencies
-    && apk add --no-cache \
-        build-base \
+    && apt install -y --no-install-recommends \
+        build-essential \
         curl \
         git \
         python3-dev \
-        wget
+        wget \
+    # Cleanup
+    && apt autoremove -y \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Builder
 WORKDIR /builder
 
 # Build wheel archives for setuptools and esphome with optional display components
-RUN \
-    pip install --no-cache --upgrade pip \
-    && pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
+RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:alpine
+FROM python:3.12-slim
 
 # Label
 ARG \
@@ -110,15 +112,22 @@ ENV \
 # Install
 RUN \
     # Update repos and upgrade
-    apk update && apk upgrade \
+    apt update && apt upgrade -y \
     # Install dependencies
-    # TODO: Are image libs/tools installed in ESPHome Dockerfile actually required at runtime?
-    && apk add --no-cache \
-        bash \
+    && apt install -y --no-install-recommends \
         curl \
         git \
+        locales \
+        locales-all \
+        tzdata \
+    # Generate locale
+    && locale-gen --no-purge en_US en_US.UTF-8 \
     # Avoid git error when directory owners don't match
-    && git config --system --add safe.directory '*'
+    && git config --system --add safe.directory '*' \
+    # Cleanup
+    && apt autoremove -y \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Environment
 ENV \
@@ -131,8 +140,7 @@ ENV \
 COPY --from=builder /builder/wheels /wheels
 
 # Install all packages from wheels archives
-RUN pip install --no-cache --upgrade pip \
-    && pip install --no-cache --no-index --find-links /wheels /wheels/* \
+RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
     && rm -rf /home \
     && rm -rf /root \
