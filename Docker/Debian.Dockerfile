@@ -53,10 +53,7 @@ RUN \
     # Install dependencies
     && apt install -y --no-install-recommends \
         build-essential \
-        curl \
-        git \
         python3-dev \
-        wget \
     # Cleanup
     && apt autoremove -y \
     && apt clean \
@@ -115,7 +112,6 @@ RUN \
     apt update && apt upgrade -y \
     # Install dependencies
     && apt install -y --no-install-recommends \
-        curl \
         git \
         locales \
         locales-all \
