@@ -5,10 +5,6 @@
 
 # TODO: ESPHome install fails on Python 3.13, pin to 3.12
 
-# TODO: sh: xtensa-lx106-elf-g++: not found
-# https://community.platformio.org/t/is-alpine-docker-a-supported-platform/43700
-# https://github.com/ptr727/ESPHome-NonRoot/issues/29
-
 # Get compressed image size from manifest:
 # docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
 # Get uncompressed size, requires downloading:
@@ -55,11 +51,8 @@ RUN \
     # Install dependencies
     && apk add --no-cache \
         build-base \
-        curl \
         gcompat \
-        git \
-        python3-dev \
-        wget
+        python3-dev
 
 # Builder
 WORKDIR /builder
@@ -113,7 +106,7 @@ RUN \
     # Install dependencies
     && apk add --no-cache \
         bash \
-        curl \
+        build-base \
         gcompat \
         git \
     # Avoid git error when directory owners don't match
