@@ -26,7 +26,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
   - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
 - Version 1.3:
   - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
-  - ~~Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine, uncompressed image size reduced from ~650MB to ~280MB.~~
+  - ~~Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine, uncompressed image size reduced from \~650MB to \~280MB.~~
     - Reverted, see [Issue #29](https://github.com/ptr727/ESPHome-NonRoot/issues/29).
 - Version 1.2:
   - Delete temp directory contents and prune PIO cached content on startup.
