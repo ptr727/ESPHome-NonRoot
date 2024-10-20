@@ -112,6 +112,7 @@ RUN \
     apt update && apt upgrade -y \
     # Install dependencies
     && apt install -y --no-install-recommends \
+        curl \
         git \
         locales \
         locales-all \
