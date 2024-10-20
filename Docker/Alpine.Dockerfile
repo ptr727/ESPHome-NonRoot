@@ -107,6 +107,7 @@ RUN \
     && apk add --no-cache \
         bash \
         build-base \
+        curl \
         gcompat \
         git \
     # Avoid git error when directory owners don't match
