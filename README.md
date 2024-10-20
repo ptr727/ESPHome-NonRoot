@@ -161,7 +161,7 @@ I have no name!@012d4b62d376:/config$
 
 ## Project Design
 
-- Use the `python:alpine` Alpine based Python docker image as a base image simplifying use for Python in a container environment.
+- Use [Python](https://hub.docker.com/_/python) docker base image simplifying use for Python in a container environment.
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
 - Build [wheel](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install from the generated wheel packages in the final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
