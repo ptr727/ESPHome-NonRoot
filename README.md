@@ -22,6 +22,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
+- Version 1.5:
+  - Using Python 3.13 base image.
 - Version 1.4:
   - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
 - Version 1.3:
@@ -176,11 +178,11 @@ Detailed debug setup details are beyond the scope of this project, refer to my [
 
 ## Notes
 
-- ESPHome's [`Dockerfile`][esphome-dockerfile-link] installs `LIB_DEPS` and `BUILD_DEPS`, is that really required when installing using `wheel`?
-- Using untagged base Python docker images will use the current released version of Python, and may [not](https://github.com/esphome/issues/issues/6321) always be compatible with ESPHome, tag base images as required e.g. `python:3.12-slim`.
+- ESPHome's [`Dockerfile`][esphome-dockerfile-link] installs `LIB_DEPS` and `BUILD_DEPS`, that should not be required when installing using `wheel`, right?
+- Using unversioned base Python docker images will use the current released version of Python, and may [not](https://github.com/esphome/issues/issues/6321) always be compatible with ESPHome.
 - Alpine uses `musl` not `glibc`, `gcompat` is [required](https://github.com/platformio/platformio-core/issues/4996) for PIO and tools that do not have native `musl` support.
-  - Currently still using the larger Debian base image, vs. the smaller Alpine image, may switch at some future time.
-- There is an open [PR](https://github.com/esphome/esphome/pull/7604) for a general `LOG_LEVEL` configuration vs. using `ESPHOME_VERBOSE`.
+- Track open [PR](https://github.com/esphome/esphome/pull/7604) for a general `LOG_LEVEL` configuration vs. using `ESPHOME_VERBOSE`.
+- Chance of a version mismatch when tagging the docker image with the current ESPHome version vs. the version actually installed when building the image.
 
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
