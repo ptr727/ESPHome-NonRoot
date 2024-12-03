@@ -3,7 +3,9 @@
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
-# TODO: ESPHome install fails on Python 3.13, pin to 3.12
+# ESPHome's Dockerfile installs LIB_DEPS and BUILD_DEPS, is that really required, especially when installing using wheel?
+
+# Using untagged base Python docker images will use the current released version of Python, and may not always be compatible with ESPHome, tag base images as required e.g. python:3.12-slim.
 
 # Get compressed image size from manifest:
 # docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
@@ -16,7 +18,7 @@
 # --no-cache
 
 # Test image in shell:
-# docker run -it --rm --pull always --name Testing python:3.12-slim /bin/bash
+# docker run -it --rm --pull always --name Testing python:slim /bin/bash
 # docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
 
 # Build Dockerfile
@@ -35,7 +37,7 @@
 # docker network prune --force
 
 # Builder
-FROM python:3.12-slim AS builder
+FROM python:slim AS builder
 
 # Environment
 ENV \
@@ -66,7 +68,7 @@ WORKDIR /builder
 RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:3.12-slim
+FROM python:slim
 
 # Label
 ARG \
