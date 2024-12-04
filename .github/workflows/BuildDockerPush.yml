@@ -52,10 +52,13 @@ jobs:
         id: nbgv
         uses: dotnet/nbgv@master
 
+      # TODO:
+      ## There is a chance that the esphome version we get from pypi will be different to the actually installed version of esphome
+      ## Could tell dockerfile which version to install via env var, or could get installed versions after install, and then tag the image with that version
+
       # curl --silent https://api.github.com/repos/esphome/esphome/releases/latest | jq -r .tag_name
       # curl --silent https://pypi.org/pypi/esphome/json | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
       # curl --silent https://pypi.org/pypi/esphome/json | jq -r .info.version
-      # TODO: There is a slim chance that the github release is out of sync with pypi release
       - name: Get ESPHome Package Latest Version
         id: plv
         run: |

@@ -3,8 +3,6 @@
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
-# TODO: ESPHome install fails on Python 3.13, pin to 3.12
-
 # Get compressed image size from manifest:
 # docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
 # Get uncompressed size, requires downloading:
@@ -16,7 +14,7 @@
 # --no-cache
 
 # Test image in shell:
-# docker run -it --rm --pull always --name Testing python:3.12-alpine /bin/sh
+# docker run -it --rm --pull always --name Testing python:alpine /bin/sh
 # docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
 
 # Build Dockerfile
@@ -35,7 +33,7 @@
 # docker network prune --force
 
 # Builder
-FROM python:3.12-alpine AS builder
+FROM python:alpine AS builder
 
 # Environment
 ENV \
@@ -61,7 +59,7 @@ WORKDIR /builder
 RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:3.12-alpine
+FROM python:alpine
 
 # Label
 ARG \
