@@ -22,6 +22,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
+- Version 1.5:
+  - Using Python 3.13 base image.
 - Version 1.4:
   - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
 - Version 1.3:
@@ -163,7 +165,7 @@ I have no name!@012d4b62d376:/config$
 
 - Use [Python](https://hub.docker.com/_/python) docker base image simplifying use for Python in a container environment.
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
-- Build [wheel](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install from the generated wheel packages in the final stage.
+- Build [`wheel`](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install the platform specific generated wheel packages in the final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
 - Refer to [`Dockerfile`](./Docker/Dockerfile) for container details.
 - Refer to [`BuildDockerPush.yml`](./.github/workflows/BuildDockerPush.yml) and for pipeline details.
@@ -173,6 +175,14 @@ I have no name!@012d4b62d376:/config$
 The [included](./.devcontainer/devcontainer.json) [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) can be used for [ESPHome Python](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO C++](https://docs.platformio.org/en/latest/plus/debugging.html) debugging in VSCode.
 
 Detailed debug setup details are beyond the scope of this project, refer to my [ESPHome-Config](https://github.com/ptr727/ESPHome-Config) project for slightly more complete debugging setup instructions.
+
+## Notes
+
+- ESPHome's [`Dockerfile`][esphome-dockerfile-link] installs `LIB_DEPS` and `BUILD_DEPS`, that should not be required when installing using `wheel`, right?
+- Using unversioned base Python docker images will use the current released version of Python, and may [not](https://github.com/esphome/issues/issues/6321) always be compatible with ESPHome.
+- Alpine uses `musl` not `glibc`, `gcompat` is [required](https://github.com/platformio/platformio-core/issues/4996) for PIO and tools that do not have native `musl` support.
+- Track open [PR](https://github.com/esphome/esphome/pull/7604) for a general `LOG_LEVEL` configuration vs. using `ESPHOME_VERBOSE`.
+- Chance of a version mismatch when tagging the docker image with the current ESPHome version vs. the version actually installed when building the image.
 
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
@@ -186,3 +196,4 @@ Detailed debug setup details are beyond the scope of this project, refer to my [
 [license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
 [esphome-link]: https://esphome.io
 [esphome-docker-link]: https://hub.docker.com/r/esphome/esphome
+[esphome-dockerfile-link]: https://github.com/esphome/esphome/blob/dev/docker/Dockerfile
