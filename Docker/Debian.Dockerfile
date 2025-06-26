@@ -80,7 +80,6 @@ LABEL name="ESPHome" \
     description="ESPHome docker container that supports non-root operation" \
     maintainer="Pieter Viljoen <ptr727@users.noreply.github.com>"
 
-# TODO: Keep in sync with cache.sh
 # Environment
 ENV \
     # No python bytecode generation
@@ -90,23 +89,7 @@ ENV \
     # Prevent EULA and confirmation prompts in installers
     DEBIAN_FRONTEND=noninteractive \
     # Set default timezone to UTC
-    TZ=Etc/UTC \
-    # PlatformIO disable progress bars, default is "false"
-    PLATFORMIO_DISABLE_PROGRESSBAR=true \
-    # PlatformIO "core_dir" option, default is "~/.platformio"
-    PLATFORMIO_CORE_DIR=/cache/pio \
-    # ESPHome "build_path" option, default is "/config/.esphome/build/[project]"
-    ESPHOME_BUILD_PATH=/cache/build \
-    # ESPHome "data_dir" option, default is "/config/.esphome"
-    ESPHOME_DATA_DIR=/cache/data \
-    # Set pip cache directory, default is "~/.cache/pip"
-    PIP_CACHE_DIR=/cache/pip \
-    # Set shell home / ~ directory, default is "/home/[username]"
-    HOME=/cache/home \
-    # Set temp directory, default is "/tmp"
-    TMPDIR=/cache/tmp \
-    TEMP=/cache/tmp \
-    TMP=/cache/tmp
+    TZ=Etc/UTC
 
 # Install
 RUN \
@@ -145,6 +128,26 @@ RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     && rm -rf /root \
     && rm -rf /tmp \
     && rm -rf /wheels
+
+# TODO: Keep in sync with cache.sh
+# Environment
+ENV \
+    # PlatformIO disable progress bars, default is "false"
+    PLATFORMIO_DISABLE_PROGRESSBAR=true \
+    # PlatformIO "core_dir" option, default is "~/.platformio"
+    PLATFORMIO_CORE_DIR=/cache/pio \
+    # ESPHome "build_path" option, default is "/config/.esphome/build/[project]"
+    ESPHOME_BUILD_PATH=/cache/build \
+    # ESPHome "data_dir" option, default is "/config/.esphome"
+    ESPHOME_DATA_DIR=/cache/data \
+    # Set pip cache directory, default is "~/.cache/pip"
+    PIP_CACHE_DIR=/cache/pip \
+    # Set shell home / ~ directory, default is "/home/[username]"
+    HOME=/cache/home \
+    # Set temp directory, default is "/tmp"
+    TMPDIR=/cache/tmp \
+    TEMP=/cache/tmp \
+    TMP=/cache/tmp
 
 # Dashboard runs on TCP port 6052
 EXPOSE 6052
