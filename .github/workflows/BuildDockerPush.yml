@@ -41,7 +41,7 @@ jobs:
       # Checkout code
       # https://github.com/marketplace/actions/checkout
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # Get all history for version calculation
           fetch-depth: 0
@@ -85,7 +85,7 @@ jobs:
       # Checkout code
       # https://github.com/marketplace/actions/checkout
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Setup QEMU for multi architecture builds
       # https://github.com/marketplace/actions/docker-setup-qemu
@@ -177,11 +177,11 @@ jobs:
 
     # https://github.com/marketplace/actions/checkout
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # https://github.com/marketplace/actions/download-a-build-artifact
     - name: Download version artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: versions
         path: ${{ runner.temp }}/versions
@@ -213,7 +213,7 @@ jobs:
 
     # https://github.com/marketplace/actions/checkout
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # Create GitHub release
     # https://github.com/marketplace/actions/gh-release
