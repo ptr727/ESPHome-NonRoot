@@ -1,5 +1,5 @@
 # Description: ESPHome docker container that supports non-root operation.
-# Based on: python:3.12-alpine
+# Based on: python:3.13-alpine
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
@@ -33,7 +33,7 @@
 # docker network prune --force
 
 # Builder
-FROM python:alpine AS builder
+FROM python:3.13-alpine AS builder
 
 # Environment
 ENV \
@@ -59,7 +59,7 @@ WORKDIR /builder
 RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:alpine
+FROM python:3.13-alpine
 
 # Label
 ARG \
