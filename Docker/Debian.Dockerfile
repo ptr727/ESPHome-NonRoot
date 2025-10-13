@@ -1,5 +1,5 @@
 # Description: ESPHome docker container that supports non-root operation.
-# Based on: python:3.12-slim
+# Based on: python:3.13-slim
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
@@ -36,8 +36,10 @@
 # docker volume prune --all --force
 # docker network prune --force
 
+# TODO: Pillow needs to be updated to 11.3+ support Python 3.14 https://github.com/python-pillow/Pillow/issues/9237
+
 # Builder
-FROM python:slim AS builder
+FROM python:3.13-slim AS builder
 
 # Environment
 ENV \
@@ -68,7 +70,7 @@ WORKDIR /builder
 RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
 
 # Final
-FROM python:slim
+FROM python:3.13-slim
 
 # Label
 ARG \
