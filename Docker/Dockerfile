@@ -41,14 +41,15 @@
 # Builder
 FROM python:3.13-slim AS builder
 
+# Prevent EULA and confirmation prompts in installers
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Environment
 ENV \
     # No python bytecode generation
     PYTHONDONTWRITEBYTECODE=1 \
     # Don't buffer python stream output
-    PYTHONUNBUFFERED=1 \
-    # Prevent EULA and confirmation prompts in installers
-    DEBIAN_FRONTEND=noninteractive
+    PYTHONUNBUFFERED=1
 
 # Install
 RUN \
@@ -82,14 +83,15 @@ LABEL name="ESPHome" \
     description="ESPHome docker container that supports non-root operation" \
     maintainer="Pieter Viljoen <ptr727@users.noreply.github.com>"
 
+# Prevent EULA and confirmation prompts in installers
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Environment
 ENV \
     # No python bytecode generation
     PYTHONDONTWRITEBYTECODE=1 \
     # Don't buffer python stream output
     PYTHONUNBUFFERED=1 \
-    # Prevent EULA and confirmation prompts in installers
-    DEBIAN_FRONTEND=noninteractive \
     # Set default timezone to UTC
     TZ=Etc/UTC
 
@@ -102,7 +104,6 @@ RUN \
         curl \
         git \
         locales \
-        locales-all \
         tzdata \
     # Generate locale
     && locale-gen --no-purge en_US en_US.UTF-8 \
@@ -167,7 +168,6 @@ HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || ex
 
 # Default entrypoint command will run dashboard
 WORKDIR /config
-COPY ./entrypoint /entrypoint
-RUN chmod +x /entrypoint/*.sh
+COPY --chmod=755 ./entrypoint /entrypoint
 ENTRYPOINT ["/entrypoint/entrypoint.sh"]
 CMD ["entrypoint"]
