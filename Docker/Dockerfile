@@ -1,3 +1,5 @@
+# check=skip=CopyIgnoredFile
+
 # Description: ESPHome docker container that supports non-root operation.
 # Based on: python:3.13-slim
 # Platforms: linux/amd64, linux/arm64
@@ -125,6 +127,8 @@ ENV \
 # Copy wheels from builder
 COPY --from=builder /builder/wheels /wheels
 
+# TODO: Keep in sync with cache.sh
+
 # Install all packages from wheels archives
 RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
@@ -135,7 +139,6 @@ RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     && mkdir -p /tmp /cache \
     && chmod 0777 /tmp /cache
 
-# TODO: Keep in sync with cache.sh
 # Environment
 ENV \
     # PlatformIO disable progress bars, default is "false"
