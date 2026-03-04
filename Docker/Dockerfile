@@ -128,8 +128,10 @@ RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
     && rm -rf /home \
     && rm -rf /root \
-    && rm -rf /tmp \
-    && rm -rf /wheels
+    && rm -rf /wheels \
+    # Make sure there is a /tmp directory with sticky bit
+    && mkdir -p /tmp \
+    && chmod 1777 /tmp
 
 # TODO: Keep in sync with cache.sh
 # Environment
