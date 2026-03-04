@@ -117,7 +117,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./Docker
-          file: ./Docker/Debian.Dockerfile
+          file: ./Docker/Dockerfile
           push: ${{ needs.version.outputs.PushAction == 'true' }}
           tags: ${{ needs.version.outputs.TagList }}
           platforms: linux/amd64,linux/arm64
@@ -161,7 +161,7 @@ jobs:
 
     # https://github.com/marketplace/actions/upload-a-build-artifact
     - name: Upload version artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v4
       with:
         name: versions
         path: ${{ runner.temp }}/version.info
@@ -181,7 +181,7 @@ jobs:
 
     # https://github.com/marketplace/actions/download-a-build-artifact
     - name: Download version artifacts
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v5
       with:
         name: versions
         path: ${{ runner.temp }}/versions

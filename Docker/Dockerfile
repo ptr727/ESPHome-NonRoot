@@ -1,3 +1,5 @@
+# check=skip=CopyIgnoredFile
+
 # Description: ESPHome docker container that supports non-root operation.
 # Based on: python:3.13-slim
 # Platforms: linux/amd64, linux/arm64
@@ -23,12 +25,12 @@
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Debian.Dockerfile ./Docker
+# docker buildx build --platform linux/amd64,linux/arm64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Debian.Dockerfile ./Docker
-# docker run -it --rm --name Testing testing:latest /bin/bash
-# docker run -it --rm --name Testing --publish 6052:6052 testing:latest
+# docker buildx build --load --platform linux/amd64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
+# docker run -it --rm --name Testing esphome:testing /bin/bash
+# docker run -it --rm --name Testing --publish 6052:6052 esphome:testing
 # docker exec -it Testing /bin/bash
 
 # Cleanup unused Docker resources:
@@ -41,14 +43,15 @@
 # Builder
 FROM python:3.13-slim AS builder
 
+# Prevent EULA and confirmation prompts in installers
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Environment
 ENV \
     # No python bytecode generation
     PYTHONDONTWRITEBYTECODE=1 \
     # Don't buffer python stream output
-    PYTHONUNBUFFERED=1 \
-    # Prevent EULA and confirmation prompts in installers
-    DEBIAN_FRONTEND=noninteractive
+    PYTHONUNBUFFERED=1
 
 # Install
 RUN \
@@ -82,14 +85,15 @@ LABEL name="ESPHome" \
     description="ESPHome docker container that supports non-root operation" \
     maintainer="Pieter Viljoen <ptr727@users.noreply.github.com>"
 
+# Prevent EULA and confirmation prompts in installers
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Environment
 ENV \
     # No python bytecode generation
     PYTHONDONTWRITEBYTECODE=1 \
     # Don't buffer python stream output
     PYTHONUNBUFFERED=1 \
-    # Prevent EULA and confirmation prompts in installers
-    DEBIAN_FRONTEND=noninteractive \
     # Set default timezone to UTC
     TZ=Etc/UTC
 
@@ -102,10 +106,10 @@ RUN \
         curl \
         git \
         locales \
-        locales-all \
         tzdata \
     # Generate locale
-    && locale-gen --no-purge en_US en_US.UTF-8 \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen \
     # Avoid git error when directory owners don't match
     && git config --system --add safe.directory '*' \
     # Cleanup
@@ -123,15 +127,18 @@ ENV \
 # Copy wheels from builder
 COPY --from=builder /builder/wheels /wheels
 
+# TODO: Keep in sync with cache.sh
+
 # Install all packages from wheels archives
 RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     # Cleanup
     && rm -rf /home \
     && rm -rf /root \
-    && rm -rf /tmp \
-    && rm -rf /wheels
+    && rm -rf /wheels \
+    # Make sure there is a /tmp and /cache directory with full access for any user
+    && mkdir -p /tmp /cache \
+    && chmod 0777 /tmp /cache
 
-# TODO: Keep in sync with cache.sh
 # Environment
 ENV \
     # PlatformIO disable progress bars, default is "false"
@@ -147,9 +154,9 @@ ENV \
     # Set shell home / ~ directory, default is "/home/[username]"
     HOME=/cache/home \
     # Set temp directory, default is "/tmp"
-    TMPDIR=/cache/tmp \
-    TEMP=/cache/tmp \
-    TMP=/cache/tmp
+    TMPDIR=/tmp \
+    TEMP=/tmp \
+    TMP=/tmp
 
 # Dashboard runs on TCP port 6052
 EXPOSE 6052
@@ -165,7 +172,6 @@ HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || ex
 
 # Default entrypoint command will run dashboard
 WORKDIR /config
-COPY ./entrypoint /entrypoint
-RUN chmod +x /entrypoint/*.sh
+COPY --chmod=755 ./entrypoint /entrypoint
 ENTRYPOINT ["/entrypoint/entrypoint.sh"]
 CMD ["entrypoint"]
