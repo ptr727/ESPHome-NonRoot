@@ -23,7 +23,8 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 ## Release Notes
 
 - Version 1.6:
-  - Support `tmpfs` for `/tmp` volume and use `/tmp` instead of `/cache/tmp` for temp files.
+  - Support `tmpfs` for optinal `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
+  - Make `/cache` volume mount optional.
 - Version 1.5:
   - Using Python 3.13 base image.
 - Version 1.4:
@@ -46,7 +47,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 - `volumes` :
   - `/config` : Volume mapping to project files.
-  - `/cache` : Volume mapping to runtime generated content.
+  - `/cache` (Optional) : Volume mapping to runtime generated content.
   - `/tmp` (Optional) : Volume mapping for temp files.
 - `user` (Optional) : Run the container under the specified user account.
   - Use the `uid:gid` notation, e.g. `user: 1001:100`.
