@@ -22,6 +22,10 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
+- Version 1.6:
+  - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
+  - Make `/cache` volume mount optional.
+  - Replace `locales-all` package with `locales` to reduce image size.
 - Version 1.5:
   - Using Python 3.13 base image.
 - Version 1.4:
@@ -43,8 +47,9 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 ### Configuration
 
 - `volumes` :
-  - `/config` : Volume mapping to project files, e.g. `/data/esphome/config:/config`.
-  - `/cache` : Volume mapping to runtime generated content, e.g. `/data/esphome/cache:/cache`.
+  - `/config` : Volume mapping to project files.
+  - `/cache` (Optional) : Volume mapping to runtime generated content.
+  - `/tmp` (Optional) : Volume mapping for temp files.
 - `user` (Optional) : Run the container under the specified user account.
   - Use the `uid:gid` notation, e.g. `user: 1001:100`.
     - Get the `uid` : `sudo id -u nonroot`.
@@ -60,9 +65,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
   - `ESPHOME_DASHBOARD_USE_PING` (Optional) : Use [`ping` instead of `mDNS`](https://github.com/esphome/issues/issues/641#issuecomment-534156628) to test if nodes are up, e.g. `ESPHOME_DASHBOARD_USE_PING=true`.
   - `TZ` (Optional) : Sets the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
 
-### Examples
-
-#### Docker Compose Dashboard
+### Docker Compose Dashboard
 
 ```yaml
 services:
@@ -81,6 +84,8 @@ services:
     volumes:
       - /data/esphome/config:/config
       - /data/esphome/cache:/cache
+    tmpfs:
+      - /tmp:size=1g,mode=1777
 ```
 
 ```shell
@@ -132,6 +137,42 @@ Status: Image is up to date for ptr727/esphome-nonroot:latest
 I have no name!@012d4b62d376:/config$ id
 uid=1001 gid=100(users) groups=100(users)
 I have no name!@012d4b62d376:/config$
+```
+
+### Docker Compose with Static IP and Traefik
+
+```yaml
+  esphome:
+    image: docker.io/ptr727/esphome-nonroot:latest
+    container_name: esphome
+    hostname: esphome
+    domainname: ${DOMAIN_NAME}
+    restart: unless-stopped
+    user: ${USER_NONROOT_ID}:${USERS_GROUP_ID}
+    group_add:
+      - ${DOCKER_GROUP_ID}
+    security_opt: # Use with care
+      - seccomp=unconfined
+      - apparmor=unconfined
+    environment:
+      - TZ=${TZ}
+      # - ESPHOME_VERBOSE=true
+    volumes:
+      - ${APPDATA_DIR}/esphome/config:/config
+      - ${APPDATA_DIR}/esphome/cache:/cache
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+    networks:
+      public_network:
+        ipv4_address: ${ESPHOME_IP}
+        mac_address: ${ESPHOME_MAC}
+      local_network:
+      stack_network:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.esphome.rule=HostRegexp(`^esphome${DOMAIN_REGEX}$$`)
+      - traefik.http.services.esphome.loadbalancer.server.scheme=http
+      - traefik.http.services.esphome.loadbalancer.server.port=6052
 ```
 
 ## Use Case
