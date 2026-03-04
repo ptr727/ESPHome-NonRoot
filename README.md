@@ -23,9 +23,9 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 ## Release Notes
 
 - Version 1.6:
-  - Support `tmpfs` for optinal `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
+  - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
   - Make `/cache` volume mount optional.
-  - Replace `locale-all` package with `locale` to reduce image size.
+  - Replace `locales-all` package with `locales` to reduce image size.
 - Version 1.5:
   - Using Python 3.13 base image.
 - Version 1.4:
@@ -151,7 +151,7 @@ I have no name!@012d4b62d376:/config$
     user: ${USER_NONROOT_ID}:${USERS_GROUP_ID}
     group_add:
       - ${DOCKER_GROUP_ID}
-    security_opt:
+    security_opt: # Use with care
       - seccomp=unconfined
       - apparmor=unconfined
     environment:
