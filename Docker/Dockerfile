@@ -130,9 +130,9 @@ RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
     && rm -rf /home \
     && rm -rf /root \
     && rm -rf /wheels \
-    # Make sure there is a /tmp directory with sticky bit
-    && mkdir -p /tmp \
-    && chmod 1777 /tmp
+    # Make sure there is a /tmp and /cache directory with full access for any user
+    && mkdir -p /tmp /cache \
+    && chmod 0777 /tmp /cache
 
 # TODO: Keep in sync with cache.sh
 # Environment
