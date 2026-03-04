@@ -23,12 +23,12 @@
 
 # Build Dockerfile
 # docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag testing:latest --file ./Docker/Dockerfile ./Docker
+# docker buildx build --platform linux/amd64,linux/arm64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
 
 # Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag testing:latest --file ./Docker/Dockerfile ./Docker
-# docker run -it --rm --name Testing testing:latest /bin/bash
-# docker run -it --rm --name Testing --publish 6052:6052 testing:latest
+# docker buildx build --load --platform linux/amd64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
+# docker run -it --rm --name Testing esphome:testing /bin/bash
+# docker run -it --rm --name Testing --publish 6052:6052 esphome:testing
 # docker exec -it Testing /bin/bash
 
 # Cleanup unused Docker resources:
