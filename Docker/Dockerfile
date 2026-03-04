@@ -106,7 +106,8 @@ RUN \
         locales \
         tzdata \
     # Generate locale
-    && locale-gen --no-purge en_US en_US.UTF-8 \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen \
     # Avoid git error when directory owners don't match
     && git config --system --add safe.directory '*' \
     # Cleanup

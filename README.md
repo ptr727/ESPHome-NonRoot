@@ -25,6 +25,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 - Version 1.6:
   - Support `tmpfs` for optinal `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
   - Make `/cache` volume mount optional.
+  - Replace `locale-all` package with `locale` to reduce image size.
 - Version 1.5:
   - Using Python 3.13 base image.
 - Version 1.4:
