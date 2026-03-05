@@ -121,7 +121,7 @@ jobs:
             LABEL_VERSION=${{ needs.version.outputs.SemVer2 }}
             ESPHOME_VERSION=${{ needs.version.outputs.ESPHomeVersion }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
 
   # Get tool versions from image
   toolversions:
