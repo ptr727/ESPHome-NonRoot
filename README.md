@@ -32,8 +32,6 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
   - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
 - Version 1.3:
   - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
-  - ~~Converted Docker base image from `python:slim` based on Debian to `python:alpine` based on Alpine, uncompressed image size reduced from \~650MB to \~280MB.~~
-    - Reverted, see [Issue #29](https://github.com/ptr727/ESPHome-NonRoot/issues/29).
 - Version 1.2:
   - Delete temp directory contents and prune PIO cached content on startup.
   - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
@@ -217,14 +215,6 @@ The [included](./.devcontainer/devcontainer.json) [Dev Container](https://code.v
 
 Detailed debug setup details are beyond the scope of this project, refer to my [ESPHome-Config](https://github.com/ptr727/ESPHome-Config) project for slightly more complete debugging setup instructions.
 
-## Notes
-
-- ESPHome's [`Dockerfile`][esphome-dockerfile-link] installs `LIB_DEPS` and `BUILD_DEPS`, that should not be required when installing using `wheel`, right?
-- Using unversioned base Python docker images will use the current released version of Python, and may [not](https://github.com/esphome/issues/issues/6321) always be compatible with ESPHome.
-- Alpine uses `musl` not `glibc`, `gcompat` is [required](https://github.com/platformio/platformio-core/issues/4996) for PIO and tools that do not have native `musl` support.
-- Track open [PR](https://github.com/esphome/esphome/pull/7604) for a general `LOG_LEVEL` configuration vs. using `ESPHOME_VERBOSE`.
-- Chance of a version mismatch when tagging the docker image with the current ESPHome version vs. the version actually installed when building the image.
-
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
@@ -237,4 +227,3 @@ Detailed debug setup details are beyond the scope of this project, refer to my [
 [license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
 [esphome-link]: https://esphome.io
 [esphome-docker-link]: https://hub.docker.com/r/esphome/esphome
-[esphome-dockerfile-link]: https://github.com/esphome/esphome/blob/dev/docker/Dockerfile
