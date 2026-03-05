@@ -16,8 +16,9 @@ mkdir -p /cache/pio /cache/build /cache/data /cache/pip /cache/home
 # Clear temporary files
 echo "Clearing temporary files..."
 mkdir -p /tmp
-rm -rf /tmp/{*,.*}
+find /tmp -mindepth 1 -delete
 
-# Prune PIO files
-echo "Pruning PIO files..."
-pio system prune --force
+# Prune PIO cache files only, preserve downloaded packages
+echo "Pruning PIO cache..."
+pio system prune --cache --force
+

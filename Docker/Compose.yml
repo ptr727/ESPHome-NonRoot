@@ -14,10 +14,11 @@ volumes:
 services:
   # Set non-root permissions on created volumes
   # For testing only, not required if external volumes are used
-  fix-volume-permissions:
-    image: python:slim
+  fix-permissions:
+    image: busybox
+    container_name: esphome-fixpermissions
     user: root
-    command: bash -c "
+    command: sh -c "
       chown -R 1001:100 /config
       && chmod -R ugo=rwx /config
       && chown -R 1001:100 /cache
@@ -33,12 +34,13 @@ services:
     restart: unless-stopped
     depends_on:
       # Fix volume permissions before starting
-      - fix-volume-permissions
+      fix-permissions:
+        condition: service_completed_successfully
     # Change the user to match the host configuration
     user: 1001:100
     environment:
       - ESPHOME_VERBOSE=true
-      - TZ=Americas/Los_Angeles
+      - TZ=America/Los_Angeles
     network_mode: bridge
     ports:
       - 6052:6052
