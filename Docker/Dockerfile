@@ -59,7 +59,7 @@ RUN if [ -n "$ESPHOME_VERSION" ]; then \
         pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools "esphome[displays]==$ESPHOME_VERSION"; \
     else \
         echo "Building wheel archives for setuptools and latest esphome[displays]..."; \
-        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]; \
+        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools "esphome[displays]"; \
     fi
 
 # Final
