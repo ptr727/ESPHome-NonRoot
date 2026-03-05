@@ -5,19 +5,7 @@
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
-# ESPHome's Dockerfile installs LIB_DEPS and BUILD_DEPS, is that really required, especially when installing using wheel?
-
-# Using untagged base Python docker images will use the current released version of Python, and may not always be compatible with ESPHome, tag base images as required e.g. python:3.12-slim.
-
-# Get compressed image size from manifest:
-# docker manifest inspect -v ptr727/esphome-nonroot:latest | jq '.[] | select(.Descriptor.platform.architecture=="amd64") | [.OCIManifest.layers[].size] | add' | numfmt --to=iec
-# Get uncompressed size, requires downloading:
-# docker pull ptr727/esphome-nonroot:latest
-# docker image inspect --format json ptr727/esphome-nonroot:latest | jq '.[] | select(.Architecture=="amd64") | [.Size] | add' | numfmt --to=iec
-
-# Docker build debugging:
-# --progress=plain
-# --no-cache
+# ESPHome Dockerfile: https://github.com/esphome/esphome/blob/dev/docker/Dockerfile
 
 # Test image in shell:
 # docker run -it --rm --pull always --name Testing python:slim /bin/bash
@@ -32,13 +20,6 @@
 # docker run -it --rm --name Testing esphome:testing /bin/bash
 # docker run -it --rm --name Testing --publish 6052:6052 esphome:testing
 # docker exec -it Testing /bin/bash
-
-# Cleanup unused Docker resources:
-# docker image prune --all --force
-# docker volume prune --all --force
-# docker network prune --force
-
-# TODO: Pillow needs to be updated to 11.3+ support Python 3.14 https://github.com/python-pillow/Pillow/issues/9237
 
 # Builder
 FROM python:3.13-slim AS builder
@@ -69,8 +50,17 @@ RUN \
 # Builder
 WORKDIR /builder
 
+# Pin ESPHome version if provided via build-arg to ensure tag matches installed version
+ARG ESPHOME_VERSION=""
+
 # Build wheel archives for setuptools and esphome with optional display components
-RUN pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]
+RUN if [ -n "$ESPHOME_VERSION" ]; then \
+        echo "Building wheel archives for setuptools and esphome[displays] version $ESPHOME_VERSION..."; \
+        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools "esphome[displays]==$ESPHOME_VERSION"; \
+    else \
+        echo "Building wheel archives for setuptools and latest esphome[displays]..."; \
+        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools esphome[displays]; \
+    fi
 
 # Final
 FROM python:3.13-slim
@@ -168,7 +158,7 @@ VOLUME /config
 VOLUME /cache
 
 # Healthcheck ping the dashboard
-HEALTHCHECK CMD curl --fail http://localhost:6052/version -A "HealthCheck" || exit 1
+HEALTHCHECK --start-period=30s CMD curl --fail http://localhost:6052/version -A "HealthCheck" || exit 1
 
 # Default entrypoint command will run dashboard
 WORKDIR /config
