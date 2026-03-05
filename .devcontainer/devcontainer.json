@@ -11,7 +11,7 @@
 	"containerEnv": {
 		"ESPHOME_VERBOSE": "true",
 		"ESPHOME_DASHBOARD_USE_PING": "1",
-		"TZ": "Americas/Los_Angeles"
+		"TZ": "America/Los_Angeles"
 	},
 	// Do not run default entrypoint
 	"overrideCommand": true,

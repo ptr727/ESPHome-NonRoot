@@ -55,7 +55,8 @@ jobs:
     if: ${{ needs.version.outputs.DockerVersion != needs.version.outputs.PyPiVersion }}
 
     # Permissions to launch workflow
-    permissions: write-all
+    permissions:
+      actions: write
 
     steps:
 
