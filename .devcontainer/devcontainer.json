@@ -8,14 +8,14 @@
 		"dockerfile": "../Docker/Dockerfile",
 		"context": "../Docker"
 	},
+	"workspaceMount": "source=${localWorkspaceFolder},target=/config,type=bind",
+	"workspaceFolder": "/config",
 	"containerEnv": {
 		"ESPHOME_VERBOSE": "true",
 		"ESPHOME_DASHBOARD_USE_PING": "1",
 		"TZ": "America/Los_Angeles"
 	},
-	// Do not run default entrypoint
 	"overrideCommand": true,
-	// Create cache sub-directories
 	"postStartCommand": [
 		"/entrypoint/cache.sh"
 	],

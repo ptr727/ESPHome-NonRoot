@@ -4,7 +4,7 @@
 			"path": "../."
 		},
 		{
-			"path": "../../../usr/local/lib/python3.12/site-packages"
+			"path": "../../../usr/local/lib/python3.13/site-packages"
 		},
 		{
 			"path": "../../../config"
