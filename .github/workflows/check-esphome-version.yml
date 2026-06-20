@@ -82,6 +82,10 @@ jobs:
           # Rewrite only the version field, preserving the $comment field.
           tmp="$(mktemp)"
           jq --arg v "$latest" '.version = $v' esphome-version.json > "$tmp"
+          # jq emits LF, but .editorconfig requires CRLF for *.json and
+          # .gitattributes (* -text) disables git EOL normalization - so convert
+          # to CRLF before committing or every bump PR would flip the file to LF.
+          sed -i 's/$/\r/' "$tmp"
           mv "$tmp" esphome-version.json
           {
             echo "changed=true"
