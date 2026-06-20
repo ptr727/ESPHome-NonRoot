@@ -43,7 +43,7 @@ jobs:
               # The pinned ESPHome version (build-arg + tag) lives here, and the
               # NBGV release version comes from version.json - a change to either
               # should rebuild the image.
-              - '.github/esphome-version.json'
+              - 'esphome-version.json'
               - 'version.json'
 
   # Fast PR feedback: build the Docker image in smoke mode (amd64-only, no

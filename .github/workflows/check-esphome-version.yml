@@ -3,7 +3,7 @@ name: Check ESPHome version action
 # Upstream-release tracker. Mirrors ptr727/homeassistant-purpleair's
 # check-ha-version.yml: it does NOT dispatch a build. It resolves the latest
 # upstream ESPHome version from PyPI, writes it into the committed state file
-# .github/esphome-version.json, and opens a rolling, App-authored, signed PR
+# esphome-version.json, and opens a rolling, App-authored, signed PR
 # that merge-bot auto-merges. The pinned version then ships on the next publish
 # (weekly schedule / manual dispatch / PUBLISH_ON_MERGE). build-docker-task.yml
 # reads the same state file for the image tag and the ESPHOME_VERSION build-arg.
@@ -68,7 +68,7 @@ jobs:
             echo "::error::Could not resolve the latest esphome version from PyPI"
             exit 1
           fi
-          current="$(jq -r .version .github/esphome-version.json)"
+          current="$(jq -r .version esphome-version.json)"
           echo "Branch=${{ matrix.branch }} Current=$current Latest=$latest"
           if [[ "$latest" == "$current" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -76,8 +76,8 @@ jobs:
           fi
           # Rewrite only the version field, preserving the $comment field.
           tmp="$(mktemp)"
-          jq --arg v "$latest" '.version = $v' .github/esphome-version.json > "$tmp"
-          mv "$tmp" .github/esphome-version.json
+          jq --arg v "$latest" '.version = $v' esphome-version.json > "$tmp"
+          mv "$tmp" esphome-version.json
           {
             echo "changed=true"
             echo "latest=$latest"
@@ -101,7 +101,7 @@ jobs:
           title: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
           commit-message: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
           body: |
-            Bumps the pinned upstream ESPHome version in `.github/esphome-version.json`.
+            Bumps the pinned upstream ESPHome version in `esphome-version.json`.
 
             - ESPHome: `${{ steps.resolve.outputs.current }}` -> `${{ steps.resolve.outputs.latest }}`
             - Release notes: https://github.com/esphome/esphome/releases/tag/${{ steps.resolve.outputs.latest }}
