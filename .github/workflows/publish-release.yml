@@ -8,7 +8,7 @@ on:
     # Weekly full build/publish of both branches on Mondays at 02:00 UTC.
     # This is the guaranteed publisher in the default two-phase model: routine
     # merges only smoke-test, and this scheduled run republishes everything
-    # (also refreshing the Docker base image, e.g. `ubuntu:rolling`).
+    # (also refreshing the Docker base image, e.g. `python:3.13-slim`).
     - cron: '0 2 * * MON'
 
 # Real publishes (schedule, dispatch, or push when PUBLISH_ON_MERGE is set)

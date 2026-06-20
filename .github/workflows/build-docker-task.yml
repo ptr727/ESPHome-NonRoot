@@ -100,7 +100,10 @@ jobs:
           # copies only `entrypoint/`); the ESPHome version is supplied as a
           # build-arg, so the state file does not need to be in the context.
           context: ./Docker
-          push: ${{ inputs.push }}
+          # Self-enforce "smoke never publishes" at the task level too (the
+          # caller also gates on !smoke), so a future miswired caller cannot
+          # publish from a smoke run.
+          push: ${{ inputs.push && !inputs.smoke }}
           file: ./Docker/Dockerfile
           # `main` publishes the moving `:latest` tag plus the immutable pinned
           # ESPHome version tag (e.g. `:2025.5.0`) so consumers can pin an exact
@@ -114,17 +117,17 @@ jobs:
           # Branch-scoped registry cache. READ both branches' caches - the
           # layers are nearly identical - so a main build can seed from
           # develop's cache and vice versa - but WRITE only this branch's own
-          # tag, and only when actually pushing. Gating the export on
-          # `inputs.push` (not just `!smoke`) means a non-publishing build never
-          # writes the shared registry cache or needs Docker Hub write creds -
-          # smoke builds (always push=false) are covered too. Branch-scoping is
-          # what lets the publisher's weekly matrix build main and develop
-          # concurrently in one run without the two legs overwriting a single
-          # shared cache (destroying hit rates).
+          # tag, and only when actually publishing (push and not smoke). Gating
+          # the export on `inputs.push && !inputs.smoke` means a non-publishing
+          # or smoke build never writes the shared registry cache or needs
+          # Docker Hub write creds. Branch-scoping is what lets the publisher's
+          # weekly matrix build main and develop concurrently in one run without
+          # the two legs overwriting a single shared cache (destroying hit
+          # rates).
           cache-from: |
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop
-          cache-to: ${{ inputs.push && format('type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-{0},mode=max,ignore-error=true', inputs.branch) || '' }}
+          cache-to: ${{ inputs.push && !inputs.smoke && format('type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-{0},mode=max,ignore-error=true', inputs.branch) || '' }}
           build-args: |
             LABEL_VERSION=${{ needs.get-version.outputs.SemVer2 }}
             ESPHOME_VERSION=${{ steps.esphome.outputs.version }}

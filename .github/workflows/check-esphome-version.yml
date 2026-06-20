@@ -17,7 +17,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Ref-independent group: the scheduled run (github.ref = default branch) and a
+  # manual dispatch (any ref) both matrix over main + develop and write the same
+  # `esphome-version-bump/*` branches, so a ref-scoped group would let them run
+  # concurrently and race on those branches. Mirrors homeassistant-purpleair's
+  # check-ha-version.yml.
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 permissions:

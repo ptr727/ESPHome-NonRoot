@@ -10,7 +10,7 @@ Licensed under the [MIT License](https://github.com/ptr727/ESPHome-NonRoot/blob/
 
 ## Project
 
-Code and pipeline are on [GitHub](https://github.com/ptr727/ESPHome-NonRoot). Docker images are published on [Docker Hub](https://hub.docker.com/r/ptr727/esphome-nonroot) and rebuilt on each upstream ESPHome release and weekly.
+Code and pipeline are on [GitHub](https://github.com/ptr727/ESPHome-NonRoot). Docker images are published on [Docker Hub](https://hub.docker.com/r/ptr727/esphome-nonroot). A new upstream ESPHome release is picked up by an automated version-bump pull request and published on the next scheduled (weekly) or manually triggered release run.
 
 ## Docker Tags
 
