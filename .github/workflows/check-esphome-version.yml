@@ -1,0 +1,110 @@
+name: Check ESPHome version action
+
+# Upstream-release tracker. Mirrors ptr727/homeassistant-purpleair's
+# check-ha-version.yml: it does NOT dispatch a build. It resolves the latest
+# upstream ESPHome version from PyPI, writes it into the committed state file
+# .github/esphome-version.json, and opens a rolling, App-authored, signed PR
+# that merge-bot auto-merges. The pinned version then ships on the next publish
+# (weekly schedule / manual dispatch / PUBLISH_ON_MERGE). build-docker-task.yml
+# reads the same state file for the image tag and the ESPHOME_VERSION build-arg.
+
+on:
+  schedule:
+    # Daily at 05:00 UTC. ESPHome publishes to PyPI on its own cadence; a daily
+    # check keeps the pinned version within ~24h. workflow_dispatch is available
+    # for urgent bumps.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  check:
+    name: Check ESPHome PyPI version job
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Dual-target: the pinned ESPHome version is shipped image content (main
+        # builds the :latest and :<version> tags), so main and develop are
+        # tracked independently - like Dependabot - rather than develop-only.
+        # See AGENTS.md "Branching Model". The head/base pairing is enforced by
+        # merge-bot's merge-esphome-version-bump job.
+        branch: [main, develop]
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+
+      - name: Generate GitHub App token step
+        # App-authored PR so it triggers PR workflows (PRs authored by the
+        # default GITHUB_TOKEN do not) and merge-bot's actor guard picks it up.
+        # client-id per actions/create-github-app-token v3+.
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Checkout the repository step
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ matrix.branch }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve latest ESPHome version and apply step
+        id: resolve
+        run: |
+          set -euo pipefail
+          latest="$(curl --silent --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
+          if [[ -z "$latest" || "$latest" == "null" ]]; then
+            echo "::error::Could not resolve the latest esphome version from PyPI"
+            exit 1
+          fi
+          current="$(jq -r .version .github/esphome-version.json)"
+          echo "Branch=${{ matrix.branch }} Current=$current Latest=$latest"
+          if [[ "$latest" == "$current" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Rewrite only the version field, preserving the $comment field.
+          tmp="$(mktemp)"
+          jq --arg v "$latest" '.version = $v' .github/esphome-version.json > "$tmp"
+          mv "$tmp" .github/esphome-version.json
+          {
+            echo "changed=true"
+            echo "latest=$latest"
+            echo "current=$current"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create version bump pull request step
+        if: ${{ steps.resolve.outputs.changed == 'true' }}
+        # Single rolling branch per base - at most one bump PR open per branch.
+        # peter-evans force-pushes the latest pending version to the branch on
+        # every tick, so the PR refreshes in place. sign-commits creates the
+        # commit via the API so it is signed (the signed-commits ruleset
+        # requires it). The App token makes the PR App-authored.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          base: ${{ matrix.branch }}
+          branch: esphome-version-bump/${{ matrix.branch }}
+          delete-branch: true
+          sign-commits: true
+          title: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
+          commit-message: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
+          body: |
+            Bumps the pinned upstream ESPHome version in `.github/esphome-version.json`.
+
+            - ESPHome: `${{ steps.resolve.outputs.current }}` -> `${{ steps.resolve.outputs.latest }}`
+            - Release notes: https://github.com/esphome/esphome/releases/tag/${{ steps.resolve.outputs.latest }}
+            - PyPI: https://pypi.org/project/esphome/${{ steps.resolve.outputs.latest }}/
+
+            The image tag and the `ESPHOME_VERSION` build-arg derive from this file. The new version ships on the next publish (weekly schedule, manual dispatch, or `PUBLISH_ON_MERGE`).

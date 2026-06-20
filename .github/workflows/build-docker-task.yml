@@ -1,0 +1,131 @@
+name: Build Docker image task
+
+on:
+  workflow_call:
+    inputs:
+      # Input to control whether to push the Docker image to Docker Hub
+      push:
+        required: false
+        type: boolean
+        default: false
+      # Git ref to check out / version (empty = default checkout ref).
+      ref:
+        required: false
+        type: string
+        default: ''
+      # Logical branch driving the image tags (`main` => `latest` + the pinned
+      # ESPHome version, anything else => `develop`). Required (no
+      # `github.ref_name` fallback): the publisher builds develop from a run
+      # whose `github.ref_name` is `main`, so a silent fallback would mistag it.
+      # The orchestrator always passes it explicitly.
+      branch:
+        required: true
+        type: string
+      # Smoke mode: build `linux/amd64` only (no QEMU/arm64), never push, and
+      # skip the shared registry `cache-to` so PR builds don't pollute the
+      # release buildcache. Used for fast PR feedback.
+      smoke:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+
+  get-version:
+    name: Get version information job
+    uses: ./.github/workflows/get-version-task.yml
+    secrets: inherit
+    with:
+      ref: ${{ inputs.ref }}
+
+  build-docker:
+    name: Build Docker image job
+    runs-on: ubuntu-latest
+    needs: [get-version]
+
+    steps:
+
+      - name: Checkout step
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+
+      # Read the committed upstream ESPHome version from the state file the
+      # tracker (check-esphome-version.yml) maintains. This is a reviewed,
+      # version-controlled value - not a live PyPI fetch - so the build is
+      # deterministic and reproducible for a given commit. It drives both the
+      # image tag and the ESPHOME_VERSION build-arg that pins the wheel build.
+      - name: Get ESPHome version step
+        id: esphome
+        run: |
+          set -euo pipefail
+          version="$(jq -r .version .github/esphome-version.json)"
+          if [[ -z "$version" || "$version" == "null" ]]; then
+            echo "::error::Could not read .version from .github/esphome-version.json"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # QEMU only exists to emulate arm64. Smoke builds are amd64-only, so
+      # skip it entirely to save the emulation setup cost.
+      - name: Setup QEMU step
+        if: ${{ !inputs.smoke }}
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Setup Buildx step
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+
+      # Always login to Docker Hub, not just on push, to benefit from higher
+      # rate limits with a Docker subscription for pulls and cache reads on
+      # every build (including smoke). This is a CONSCIOUS choice over gating
+      # login on `inputs.push`: the trade-off is that fork PRs without access
+      # to the Docker Hub secrets cannot run the Docker smoke build.
+      # Acceptable here because the repo is private and PRs are same-repo; a
+      # public derived project that accepts fork PRs may prefer to gate this
+      # step on `inputs.push`.
+      - name: Login to Docker Hub step
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Docker build and push step
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          # The Docker build context is the `Docker/` directory (the Dockerfile
+          # copies only `entrypoint/`); the ESPHome version is supplied as a
+          # build-arg, so the state file does not need to be in the context.
+          context: ./Docker
+          push: ${{ inputs.push }}
+          file: ./Docker/Dockerfile
+          # `main` publishes the moving `:latest` tag plus the immutable pinned
+          # ESPHome version tag (e.g. `:2025.5.0`) so consumers can pin an exact
+          # upstream version. `develop` publishes only the moving `:develop`
+          # tag. On `develop` the second entry is an empty line that
+          # build-push-action ignores.
+          tags: |
+            docker.io/ptr727/esphome-nonroot:${{ inputs.branch == 'main' && 'latest' || 'develop' }}
+            ${{ inputs.branch == 'main' && format('docker.io/ptr727/esphome-nonroot:{0}', steps.esphome.outputs.version) || '' }}
+          platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # Branch-scoped registry cache. READ both branches' caches - the
+          # layers are nearly identical - so a main build can seed from
+          # develop's cache and vice versa - but WRITE only this branch's own
+          # tag, and only when actually pushing. Gating the export on
+          # `inputs.push` (not just `!smoke`) means a non-publishing build never
+          # writes the shared registry cache or needs Docker Hub write creds -
+          # smoke builds (always push=false) are covered too. Branch-scoping is
+          # what lets the publisher's weekly matrix build main and develop
+          # concurrently in one run without the two legs overwriting a single
+          # shared cache (destroying hit rates).
+          cache-from: |
+            type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
+            type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop
+          cache-to: ${{ inputs.push && format('type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-{0},mode=max,ignore-error=true', inputs.branch) || '' }}
+          build-args: |
+            LABEL_VERSION=${{ needs.get-version.outputs.SemVer2 }}
+            ESPHOME_VERSION=${{ steps.esphome.outputs.version }}
+

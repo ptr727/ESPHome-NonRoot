@@ -1,8 +1,16 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 # https://containers.dev/guide/dependabot
+#
+# Every ecosystem appears twice - once with target-branch "main" and once with
+# "develop" - so Dependabot keeps both branches current independently of the
+# develop -> main release cadence (main ships the published image directly).
+# The merge-bot dispatches the right merge method per base; security PRs always
+# open against main. See AGENTS.md "Branching Model".
 
 version: 2
 updates:
+
+# ----- github-actions -----
 
 # main
 - package-ecosystem: "github-actions"
@@ -23,5 +31,29 @@ updates:
     interval: "daily"
   groups:
     actions-deps:
+      patterns:
+        - "*"
+
+# ----- docker (base image in Docker/Dockerfile) -----
+
+# main
+- package-ecosystem: "docker"
+  target-branch: "main"
+  directory: "/Docker"
+  schedule:
+    interval: "daily"
+  groups:
+    docker-deps:
+      patterns:
+        - "*"
+
+# develop
+- package-ecosystem: "docker"
+  target-branch: "develop"
+  directory: "/Docker"
+  schedule:
+    interval: "daily"
+  groups:
+    docker-deps:
       patterns:
         - "*"

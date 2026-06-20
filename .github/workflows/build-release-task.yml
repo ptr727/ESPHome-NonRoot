@@ -1,0 +1,165 @@
+name: Build project release task
+
+on:
+  workflow_call:
+    inputs:
+      # Input to control whether to create a GitHub release
+      github:
+        required: false
+        type: boolean
+        default: false
+      # Input to control whether to push the docker image to Docker Hub
+      dockerhub:
+        required: false
+        type: boolean
+        default: false
+      # Git ref to check out / version (empty = default checkout ref).
+      ref:
+        required: false
+        type: string
+        default: ''
+      # Logical branch driving config / tags / prerelease for every target.
+      # Required (no `github.ref_name` fallback): the publisher builds both
+      # `main` and `develop` from one run whose `github.ref_name` is `main`,
+      # so a silent fallback would mislabel the develop leg. Every caller
+      # passes it explicitly; a missing value should fail loudly.
+      branch:
+        required: true
+        type: string
+      # Smoke mode: reduced, never-published build for fast PR feedback.
+      # Forwarded to every target; also hard-disables every push below so a
+      # smoke run can never publish regardless of the publish flags.
+      smoke:
+        required: false
+        type: boolean
+        default: false
+      # Per-target presence gate. Default true (build the Docker image). A PR
+      # smoke run sets this from the paths-filter so the build only runs when
+      # the Docker context changed. (This repo ships only the Docker target;
+      # the template's nuget/pypi/executable gates and jobs were removed per
+      # AGENTS.md "Release Model" per-target subsetting.)
+      enable_docker:
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+
+  get-version:
+    name: Get version information job
+    uses: ./.github/workflows/get-version-task.yml
+    secrets: inherit
+    with:
+      ref: ${{ inputs.ref }}
+
+  build-docker:
+    name: Build Docker job
+    if: ${{ inputs.enable_docker }}
+    needs: [get-version]
+    uses: ./.github/workflows/build-docker-task.yml
+    secrets: inherit
+    with:
+      # Pin to the exact commit get-version resolved (immutable), not the
+      # possibly-moving branch ref: the publisher passes a branch name, and a
+      # commit landing mid-run could otherwise build artifacts from a different
+      # commit than the one the release tag (also GitCommitId) points at.
+      ref: ${{ needs.get-version.outputs.GitCommitId }}
+      branch: ${{ inputs.branch }}
+      smoke: ${{ inputs.smoke }}
+      # Conditional push to Docker Hub - never on a smoke build.
+      push: ${{ inputs.dockerhub && !inputs.smoke }}
+
+  github-release:
+    name: Publish GitHub release job
+    # `&& !inputs.smoke` enforces the "smoke never publishes" guarantee at the
+    # job level too (matching the `&& !inputs.smoke` push gates above), so a
+    # smoke caller that also set `github: true` still can't create a release.
+    if: ${{ inputs.github && !inputs.smoke }}
+    runs-on: ubuntu-latest
+    needs: [get-version, build-docker]
+
+    steps:
+
+      # Check out the exact built commit (NBGV `GitCommitId`), not the
+      # possibly-moving `inputs.ref` branch, so the uploaded release files
+      # match the tag even if the branch advances mid-run.
+      - name: Checkout code step
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.get-version.outputs.GitCommitId }}
+
+      # Collect every release asset by the `release-asset-<branch>-*` artifact
+      # convention rather than naming individual build jobs, so this download
+      # step never changes when a derived project subsets targets: dropping a
+      # target (delete its job + this job's `needs` entry, per AGENTS.md
+      # "Per-target subsetting") just leaves one fewer `release-asset-*` to
+      # match, and a downstream ships different files by adding/replacing a
+      # leaf `build-*-task.yml` that uploads under this pattern - without
+      # editing this step. `merge-multiple` flattens the matched artifacts into
+      # one `./Publish` dir, exactly as the previous per-target downloads did;
+      # download-artifact@v7 succeeds (downloads nothing) when the pattern
+      # matches zero artifacts, so a file-less release (tag + LICENSE/README
+      # only) still works.
+      # NOTE: subset releases by *deleting* the target, not by `enable_*:
+      # false`. `enable_*` is for smoke subsetting only - it skips a build job,
+      # and because `github-release` `needs` those jobs, a skipped one would
+      # skip this release job too (GitHub Actions: a skipped `needs` job skips
+      # its dependents).
+      - name: Download release asset artifacts step
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: release-asset-${{ inputs.branch }}-*
+          merge-multiple: true
+          path: ./Publish
+
+      # The weekly publisher re-runs even when a branch has no new commits, so
+      # NBGV can produce a SemVer2 that was already released. GitHub release
+      # creation has no built-in skip-duplicate (unlike NuGet's
+      # `--skip-duplicate` and PyPI's `skip-existing`), and re-publishing an
+      # unchanged version is exactly the churn the two-phase model avoids - so
+      # skip the release step when a release for this tag already exists. The
+      # Docker mutable tags (`latest`/`develop`) and base-image refresh still
+      # happen regardless, so security-only rebuilds still ship.
+      - name: Check for existing release step
+        id: release-exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.get-version.outputs.SemVer2 }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              echo "Release $TAG already exists; workflow_dispatch will refresh it."
+            else
+              echo "Release $TAG already exists; skipping release creation (no-op republish)."
+            fi
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # `target_commitish` MUST be set explicitly: softprops doesn't pass a
+      # default through, and GitHub's REST API then defaults the new tag to
+      # the repository's default branch (main). We pin it to NBGV's
+      # `GitCommitId` - the exact commit the version was computed from. This
+      # avoids two bugs: `github.sha` would be wrong (the publisher's branch
+      # matrix builds `develop` from a run whose `github.sha` is main's tip),
+      # and `inputs.branch` would be a moving ref (a commit landing mid-run
+      # could tag the release on a newer commit than the one that was built).
+      # The exact SHA is immutable, on the right branch, and consistent with
+      # both the SemVer2 tag and the uploaded artifacts.
+      # Skip the no-op weekly republish when the tag already exists, but always
+      # allow a manual `workflow_dispatch` through so it can repair/refresh a
+      # partially-created release for the same tag.
+      - name: Create GitHub release step
+        if: ${{ steps.release-exists.outputs.exists == 'false' || github.event_name == 'workflow_dispatch' }}
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          generate_release_notes: true
+          tag_name: ${{ needs.get-version.outputs.SemVer2 }}
+          target_commitish: ${{ needs.get-version.outputs.GitCommitId }}
+          prerelease: ${{ inputs.branch != 'main' }}
+          files: |
+            LICENSE
+            README.md
+            ./Publish/*
