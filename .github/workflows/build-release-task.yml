@@ -111,13 +111,11 @@ jobs:
           path: ./Publish
 
       # The weekly publisher re-runs even when a branch has no new commits, so
-      # NBGV can produce a SemVer2 that was already released. GitHub release
-      # creation has no built-in skip-duplicate (unlike NuGet's
-      # `--skip-duplicate` and PyPI's `skip-existing`), and re-publishing an
-      # unchanged version is exactly the churn the two-phase model avoids - so
-      # skip the release step when a release for this tag already exists. The
-      # Docker mutable tags (`latest`/`develop`) and base-image refresh still
-      # happen regardless, so security-only rebuilds still ship.
+      # NBGV can produce a SemVer2 that was already released. Skip the release
+      # step when a release for this tag already exists, so a no-op republish
+      # does not recreate it. The Docker mutable tags (`latest`/`develop`) and
+      # base-image refresh still happen regardless, so rebuilds that only pick
+      # up a new base image still ship.
       - name: Check for existing release step
         id: release-exists
         env:

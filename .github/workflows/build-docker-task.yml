@@ -79,12 +79,13 @@ jobs:
         with:
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
 
-      # Log in to Docker Hub on every build, including non-pushing smoke builds,
-      # so base-image pulls and registry cache reads are authenticated and get
-      # higher rate limits. Because the login uses repository secrets, a smoke
-      # build that cannot read them - a pull request from a fork - fails at this
-      # step and so cannot run the Docker build.
+      # Log in to Docker Hub only when publishing. A non-pushing build - a PR
+      # smoke build - needs no credentials: it reads the public registry build
+      # cache anonymously and never pushes. Gating the login here is what lets a
+      # pull request from a fork, which has no access to the repository secrets,
+      # still run the Docker build.
       - name: Login to Docker Hub step
+        if: ${{ inputs.push }}
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
