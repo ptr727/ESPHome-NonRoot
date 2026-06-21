@@ -1,0 +1,55 @@
+# https://editorconfig.org
+
+# https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names
+# https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions
+# https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/overview
+
+# https://github.com/dotnet/runtime/blob/main/docs/coding-guidelines/coding-style.md
+# https://github.com/dotnet/runtime/blob/main/.editorconfig
+
+# https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-format
+# dotnet format style --verify-no-changes --severity=info --verbosity=detailed
+
+# Root config
+root = true
+
+# Defaults
+[*]
+charset = utf-8
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown files
+[*.md]
+end_of_line = crlf
+trim_trailing_whitespace = false
+
+# Xml files
+[*.{xml,csproj,props,targets}]
+end_of_line = crlf
+indent_size = 2
+
+# Yaml files
+[*.{yml,yaml}]
+end_of_line = crlf
+indent_size = 2
+
+# Json and JsonC files
+[*.{json,jsonc}]
+end_of_line = crlf
+
+# Linux scripts
+[*.sh]
+end_of_line = lf
+
+# Windows scripts
+[*.{cmd,bat,ps1}]
+end_of_line = crlf
+
+# C# / ReSharper style rules from the upstream ProjectTemplate .editorconfig
+# are intentionally omitted: this is a Docker-only repository with no C#
+# sources. The per-extension line-ending rules above are the mandatory
+# verbatim carry (see AGENTS.md "Files and Sections Derived Repos Must Carry
+# Verbatim"); re-sync them from ptr727/ProjectTemplate.

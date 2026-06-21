@@ -1,0 +1,34 @@
+name: Publish docker hub readme task
+
+# Pushes Docker/README.md as the Docker Hub repository overview.
+
+on:
+  workflow_call:
+    inputs:
+      # Branch whose Docker/README.md is published; empty uses the caller's ref.
+      ref:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+
+  publish-readme:
+    name: Publish docker hub readme job
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout step
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Update docker hub description step
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          repository: ptr727/esphome-nonroot
+          short-description: ${{ github.event.repository.description }}
+          readme-filepath: ./Docker/README.md

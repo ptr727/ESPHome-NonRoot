@@ -207,7 +207,7 @@ I have no name!@012d4b62d376:/config$
 - Build [`wheel`](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install the platform specific generated wheel packages in the final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
 - Refer to [`Dockerfile`](./Docker/Dockerfile) for container details.
-- Refer to [`BuildDockerPush.yml`](./.github/workflows/BuildDockerPush.yml) and for pipeline details.
+- Refer to [`publish-release.yml`](./.github/workflows/publish-release.yml) (the publisher) and [`build-docker-task.yml`](./.github/workflows/build-docker-task.yml) (the image build) for pipeline details.
 
 ## Debugging
 
@@ -219,7 +219,7 @@ Detailed debug setup details are beyond the scope of this project, refer to my [
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
-[workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/BuildDockerPush.yml?logo=github&label=Workflow%20Status
+[workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/publish-release.yml?event=schedule&logo=github&label=Workflow%20Status
 [github-link]: https://github.com/ptr727/ESPHome-NonRoot
 [last-build-shield]: https://byob.yarr.is/ptr727/ESPHome-NonRoot/lastbuild
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit

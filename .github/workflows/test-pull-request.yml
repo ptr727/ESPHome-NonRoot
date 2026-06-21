@@ -1,0 +1,83 @@
+name: Test pull request action
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # Smoke-build only when the Docker context changes. Workflow files aren't
+  # filtered, so a workflow-only change isn't smoke-built (lint locally with
+  # actionlint). workflow_dispatch forces a full smoke build.
+  changes:
+    name: Detect changed targets job
+    runs-on: ubuntu-latest
+    # paths-filter reads the changed files via the API; needs pull-requests: read.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docker: ${{ github.event_name == 'pull_request' && steps.filter.outputs.docker || 'true' }}
+    steps:
+      - name: Filter changed paths step
+        id: filter
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            docker:
+              - 'Docker/**'
+              # Pinned ESPHome version and NBGV version source.
+              - 'esphome-version.json'
+              - 'version.json'
+
+  # Build the image in smoke mode (amd64, no push) against the PR base branch;
+  # skipped when the Docker context didn't change.
+  smoke-build:
+    name: Smoke build changed targets job
+    needs: [changes]
+    if: ${{ needs.changes.outputs.docker == 'true' }}
+    uses: ./.github/workflows/build-release-task.yml
+    secrets: inherit
+    with:
+      smoke: true
+      github: false
+      dockerhub: false
+      # PR head by SHA so fork PRs check out; dispatch falls back to the ref.
+      ref: ${{ github.event.pull_request.head.sha || github.ref_name }}
+      branch: ${{ github.base_ref || github.ref_name }}
+      enable_docker: ${{ needs.changes.outputs.docker == 'true' }}
+
+  # Aggregator giving the PR one required status check across the conditional
+  # jobs. Its name is the required-check context in the branch ruleset - do NOT
+  # rename it.
+  # https://github.com/orgs/community/discussions/12395#discussioncomment-12970019
+  check-workflow-status:
+    name: Check pull request workflow status
+    runs-on: ubuntu-latest
+    needs:
+      [ changes, smoke-build ]
+    if: always()
+    steps:
+      - name: Check workflow results step
+        run: |
+          set -euo pipefail
+          exit_on_result() {
+            if [[ "$2" == "failure" || "$2" == "cancelled" ]]; then
+              echo "Job '$1' failed or was cancelled."
+              exit 1
+            fi
+          }
+          # `changes` must succeed, else we don't know if Docker changed and a
+          # smoke build could be silently skipped.
+          if [[ "${{ needs.changes.result }}" != "success" ]]; then
+            echo "Job 'changes' did not succeed (${{ needs.changes.result }}); refusing to pass."
+            exit 1
+          fi
+          # smoke-build skipped (unchanged) passes; only failure/cancelled blocks.
+          exit_on_result "smoke-build" "${{ needs.smoke-build.result }}"
