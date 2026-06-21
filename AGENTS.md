@@ -73,7 +73,7 @@ Clarify devcontainer setup steps in README
 
 - Use reference-style links for any URL referenced more than once or appearing in lists; alphabetize the reference definitions block.
 - Inline single-use relative links (e.g. `[CODESTYLE.md](./CODESTYLE.md)`) are fine.
-- One logical paragraph per line; no hard-wrap line-length limit.
+- One logical paragraph per line; no hard-wrap line-length limit. For an intentional hard line break within a block - stacked badges, status, or license lines - end the line with a trailing backslash (`\`); this explicit form is preferred over trailing whitespace for readability and is not treated as a paragraph split.
 - Headings follow the title-case-with-short-bind-words rule from the PR-title section.
 - **Write docs in the current state, not as a change from a prior one.** The reader has no memory of the previous behavior, so describe what *is*: "X does Y", never "X *now* does Y", "X *no longer* does Z", "changed/switched/restored to Y", or "X *still* does W". Before/after framing belongs in changelogs, commit messages, and PR descriptions - where the prior state is the point - not in `README.md` or other living docs.
 
