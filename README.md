@@ -4,7 +4,7 @@
 
 ## Build
 
-Code and Pipeline is on [GitHub][github-link].\
+Code and pipeline are on [GitHub][github-link].\
 Docker image is published on [Docker Hub][docker-link].\
 Image is rebuilt weekly, or when a new ESPHome version is released, picking up the latest ESPHome release and upstream container updates.
 
@@ -20,7 +20,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 - Version 1.7:
   - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
   - Switched the image build to a `uv` virtual environment.
-  - Pin and auto-track the `esphome-device-builder` version alongside `esphome`.
+  - Pinned and auto-tracked the `esphome-device-builder` version alongside `esphome`.
   - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.

@@ -3,9 +3,9 @@
 ## Release History
 
 - Version 1.7:
-  - Migrated the dashboard to ESPHome's new [`esphome-device-builder`](https://github.com/esphome/device-builder) package ([#60](https://github.com/ptr727/ESPHome-NonRoot/issues/60)).
+  - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
   - Switched the image build to a `uv` virtual environment copied into the slim final stage.
-  - Pin and auto-track the `esphome-device-builder` version alongside `esphome`.
+  - Pinned and auto-tracked the `esphome-device-builder` version alongside `esphome`.
   - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
 - Version 1.6:
   - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
@@ -14,13 +14,20 @@
 - Version 1.5:
   - Using Python 3.13 base image.
 - Version 1.4:
-  - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
+  - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR][esphome-pr-6987-link] merged.
 - Version 1.3:
   - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
 - Version 1.2:
   - Delete temp directory contents and prune PIO cached content on startup.
-  - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
+  - Added [Dev Container][devcontainer-link] that can be used for [ESPHome][vscode-python-debug-link] or [PlatformIO][pio-debug-link] debugging.
 - Version 1.1:
   - Added daily actions job to trigger a build if the ESPHome version changed.
 - Version 1.0:
   - Initial public release.
+
+[devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
+[device-builder-link]: https://github.com/esphome/device-builder
+[esphome-pr-6987-link]: https://github.com/esphome/esphome/pull/6987
+[issue-60-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/60
+[pio-debug-link]: https://docs.platformio.org/en/latest/plus/debugging.html
+[vscode-python-debug-link]: https://code.visualstudio.com/docs/python/debugging

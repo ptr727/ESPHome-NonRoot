@@ -1,5 +1,5 @@
 {
-  "$comment": "Pinned upstream versions, maintained by check-esphome-version.yml and read by build-docker-task.yml (the esphome version drives the image tag). Do not edit by hand; the tracker opens a bump PR when PyPI publishes newer versions.",
+  "$comment": "Pinned upstream versions, maintained by check-esphome-version.yml and read by build-docker-task.yml (the ESPHome version drives the image tag). Do not edit by hand; the tracker opens a bump PR when PyPI publishes newer versions.",
   "version": "2026.6.2",
   "device_builder_version": "1.0.12"
 }
