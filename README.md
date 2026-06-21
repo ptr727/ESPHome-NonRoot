@@ -165,7 +165,7 @@ I have no name!@012d4b62d376:/config$
   - [Issue #3929 : Not possible to run docker esphome/esphome container - problem with platformio][issue-3929-link].
   - [HA Community : Is there a way to run ESPhome in docker with custom UID and GID][ha-community-link].
   - Etc.
-- Issue analysis based on ESPHome `2024.5.5` (current version as of writing) [`Dockerfile`][esphome-dockerfile-link]:
+- Issue analysis based on ESPHome `2024.5.5` (the upstream version analyzed when this project was created) [`Dockerfile`][esphome-dockerfile-link]:
   - [`PLATFORMIO_GLOBALLIB_DIR=/piolibs`][esphome-globallib-link] sets the PlatformIO [`globallib_dir`][pio-globallib-env-link] option to `/piolibs`.
     - `/piolibs` is not mapped to an external volume.
     - `/piolibs` has default permissions and requires `root` write permissions at runtime.
