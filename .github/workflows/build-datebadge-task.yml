@@ -1,0 +1,32 @@
+name: Build BYOB date badge task
+
+on:
+  workflow_call:
+    inputs:
+      # Branch this run is for; the badge updates on `main` only.
+      branch:
+        required: true
+        type: string
+
+jobs:
+
+  date-badge:
+    name: Build BYOB date badge job
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Get current date step
+        id: date
+        run: echo "date=$(date)" >> "$GITHUB_OUTPUT"
+
+      - name: Build BYOB date badge step
+        if: ${{ inputs.branch == 'main' }}
+        uses: RubbaBoy/BYOB@a4919104bc0ec7cfd7f113e42c405cc45246f2a4 # v1
+        with:
+          name: lastbuild
+          label: "Last Build"
+          icon: "github"
+          status: ${{ steps.date.outputs.date }}
+          color: "blue"
+          github_token: ${{ secrets.GITHUB_TOKEN }}

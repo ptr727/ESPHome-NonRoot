@@ -1,0 +1,4 @@
+{
+  "$comment": "Pinned upstream ESPHome version, maintained by check-esphome-version.yml and read by build-docker-task.yml (image tag + ESPHOME_VERSION build-arg). Do not edit by hand; the tracker opens a bump PR when PyPI publishes a newer version.",
+  "version": "2026.6.2"
+}
