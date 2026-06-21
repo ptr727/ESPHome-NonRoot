@@ -6,6 +6,7 @@
   - Migrated the dashboard to ESPHome's new [`esphome-device-builder`](https://github.com/esphome/device-builder) package ([#60](https://github.com/ptr727/ESPHome-NonRoot/issues/60)).
   - Switched the image build to a `uv` virtual environment copied into the slim final stage.
   - Pin and auto-track the `esphome-device-builder` version alongside `esphome`.
+  - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
 - Version 1.6:
   - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
   - Make `/cache` volume mount optional.

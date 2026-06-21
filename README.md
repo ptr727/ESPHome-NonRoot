@@ -21,6 +21,7 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
   - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
   - Switched the image build to a `uv` virtual environment.
   - Pin and auto-track the `esphome-device-builder` version alongside `esphome`.
+  - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 
@@ -44,7 +45,6 @@ See [Release History](./HISTORY.md) for complete release notes and older version
     - `sudo chmod -R ug=rwx,o=rx /data/esphome`
 - `environment` :
   - `ESPHOME_VERBOSE` (Optional) : Enables [verbose][esphome-verbose-link] log output, e.g. `ESPHOME_VERBOSE=true`.
-  - `ESPHOME_DASHBOARD_USE_PING` (Optional) : Use [`ping` instead of `mDNS`][esphome-ping-link] to test if nodes are up, e.g. `ESPHOME_DASHBOARD_USE_PING=true`.
   - `TZ` (Optional) : Sets the [timezone][tz-link], e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
 
 ### Docker Compose Dashboard
@@ -59,7 +59,6 @@ services:
     environment:
       - TZ=America/Los_Angeles
       - ESPHOME_VERBOSE=true
-      - ESPHOME_DASHBOARD_USE_PING=true
     network_mode: bridge
     ports:
       - 6052:6052
@@ -222,7 +221,6 @@ Licensed under the [MIT License][license-link]\
 [esphome-globallib-link]: https://github.com/esphome/esphome/blob/2024.5.5/docker/Dockerfile#L67
 [esphome-installdeps-link]: https://github.com/esphome/esphome/blob/2024.5.5/docker/Dockerfile#L101
 [esphome-link]: https://esphome.io
-[esphome-ping-link]: https://github.com/esphome/issues/issues/641#issuecomment-534156628
 [esphome-pkginstall-link]: https://github.com/esphome/esphome/blob/2024.5.5/script/platformio_install_deps.py#L58
 [esphome-verbose-link]: https://esphome.io/guides/cli.html#cmdoption-v-verbose
 [github-link]: https://github.com/ptr727/ESPHome-NonRoot
