@@ -51,30 +51,46 @@ jobs:
           ref: ${{ matrix.branch }}
           token: ${{ steps.app-token.outputs.token }}
 
-      - name: Resolve latest ESPHome version and apply step
+      - name: Resolve latest upstream versions and apply step
         id: resolve
         run: |
           set -euo pipefail
-          latest="$(curl --silent --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
-          if [[ -z "$latest" || "$latest" == "null" ]]; then
-            echo "::error::Could not resolve the latest esphome version from PyPI"
+          esphome_latest="$(curl --silent --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
+          db_latest="$(curl --silent --fail https://pypi.org/pypi/esphome-device-builder/json | jq -r .info.version)"
+          if [[ -z "$esphome_latest" || "$esphome_latest" == "null" ]]; then
+            echo "::error::Could not resolve the latest ESPHome version from PyPI"
             exit 1
           fi
-          current="$(jq -r .version esphome-version.json)"
-          echo "Branch=${{ matrix.branch }} Current=$current Latest=$latest"
-          if [[ "$latest" == "$current" ]]; then
+          if [[ -z "$db_latest" || "$db_latest" == "null" ]]; then
+            echo "::error::Could not resolve the latest esphome-device-builder version from PyPI"
+            exit 1
+          fi
+          esphome_current="$(jq -r .version esphome-version.json)"
+          db_current="$(jq -r .device_builder_version esphome-version.json)"
+          echo "Branch=${{ matrix.branch }} esphome=$esphome_current->$esphome_latest device-builder=$db_current->$db_latest"
+          if [[ "$esphome_latest" == "$esphome_current" && "$db_latest" == "$db_current" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          if [[ "$esphome_latest" != "$esphome_current" && "$db_latest" != "$db_current" ]]; then
+            title="Bump ESPHome to $esphome_latest and device-builder to $db_latest"
+          elif [[ "$esphome_latest" != "$esphome_current" ]]; then
+            title="Bump ESPHome to $esphome_latest"
+          else
+            title="Bump device-builder to $db_latest"
+          fi
           tmp="$(mktemp)"
-          jq --arg v "$latest" '.version = $v' esphome-version.json > "$tmp"
+          jq --arg v "$esphome_latest" --arg d "$db_latest" '.version = $v | .device_builder_version = $d' esphome-version.json > "$tmp"
           # Keep CRLF (jq emits LF) so bumps don't churn line endings.
           sed -i 's/$/\r/' "$tmp"
           mv "$tmp" esphome-version.json
           {
             echo "changed=true"
-            echo "latest=$latest"
-            echo "current=$current"
+            echo "title=$title"
+            echo "esphome_latest=$esphome_latest"
+            echo "esphome_current=$esphome_current"
+            echo "db_latest=$db_latest"
+            echo "db_current=$db_current"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create version bump pull request step
@@ -88,13 +104,14 @@ jobs:
           branch: esphome-version-bump/${{ matrix.branch }}
           delete-branch: true
           sign-commits: true
-          title: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
-          commit-message: Bump ESPHome to ${{ steps.resolve.outputs.latest }}
+          title: ${{ steps.resolve.outputs.title }}
+          commit-message: ${{ steps.resolve.outputs.title }}
           body: |
-            Bumps the pinned upstream ESPHome version in `esphome-version.json`.
+            Bumps the pinned upstream versions in `esphome-version.json`.
 
-            - ESPHome: `${{ steps.resolve.outputs.current }}` -> `${{ steps.resolve.outputs.latest }}`
-            - Release notes: https://github.com/esphome/esphome/releases/tag/${{ steps.resolve.outputs.latest }}
-            - PyPI: https://pypi.org/project/esphome/${{ steps.resolve.outputs.latest }}/
+            - ESPHome: `${{ steps.resolve.outputs.esphome_current }}` -> `${{ steps.resolve.outputs.esphome_latest }}`
+            - device-builder: `${{ steps.resolve.outputs.db_current }}` -> `${{ steps.resolve.outputs.db_latest }}`
+            - ESPHome PyPI: https://pypi.org/project/esphome/${{ steps.resolve.outputs.esphome_latest }}/
+            - device-builder PyPI: https://pypi.org/project/esphome-device-builder/${{ steps.resolve.outputs.db_latest }}/
 
-            The image tag and the `ESPHOME_VERSION` build-arg derive from this file. The new version ships on the next publish (weekly schedule, manual dispatch, or `PUBLISH_ON_MERGE`).
+            The ESPHome version drives the image tag; both are passed as build-args. The new versions ship on the next publish (weekly schedule, manual dispatch, or `PUBLISH_ON_MERGE`).

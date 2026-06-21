@@ -42,9 +42,9 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # Pinned ESPHome version from the committed state file; drives the image
-      # tag and the ESPHOME_VERSION build-arg.
-      - name: Get ESPHome version step
+      # Pinned ESPHome + device-builder versions from the committed state file;
+      # the ESPHome version drives the image tag, both become build-args.
+      - name: Get pinned versions step
         id: esphome
         run: |
           set -euo pipefail
@@ -53,7 +53,13 @@ jobs:
             echo "::error::Could not read .version from esphome-version.json"
             exit 1
           fi
+          device_builder="$(jq -r .device_builder_version esphome-version.json)"
+          if [[ -z "$device_builder" || "$device_builder" == "null" ]]; then
+            echo "::error::Could not read .device_builder_version from esphome-version.json"
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "device_builder=$device_builder" >> "$GITHUB_OUTPUT"
 
       # QEMU emulates arm64; skip for amd64-only smoke builds.
       - name: Setup QEMU step
@@ -100,4 +106,5 @@ jobs:
           build-args: |
             LABEL_VERSION=${{ needs.get-version.outputs.SemVer2 }}
             ESPHOME_VERSION=${{ steps.esphome.outputs.version }}
+            DEVICE_BUILDER_VERSION=${{ steps.esphome.outputs.device_builder }}
 

@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
 
-echo "Launching dashboard..."
-exec esphome dashboard /config
+echo "Launching device-builder dashboard..."
+exec esphome-device-builder /config

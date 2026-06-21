@@ -12,7 +12,6 @@
 	"workspaceFolder": "/config",
 	"containerEnv": {
 		"ESPHOME_VERBOSE": "true",
-		"ESPHOME_DASHBOARD_USE_PING": "1",
 		"TZ": "America/Los_Angeles"
 	},
 	"overrideCommand": true,
