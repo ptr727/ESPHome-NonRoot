@@ -79,14 +79,11 @@ jobs:
         with:
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
 
-      # Always login to Docker Hub, not just on push, to benefit from higher
-      # rate limits with a Docker subscription for pulls and cache reads on
-      # every build (including smoke). This is a CONSCIOUS choice over gating
-      # login on `inputs.push`: the trade-off is that fork PRs without access
-      # to the Docker Hub secrets cannot run the Docker smoke build.
-      # Acceptable here because the repo is private and PRs are same-repo; a
-      # public derived project that accepts fork PRs may prefer to gate this
-      # step on `inputs.push`.
+      # Log in to Docker Hub on every build, including non-pushing smoke builds,
+      # so base-image pulls and registry cache reads are authenticated and get
+      # higher rate limits. Because the login uses repository secrets, a smoke
+      # build that cannot read them - a pull request from a fork - fails at this
+      # step and so cannot run the Docker build.
       - name: Login to Docker Hub step
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:

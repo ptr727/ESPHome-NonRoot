@@ -1,12 +1,13 @@
 name: Check ESPHome version action
 
-# Upstream-release tracker. Mirrors ptr727/homeassistant-purpleair's
-# check-ha-version.yml: it does NOT dispatch a build. It resolves the latest
-# upstream ESPHome version from PyPI, writes it into the committed state file
-# esphome-version.json, and opens a rolling, App-authored, signed PR
-# that merge-bot auto-merges. The pinned version then ships on the next publish
-# (weekly schedule / manual dispatch / PUBLISH_ON_MERGE). build-docker-task.yml
-# reads the same state file for the image tag and the ESPHOME_VERSION build-arg.
+# Upstream-release tracker. It does NOT dispatch a build directly: it resolves
+# the latest upstream ESPHome version from PyPI, writes it into the committed
+# state file esphome-version.json, and opens a rolling, App-authored, signed PR
+# that merge-bot auto-merges. Routing the bump through a PR (rather than a build
+# dispatch) keeps the pinned version reviewable and version-controlled, and lets
+# the normal publish flow ship it on the next run (weekly schedule / manual
+# dispatch / PUBLISH_ON_MERGE). build-docker-task.yml reads the same state file
+# for the image tag and the ESPHOME_VERSION build-arg.
 
 on:
   schedule:
@@ -20,8 +21,7 @@ concurrency:
   # Ref-independent group: the scheduled run (github.ref = default branch) and a
   # manual dispatch (any ref) both matrix over main + develop and write the same
   # `esphome-version-bump/*` branches, so a ref-scoped group would let them run
-  # concurrently and race on those branches. Mirrors homeassistant-purpleair's
-  # check-ha-version.yml.
+  # concurrently and race on those branches.
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
@@ -36,11 +36,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Dual-target: the pinned ESPHome version is shipped image content (main
-        # builds the :latest and :<version> tags), so main and develop are
-        # tracked independently - like Dependabot - rather than develop-only.
-        # See AGENTS.md "Branching Model". The head/base pairing is enforced by
-        # merge-bot's merge-esphome-version-bump job.
+        # Track both branches: the pinned ESPHome version is shipped image
+        # content (main builds the :latest and :<version> tags consumers pull
+        # directly), so each branch needs the current version rather than
+        # waiting for develop to flow into main. merge-bot's
+        # merge-esphome-version-bump job enforces the head/base pairing.
         branch: [main, develop]
     permissions:
       contents: write
@@ -98,8 +98,8 @@ jobs:
         # Single rolling branch per base - at most one bump PR open per branch.
         # peter-evans force-pushes the latest pending version to the branch on
         # every tick, so the PR refreshes in place. sign-commits creates the
-        # commit via the API so it is signed (the signed-commits ruleset
-        # requires it). The App token makes the PR App-authored.
+        # commit through the GitHub API so it is cryptographically signed. The
+        # App token makes the PR App-authored so it triggers CI and merge-bot.
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}

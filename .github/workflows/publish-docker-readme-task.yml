@@ -1,9 +1,8 @@
 name: Publish docker hub readme task
 
 # Pushes the static Docker Hub repository overview from Docker/README.md.
-# Mirrors ptr727/NxWitness's publish-docker-readme-task.yml. Called from
-# publish-release.yml after a real publish (never on smoke); the README tracks
-# main so it matches the :latest image.
+# Called from publish-release.yml after a real publish (never on smoke); the
+# README tracks main so the published overview matches the :latest image.
 
 on:
   workflow_call:

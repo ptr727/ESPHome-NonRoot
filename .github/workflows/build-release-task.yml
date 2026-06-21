@@ -33,11 +33,9 @@ on:
         required: false
         type: boolean
         default: false
-      # Per-target presence gate. Default true (build the Docker image). A PR
-      # smoke run sets this from the paths-filter so the build only runs when
-      # the Docker context changed. (This repo ships only the Docker target;
-      # the template's nuget/pypi/executable gates and jobs were removed per
-      # AGENTS.md "Release Model" per-target subsetting.)
+      # Presence gate for the Docker build. Default true (build it). A PR smoke
+      # run sets this from the paths-filter so the build only runs when the
+      # Docker context changed. Docker is the only build target this repo ships.
       enable_docker:
         required: false
         type: boolean

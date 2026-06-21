@@ -90,17 +90,15 @@ jobs:
       ref: ${{ matrix.branch }}
       branch: ${{ matrix.branch }}
       smoke: false
-      # Push to GitHub (release) and Docker Hub (image). This repo ships only
-      # the Docker target; the template's nuget/pypi flags and jobs were
-      # removed per AGENTS.md "Release Model" per-target subsetting.
+      # Publish the GitHub release and push the Docker image. Docker is the only
+      # delivery target this repo ships.
       github: true
       dockerhub: true
 
-  # Push the static Docker Hub repository overview after a real publish.
-  # Mirrors ptr727/NxWitness's `publish-docker-readme-task.yml` and is wired
-  # like `date-badge` below; the README tracks `main` so it matches the
-  # `:latest` image. Runs only on real publishes (gated on `setup.publish`),
-  # never on smoke.
+  # Push the static Docker Hub repository overview after a real publish, wired
+  # like `date-badge` below; the README tracks `main` so the published overview
+  # matches the `:latest` image. Runs only on real publishes (gated on
+  # `setup.publish`), never on smoke.
   docker-readme:
     name: Publish docker hub readme job
     needs: [setup, publish]
