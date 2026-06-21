@@ -6,7 +6,7 @@
 
 Code and pipeline are on [GitHub][github-link].\
 Docker image is published on [Docker Hub][docker-link].\
-Image is rebuilt weekly, or when a new ESPHome version is released, picking up the latest ESPHome release and upstream container updates.
+Image is rebuilt on the weekly schedule and on demand, picking up the latest tracked ESPHome release and upstream container updates.
 
 ## Status
 

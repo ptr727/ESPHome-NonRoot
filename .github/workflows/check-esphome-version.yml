@@ -57,8 +57,12 @@ jobs:
           set -euo pipefail
           esphome_latest="$(curl --silent --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
           db_latest="$(curl --silent --fail https://pypi.org/pypi/esphome-device-builder/json | jq -r .info.version)"
-          if [[ -z "$esphome_latest" || "$esphome_latest" == "null" || -z "$db_latest" || "$db_latest" == "null" ]]; then
-            echo "::error::Could not resolve latest versions from PyPI"
+          if [[ -z "$esphome_latest" || "$esphome_latest" == "null" ]]; then
+            echo "::error::Could not resolve the latest esphome version from PyPI"
+            exit 1
+          fi
+          if [[ -z "$db_latest" || "$db_latest" == "null" ]]; then
+            echo "::error::Could not resolve the latest esphome-device-builder version from PyPI"
             exit 1
           fi
           esphome_current="$(jq -r .version esphome-version.json)"
@@ -110,4 +114,4 @@ jobs:
             - ESPHome PyPI: https://pypi.org/project/esphome/${{ steps.resolve.outputs.esphome_latest }}/
             - device-builder PyPI: https://pypi.org/project/esphome-device-builder/${{ steps.resolve.outputs.db_latest }}/
 
-            The esphome version drives the image tag; both are passed as build-args. The new versions ship on the next publish (weekly schedule, manual dispatch, or `PUBLISH_ON_MERGE`).
+            The ESPHome version drives the image tag; both are passed as build-args. The new versions ship on the next publish (weekly schedule, manual dispatch, or `PUBLISH_ON_MERGE`).
