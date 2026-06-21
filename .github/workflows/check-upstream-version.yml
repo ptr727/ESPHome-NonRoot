@@ -36,6 +36,6 @@ jobs:
         set -euo pipefail
         esphome="$(curl --silent --show-error --location --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
         device_builder="$(curl --silent --show-error --location --fail https://pypi.org/pypi/esphome-device-builder/json | jq -r .info.version)"
-        [ -n "$esphome" ] && [ "$esphome" != null ] || { echo "::error::Could not resolve the latest esphome version from PyPI" >&2; exit 1; }
-        [ -n "$device_builder" ] && [ "$device_builder" != null ] || { echo "::error::Could not resolve the latest device_builder version from PyPI" >&2; exit 1; }
+        [ -n "$esphome" ] && [ "$esphome" != null ] || { echo "::error::Could not resolve the latest ESPHome version from PyPI" >&2; exit 1; }
+        [ -n "$device_builder" ] && [ "$device_builder" != null ] || { echo "::error::Could not resolve the latest esphome-device-builder version from PyPI" >&2; exit 1; }
         jq -cn --arg e "$esphome" --arg d "$device_builder" '{esphome: $e, device_builder: $d}'
