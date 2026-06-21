@@ -58,7 +58,7 @@ jobs:
           esphome_latest="$(curl --silent --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
           db_latest="$(curl --silent --fail https://pypi.org/pypi/esphome-device-builder/json | jq -r .info.version)"
           if [[ -z "$esphome_latest" || "$esphome_latest" == "null" ]]; then
-            echo "::error::Could not resolve the latest esphome version from PyPI"
+            echo "::error::Could not resolve the latest ESPHome version from PyPI"
             exit 1
           fi
           if [[ -z "$db_latest" || "$db_latest" == "null" ]]; then

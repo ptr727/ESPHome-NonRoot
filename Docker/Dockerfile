@@ -57,7 +57,7 @@ ARG DEVICE_BUILDER_VERSION=""
 
 # Build a self-contained virtual environment with uv. The slim final stage
 # copies it whole, so build tools never reach the final image. Installs the
-# esphome compiler (with display components) plus the device-builder dashboard.
+# ESPHome compiler (with display components) plus the device-builder dashboard.
 RUN pip install --no-cache-dir uv \
     && uv venv /opt/venv \
     && uv pip install --python /opt/venv/bin/python --no-cache \
