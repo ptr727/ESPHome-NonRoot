@@ -95,11 +95,9 @@ jobs:
           # (a valid-JSON-but-non-object file would otherwise break the `$old + $new` union below).
           if [ -f "$STATE_FILE" ] && old="$(jq -S 'if type == "object" then . else empty end' "$STATE_FILE" 2>/dev/null)" && [ -n "$old" ]; then :; else old='{}'; fi
 
-          # Write the canonical (sorted, pretty) state file. A prior file already in this exact
-          # form yields no diff, so create-pull-request opens nothing; a semantically identical
-          # file with different formatting still changes and opens a canonicalize-only PR (titled
-          # as such below).
-          printf '%s\n' "$new" > "$STATE_FILE"
+          # Write the canonical state file as CRLF (jq emits LF) to match .editorconfig's .json
+          # rule. Unchanged content => no diff => no PR.
+          printf '%s\n' "$new" | sed 's/$/\r/' > "$STATE_FILE"
 
           # Diff across the union of old+new keys so an added, moved, or removed key is all caught;
           # removals carry a null .new. These drive the PR title/body (only keys that moved).
