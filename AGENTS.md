@@ -77,6 +77,14 @@ Clarify devcontainer setup steps in README
 - Headings follow the title-case-with-short-bind-words rule from the PR-title section.
 - **Write docs in the current state, not as a change from a prior one.** The reader has no memory of the previous behavior, so describe what *is*: "X does Y", never "X *now* does Y", "X *no longer* does Z", "changed/switched/restored to Y", or "X *still* does W". Before/after framing belongs in changelogs, commit messages, and PR descriptions - where the prior state is the point - not in `README.md` or other living docs.
 
+### Comments
+
+Code and workflow-YAML comments follow the same discipline as the prose above: concise, current-state, and within ~120 columns. Explain the non-obvious *why*, not the *what* the line already shows.
+
+- **No change-log narrative.** Describe what the code does now, not how it got there - no "previously", "now", "used to", "switched to" (the current-state rule from [Markdown](#markdown) applies to comments too).
+- **No rule citations.** State the behavior directly; don't cite this file or a ruleset from inside a comment.
+- **No cross-project references.** Don't name sibling downstream repos. The only cross-repo references this repo carries point at the upstream [`ptr727/ProjectTemplate`](https://github.com/ptr727/ProjectTemplate) parent, for re-syncing and drift-reporting.
+
 ### Character Set
 
 - **Write ASCII in all agent-authored text** - documentation, code, comments, commit messages, and PR descriptions. The agent does not introduce non-ASCII characters. Replace typographic Unicode with its ASCII equivalent on sight:
@@ -161,6 +169,7 @@ These conventions describe the target state. New and modified workflows must res
 - **Reusable workflows**: job-level `permissions:` are validated *before* the `if:` evaluates, so even a skipped job needs valid permissions declared. A `release` job with `permissions: contents: write` and `if: ${{ inputs.publish }}` will still cause `startup_failure` on a caller that doesn't grant `contents: write`. Either declare permissions at the call site, or omit the inner block and inherit.
 - **Allowlist `success` and `skipped` explicitly** when chaining jobs across optional dependencies - `!= 'failure'` lets `cancelled` through (timeout, runner failure, manual cancel). Use `(needs.X.result == 'success' || needs.X.result == 'skipped')`.
 - **Tag pinning on releases**: when using `softprops/action-gh-release` (or any tag-creating action), pass `target_commitish` explicitly - without it, GitHub's REST API defaults the new tag to the repository's default branch instead of the commit that built the artifact. Pin it to the **exact built commit's SHA** (the publisher uses NBGV's `GitCommitId` output), not `github.sha` (wrong branch in the publisher's branch matrix - a `develop` leg runs with `github.sha` = main's tip) and not a branch name (a moving ref that a mid-run commit could advance past the built tree).
+- **CI storage hygiene**: cache Docker layers to a registry tag (`type=registry`, as [`build-docker-task.yml`](./.github/workflows/build-docker-task.yml) does), never the GitHub Actions cache (`type=gha`); and set `retention-days: 1` on any *intermediate* `actions/upload-artifact` step - the 90-day default piles up against the 2 GB account storage quota. This repo currently uploads no intermediate artifacts (the Docker build pushes straight to the registry), so the retention half applies only if a future target adds an upload.
 
 ### Running the Linters Locally (Known-Working Invocations)
 

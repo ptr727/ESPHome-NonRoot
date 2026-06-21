@@ -10,31 +10,11 @@ This repository ships only a Docker image and has no language source tree, so th
 
 ## Commit Messages and Pull Request Titles
 
-Feature -> develop PRs squash-merge - the PR title becomes the single commit on develop. Develop -> main PRs merge-commit - main's history shows one merge commit per release with develop's tip as the second parent. Titles are descriptive and have no versioning effect - versioning is handled by [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) reading [version.json](../version.json) and git history, not by parsing commit messages.
+Summarized for VS Code's generators; the full rules, rationale, and examples are in [AGENTS.md "Pull Request Title and Commit Message Conventions"](../AGENTS.md#pull-request-title-and-commit-message-conventions).
 
-Branch protection enforces the merge method on both bases (develop allows only squash, main allows only merge). When running `gh pr merge` against either base, pick the matching flag (`--squash` for develop, `--merge` for main); a mismatch fails with "Merge method ... is not allowed on this repository". The merge-bot workflow (`.github/workflows/merge-bot-pull-request.yml`) does this dispatch automatically for Dependabot and codegen PRs via a `case` on `base.ref` - keep that pattern when adding new auto-merge jobs.
-
-### Format
-
-- Imperative subject summarizing the change, <= 72 characters, no trailing period. ("Add 24-hour PM2.5 average sensor", not "Added X" or "Adds X".)
-- Optional body, blank-line separated, explaining *why* the change is being made when that's non-obvious. The diff shows *what*.
-
-### Rules
-
-- Don't write `update stuff`, `wip`, or other vague titles. (Dependabot's default `Bump X from Y to Z` titles are fine - keep them.)
-- Don't add `Co-Authored-By:` lines unless the user explicitly asks.
-- Don't put release-bump magnitude in the title - no "minor", "patch", "release v0.2.0", etc. NBGV computes the next release version from `version.json` + git history. Dependency versions in dependency-bump titles are fine and expected.
-- Use US English spelling and match the existing heading style of the file you're editing: title case with lowercase short bind words (a, an, the, and, but, or, of, in, on, at, to, by, for, from); hyphenated compounds capitalize both parts unless the second is a short preposition (*Built-in*, *EPA-Corrected*, *24-Hour*).
-
-### Examples
-
-```text
-Add structured logging extensions to library
-Pin softprops/action-gh-release to commit SHA
-Drop net8.0 multi-targeting from console project
-Bump xunit.v3 from 3.2.2 to 3.3.0
-Clarify devcontainer setup steps in README
-```
+- Imperative subject, <= 72 characters, no trailing period; optional blank-line-separated body for the non-obvious *why*.
+- US English, title case with lowercase short bind words; no vague titles, no `Co-Authored-By:` unless asked, no release-bump magnitude (NBGV handles versioning). Dependabot's `Bump X from Y to Z` titles are fine.
+- develop PRs squash-merge (`gh pr merge --squash`), main PRs merge-commit (`--merge`); a mismatched flag is rejected by branch protection.
 
 ## GitHub Copilot Review Runbook
 
@@ -44,9 +24,9 @@ Use this section for provider-specific mechanics. The expected review loop *cont
 
 ### Triggering and Polling
 
-Auto-review on push is configured (via the branch ruleset's `copilot_code_review` rule with `review_on_push: true`) but fires inconsistently in practice - treat it as best-effort, not guaranteed. After every push, **re-request a review programmatically** via the GraphQL `requestReviews` mutation, passing the Copilot reviewer's bot node id in `botIds`. This now works reliably (it previously did not - a maintainer had to click "re-request review" in the UI; the agent can now drive the loop end-to-end without that hand-off).
+Auto-review on push is configured (via the branch ruleset's `copilot_code_review` rule with `review_on_push: true`) but fires inconsistently in practice - treat it as best-effort, not guaranteed. After every push, **re-request a review programmatically** via the GraphQL `requestReviews` mutation, passing the Copilot reviewer's bot node id in `botIds`. This drives the loop end-to-end without a UI hand-off.
 
-> **The reviewer login differs by API - this is intentional, not a typo.** In **GraphQL** (`gh api graphql` and `gh pr view --json reviews`, which is GraphQL-backed) the `Bot.login` is `copilot-pull-request-reviewer` - **no `[bot]` suffix**. In the **REST** API (`gh api repos/.../issues|pulls/...`) the same account's `user.login` is `copilot-pull-request-reviewer[bot]` - **with** the suffix. Each query below uses the correct form for its API; match the API, not a single spelling, when adapting them.
+> **The reviewer login differs by API.** In **GraphQL** (`gh api graphql` and `gh pr view --json reviews`, which is GraphQL-backed) the `Bot.login` is `copilot-pull-request-reviewer` - **no `[bot]` suffix**. In the **REST** API (`gh api repos/.../issues|pulls/...`) the same account's `user.login` is `copilot-pull-request-reviewer[bot]` - **with** the suffix. Each query below uses the correct form for its API; match the API, not a single spelling, when adapting them.
 
 ```sh
 # 1. PR node id + the Copilot reviewer's bot node id (read from any existing
