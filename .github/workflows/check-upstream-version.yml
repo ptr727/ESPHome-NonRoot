@@ -1,0 +1,41 @@
+name: Check upstream version action
+
+# Tracks the upstream ESPHome and device-builder PyPI releases: resolves the
+# latest versions, writes them to upstream-version.json, and opens a rolling,
+# auto-merged bump PR per branch so the normal publish flow ships them.
+# build-docker-task.yml reads the same file for the image tag and build-args.
+
+on:
+  schedule:
+    # Daily; keeps the pins within ~24h of PyPI.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # Ref-independent so a scheduled run and a manual dispatch can't race the
+  # shared upstream-version-* branches.
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  check:
+    name: Check upstream version job
+    uses: ./.github/workflows/check-upstream-version-task.yml
+    secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      # Resolve both PyPI components and print them as a name -> version JSON
+      # object. The build reads .esphome (drives the image tag and ESPHOME_VERSION)
+      # and .device_builder (DEVICE_BUILDER_VERSION). Both branches matrix inside
+      # the task; matching PyPI versions produce byte-identical state, so the
+      # main and develop bumps never diverge into a merge conflict.
+      resolver-command: |
+        set -euo pipefail
+        esphome="$(curl --silent --show-error --location --fail https://pypi.org/pypi/esphome/json | jq -r .info.version)"
+        device_builder="$(curl --silent --show-error --location --fail https://pypi.org/pypi/esphome-device-builder/json | jq -r .info.version)"
+        [ -n "$esphome" ] && [ "$esphome" != null ] || { echo "::error::Could not resolve the latest ESPHome version from PyPI" >&2; exit 1; }
+        [ -n "$device_builder" ] && [ "$device_builder" != null ] || { echo "::error::Could not resolve the latest esphome-device-builder version from PyPI" >&2; exit 1; }
+        jq -cn --arg e "$esphome" --arg d "$device_builder" '{esphome: $e, device_builder: $d}'

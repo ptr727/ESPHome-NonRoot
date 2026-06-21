@@ -48,14 +48,14 @@ jobs:
         id: esphome
         run: |
           set -euo pipefail
-          version="$(jq -r .version esphome-version.json)"
+          version="$(jq -r .esphome upstream-version.json)"
           if [[ -z "$version" || "$version" == "null" ]]; then
-            echo "::error::Could not read .version from esphome-version.json"
+            echo "::error::Could not read .esphome from upstream-version.json"
             exit 1
           fi
-          device_builder="$(jq -r .device_builder_version esphome-version.json)"
+          device_builder="$(jq -r .device_builder upstream-version.json)"
           if [[ -z "$device_builder" || "$device_builder" == "null" ]]; then
-            echo "::error::Could not read .device_builder_version from esphome-version.json"
+            echo "::error::Could not read .device_builder from upstream-version.json"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"

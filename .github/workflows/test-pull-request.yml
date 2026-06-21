@@ -32,8 +32,8 @@ jobs:
           filters: |
             docker:
               - 'Docker/**'
-              # Pinned ESPHome version and NBGV version source.
-              - 'esphome-version.json'
+              # Pinned upstream versions and NBGV version source.
+              - 'upstream-version.json'
               - 'version.json'
 
   # Build the image in smoke mode (amd64, no push) against the PR base branch;
