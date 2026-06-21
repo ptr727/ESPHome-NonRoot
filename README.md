@@ -4,20 +4,20 @@
 
 ## License
 
-Licensed under the [MIT License][license-link]  
+Licensed under the [MIT License][license-link]\
 ![GitHub License][license-shield]
 
 ## Build
 
-Code and Pipeline is on [GitHub][github-link].  
-Docker image is published on [Docker Hub][docker-link].  
+Code and Pipeline is on [GitHub][github-link].\
+Docker image is published on [Docker Hub][docker-link].\
 Image is rebuilt weekly, or when a new ESPHome version is released, picking up the latest ESPHome release and upstream container updates.
 
 ## Status
 
-[![Last Commit][last-commit-shield]][commit-link]  
-[![Workflow Status][workflow-status-shield]][actions-link]  
-[![Last Build][last-build-shield]][actions-link]  
+[![Last Commit][last-commit-shield]][commit-link]\
+[![Workflow Status][workflow-status-shield]][actions-link]\
+[![Last Build][last-build-shield]][actions-link]\
 [![Docker Latest][docker-latest-version-shield]][docker-link]
 
 ## Release Notes
