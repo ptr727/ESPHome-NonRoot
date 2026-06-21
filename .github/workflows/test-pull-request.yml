@@ -11,21 +11,13 @@ concurrency:
 
 jobs:
 
-  # Detect whether a PR touches the Docker build so we only smoke-build when it
-  # changed. Build-workflow files are intentionally NOT in the filter: a path
-  # filter can't tell a logic change in a build workflow from an action-version
-  # bump. A workflow-only change is therefore not smoke-built - the reusable
-  # workflows are exercised instead by the next run that uses them (a later code
-  # PR's smoke build, or the scheduled/publish run); lint workflow edits with
-  # `actionlint` locally before pushing (there is no CI lint job). On
-  # `workflow_dispatch` (no PR base to diff against) the target is forced on so
-  # a manual run is a full smoke build.
+  # Smoke-build only when the Docker context changes. Workflow files aren't
+  # filtered, so a workflow-only change isn't smoke-built (lint locally with
+  # actionlint). workflow_dispatch forces a full smoke build.
   changes:
     name: Detect changed targets job
     runs-on: ubuntu-latest
-    # `dorny/paths-filter` lists the PR's changed files via the GitHub API
-    # (this job does not check out the tree), which needs `pull-requests: read`.
-    # The repo's default GITHUB_TOKEN is restricted, so grant it explicitly.
+    # paths-filter reads the changed files via the API; needs pull-requests: read.
     permissions:
       contents: read
       pull-requests: read
@@ -40,16 +32,12 @@ jobs:
           filters: |
             docker:
               - 'Docker/**'
-              # The pinned ESPHome version (build-arg + tag) lives here, and the
-              # NBGV release version comes from version.json - a change to either
-              # should rebuild the image.
+              # Pinned ESPHome version and NBGV version source.
               - 'esphome-version.json'
               - 'version.json'
 
-  # Fast PR feedback: build the Docker image in smoke mode (amd64-only, no
-  # publishing). Validates against the PR's base branch by passing
-  # `branch: github.base_ref`. Skipped entirely when the Docker context did not
-  # change (e.g. a docs-only PR).
+  # Build the image in smoke mode (amd64, no push) against the PR base branch;
+  # skipped when the Docker context didn't change.
   smoke-build:
     name: Smoke build changed targets job
     needs: [changes]
@@ -58,23 +46,17 @@ jobs:
     secrets: inherit
     with:
       smoke: true
-      # Do not publish anything from a PR.
       github: false
       dockerhub: false
-      # Check out the PR head by SHA (not head_ref): the head SHA is reachable
-      # in the base repo via refs/pull/N/head even for fork PRs, whereas the
-      # head_ref branch name does not exist in the base repo for forks and
-      # would fail checkout. Validate it in the base branch's configuration.
-      # `workflow_dispatch` has no pull_request payload, so fall back to the
-      # triggering ref.
+      # PR head by SHA so fork PRs check out; dispatch falls back to the ref.
       ref: ${{ github.event.pull_request.head.sha || github.ref_name }}
       branch: ${{ github.base_ref || github.ref_name }}
       enable_docker: ${{ needs.changes.outputs.docker == 'true' }}
 
-  # TODO: Workaround for GitHub Actions not supporting status checks on conditional jobs
+  # Aggregator giving the PR one required status check across the conditional
+  # jobs. Its name is the required-check context in the branch ruleset - do NOT
+  # rename it.
   # https://github.com/orgs/community/discussions/12395#discussioncomment-12970019
-  # This job's name is bound to the branch ruleset as the required status check
-  # context - do NOT rename it (see AGENTS.md "Workflow YAML Conventions").
   check-workflow-status:
     name: Check pull request workflow status
     runs-on: ubuntu-latest
@@ -91,14 +73,11 @@ jobs:
               exit 1
             fi
           }
-          # The paths-filter job MUST succeed: if it failed we don't know whether
-          # the Docker target changed, so a Docker-changing PR could merge with
-          # its smoke build silently skipped. Treat anything other than success
-          # as a block.
+          # `changes` must succeed, else we don't know if Docker changed and a
+          # smoke build could be silently skipped.
           if [[ "${{ needs.changes.result }}" != "success" ]]; then
             echo "Job 'changes' did not succeed (${{ needs.changes.result }}); refusing to pass."
             exit 1
           fi
-          # smoke-build may be legitimately skipped (Docker context unchanged) -
-          # `skipped` passes, only failure/cancelled blocks.
+          # smoke-build skipped (unchanged) passes; only failure/cancelled blocks.
           exit_on_result "smoke-build" "${{ needs.smoke-build.result }}"

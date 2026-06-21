@@ -5,37 +5,22 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
   schedule:
-    # Weekly full build/publish of both branches on Mondays at 02:00 UTC.
-    # This is the guaranteed publisher in the default two-phase model: routine
-    # merges only smoke-test, and this scheduled run republishes everything
-    # (also refreshing the Docker base image, e.g. `python:3.13-slim`).
+    # Weekly full publish of both branches; merges otherwise only smoke-test.
     - cron: '0 2 * * MON'
 
-# Real publishes (schedule, dispatch, or push when PUBLISH_ON_MERGE is set)
-# share a single GLOBAL, ref-independent group so they serialize: they push
-# both branches' shared Docker tags + caches and create GitHub releases for
-# both regardless of the triggering ref, so a ref-scoped group would let a
-# scheduled run (ref=main) and a manual dispatch (ref=develop) run concurrently
-# and double-push. Non-publishing `push` runs (the two-phase default) get a
-# unique per-run group so they don't queue behind - or delay - a real publish;
-# they only execute the no-op `setup` job and skip everything else.
+# Real publishes share one global group so they serialize (they push shared
+# tags/caches regardless of ref); non-publishing pushes get a unique group and
+# only run the no-op `setup` job.
 concurrency:
   group: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || vars.PUBLISH_ON_MERGE == 'true') && github.workflow || format('{0}-noop-{1}', github.workflow, github.run_id) }}
-  # Documented exception to the standard `cancel-in-progress: true` (see
-  # AGENTS.md "Workflow YAML Conventions"): cancelling a publish mid-flight can
-  # leave a partially pushed multi-arch tag set or a half-created GitHub
-  # release. Queue instead of cancel so each publish runs to completion.
+  # Queue, don't cancel: a cancelled publish can leave a half-pushed tag set or
+  # release.
   cancel-in-progress: false
 
 jobs:
 
-  # Decide WHICH branches to publish and WHETHER to publish at all:
-  #   - push        -> publish only the pushed branch, and only when the
-  #                    `PUBLISH_ON_MERGE` repository variable is `true`
-  #                    (opt-in legacy continuous-release). Unset/false => the
-  #                    default two-phase model: merges don't publish.
-  #   - schedule    -> always publish BOTH branches (the weekly full build).
-  #   - dispatch    -> always publish BOTH branches (manual on-demand publish).
+  # Decide which branches to publish and whether to publish: push publishes only
+  # when PUBLISH_ON_MERGE is true; schedule/dispatch publish both branches.
   setup:
     name: Resolve publish plan job
     runs-on: ubuntu-latest
@@ -46,8 +31,7 @@ jobs:
       - name: Compute publish plan step
         id: plan
         env:
-          # Repository variable (Settings -> Actions -> Variables). Unset reads
-          # as empty string, so the default is the two-phase model.
+          # Unset reads as empty string -> two-phase default.
           PUBLISH_ON_MERGE: ${{ vars.PUBLISH_ON_MERGE }}
         run: |
           set -euo pipefail
@@ -70,10 +54,8 @@ jobs:
           echo "branches=$branches" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
-  # Full build + publish of every target for each planned branch. The branch
-  # matrix lets a single scheduled run publish both `main` (Release/`latest`,
-  # non-prerelease) and `develop` (Debug/`develop`, prerelease) - each leg
-  # checks out and versions its own branch via the threaded `ref`/`branch`.
+  # Full publish per planned branch; the matrix lets one run publish both main
+  # and develop.
   publish:
     name: Publish project release job
     needs: [setup]
@@ -90,15 +72,10 @@ jobs:
       ref: ${{ matrix.branch }}
       branch: ${{ matrix.branch }}
       smoke: false
-      # Publish the GitHub release and push the Docker image. Docker is the only
-      # delivery target this repo ships.
       github: true
       dockerhub: true
 
-  # Push the static Docker Hub repository overview after a real publish, wired
-  # like `date-badge` below; the README tracks `main` so the published overview
-  # matches the `:latest` image. Runs only on real publishes (gated on
-  # `setup.publish`), never on smoke.
+  # Push the Docker Hub README (from main) after a real publish.
   docker-readme:
     name: Publish docker hub readme job
     needs: [setup, publish]
@@ -120,5 +97,5 @@ jobs:
     permissions:
       contents: write
     with:
-      # The badge task self-gates to `main`; the develop leg is a no-op.
+      # The badge self-gates to main.
       branch: ${{ matrix.branch }}

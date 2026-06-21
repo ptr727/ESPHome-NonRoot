@@ -3,27 +3,19 @@ name: Build Docker image task
 on:
   workflow_call:
     inputs:
-      # Input to control whether to push the Docker image to Docker Hub
       push:
         required: false
         type: boolean
         default: false
-      # Git ref to check out / version (empty = default checkout ref).
       ref:
         required: false
         type: string
         default: ''
-      # Logical branch driving the image tags (`main` => `latest` + the pinned
-      # ESPHome version, anything else => `develop`). Required (no
-      # `github.ref_name` fallback): the publisher builds develop from a run
-      # whose `github.ref_name` is `main`, so a silent fallback would mistag it.
-      # The orchestrator always passes it explicitly.
+      # Drives the image tags: main => latest + pinned version, else develop.
       branch:
         required: true
         type: string
-      # Smoke mode: build `linux/amd64` only (no QEMU/arm64), never push, and
-      # skip the shared registry `cache-to` so PR builds don't pollute the
-      # release buildcache. Used for fast PR feedback.
+      # amd64 only, no push, no shared cache write - fast PR feedback.
       smoke:
         required: false
         type: boolean
@@ -50,11 +42,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # Read the committed upstream ESPHome version from the state file the
-      # tracker (check-esphome-version.yml) maintains. This is a reviewed,
-      # version-controlled value - not a live PyPI fetch - so the build is
-      # deterministic and reproducible for a given commit. It drives both the
-      # image tag and the ESPHOME_VERSION build-arg that pins the wheel build.
+      # Pinned ESPHome version from the committed state file; drives the image
+      # tag and the ESPHOME_VERSION build-arg.
       - name: Get ESPHome version step
         id: esphome
         run: |
@@ -66,8 +55,7 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # QEMU only exists to emulate arm64. Smoke builds are amd64-only, so
-      # skip it entirely to save the emulation setup cost.
+      # QEMU emulates arm64; skip for amd64-only smoke builds.
       - name: Setup QEMU step
         if: ${{ !inputs.smoke }}
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -79,11 +67,8 @@ jobs:
         with:
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
 
-      # Log in to Docker Hub only when publishing. A non-pushing build - a PR
-      # smoke build - needs no credentials: it reads the public registry build
-      # cache anonymously and never pushes. Gating the login here is what lets a
-      # pull request from a fork, which has no access to the repository secrets,
-      # still run the Docker build.
+      # Log in only when publishing; smoke/PR builds read the public cache
+      # anonymously, so fork PRs (no secret access) can still build.
       - name: Login to Docker Hub step
         if: ${{ inputs.push }}
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
@@ -94,34 +79,20 @@ jobs:
       - name: Docker build and push step
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
-          # The Docker build context is the `Docker/` directory (the Dockerfile
-          # copies only `entrypoint/`); the ESPHome version is supplied as a
-          # build-arg, so the state file does not need to be in the context.
+          # Context is Docker/ (the Dockerfile only copies entrypoint/).
           context: ./Docker
-          # Self-enforce "smoke never publishes" at the task level too (the
-          # caller also gates on !smoke), so a future miswired caller cannot
-          # publish from a smoke run.
+          # Also gate on !smoke so a smoke run can never publish.
           push: ${{ inputs.push && !inputs.smoke }}
           file: ./Docker/Dockerfile
-          # `main` publishes the moving `:latest` tag plus the immutable pinned
-          # ESPHome version tag (e.g. `:2025.5.0`) so consumers can pin an exact
-          # upstream version. `develop` publishes only the moving `:develop`
-          # tag. On `develop` the second entry is an empty line that
-          # build-push-action ignores.
+          # main: latest + the pinned version tag; develop: develop only (the
+          # second line is empty off main, which build-push-action ignores).
           tags: |
             docker.io/ptr727/esphome-nonroot:${{ inputs.branch == 'main' && 'latest' || 'develop' }}
             ${{ inputs.branch == 'main' && format('docker.io/ptr727/esphome-nonroot:{0}', steps.esphome.outputs.version) || '' }}
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
-          # Branch-scoped registry cache. READ both branches' caches - the
-          # layers are nearly identical - so a main build can seed from
-          # develop's cache and vice versa - but WRITE only this branch's own
-          # tag, and only when actually publishing (push and not smoke). Gating
-          # the export on `inputs.push && !inputs.smoke` means a non-publishing
-          # or smoke build never writes the shared registry cache or needs
-          # Docker Hub write creds. Branch-scoping is what lets the publisher's
-          # weekly matrix build main and develop concurrently in one run without
-          # the two legs overwriting a single shared cache (destroying hit
-          # rates).
+          # Read both branches' caches (near-identical layers); write only this
+          # branch's, and only when publishing. Branch-scoped so the publisher's
+          # main/develop legs don't clobber one shared cache.
           cache-from: |
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop

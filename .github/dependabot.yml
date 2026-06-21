@@ -1,11 +1,7 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-# https://containers.dev/guide/dependabot
 #
-# Every ecosystem appears twice - once with target-branch "main" and once with
-# "develop" - so Dependabot keeps both branches current independently of the
-# develop -> main release cadence (main ships the published image directly).
-# The merge-bot dispatches the right merge method per base; security PRs always
-# open against main. See AGENTS.md "Branching Model".
+# Each ecosystem targets both main and develop so neither branch goes stale
+# between releases.
 
 version: 2
 updates:

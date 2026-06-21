@@ -1,15 +1,11 @@
 name: Publish docker hub readme task
 
-# Pushes the static Docker Hub repository overview from Docker/README.md.
-# Called from publish-release.yml after a real publish (never on smoke); the
-# README tracks main so the published overview matches the :latest image.
+# Pushes Docker/README.md as the Docker Hub repository overview.
 
 on:
   workflow_call:
     inputs:
-      # Branch whose Docker/README.md is published. The publisher passes main so
-      # the readme matches the main release image even when dispatched from
-      # another ref. Empty falls back to the caller's default checkout ref.
+      # Branch whose Docker/README.md is published; empty uses the caller's ref.
       ref:
         required: false
         type: string

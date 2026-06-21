@@ -1,27 +1,19 @@
 name: Check ESPHome version action
 
-# Upstream-release tracker. It does NOT dispatch a build directly: it resolves
-# the latest upstream ESPHome version from PyPI, writes it into the committed
-# state file esphome-version.json, and opens a rolling, App-authored, signed PR
-# that merge-bot auto-merges. Routing the bump through a PR (rather than a build
-# dispatch) keeps the pinned version reviewable and version-controlled, and lets
-# the normal publish flow ship it on the next run (weekly schedule / manual
-# dispatch / PUBLISH_ON_MERGE). build-docker-task.yml reads the same state file
-# for the image tag and the ESPHOME_VERSION build-arg.
+# Tracks the upstream ESPHome PyPI release: writes the latest version into
+# esphome-version.json and opens a rolling, auto-merged PR so the normal publish
+# flow ships it. build-docker-task.yml reads the same file for the image tag and
+# the ESPHOME_VERSION build-arg.
 
 on:
   schedule:
-    # Daily at 05:00 UTC. ESPHome publishes to PyPI on its own cadence; a daily
-    # check keeps the pinned version within ~24h. workflow_dispatch is available
-    # for urgent bumps.
+    # Daily; keeps the pin within ~24h of PyPI.
     - cron: '0 5 * * *'
   workflow_dispatch:
 
 concurrency:
-  # Ref-independent group: the scheduled run (github.ref = default branch) and a
-  # manual dispatch (any ref) both matrix over main + develop and write the same
-  # `esphome-version-bump/*` branches, so a ref-scoped group would let them run
-  # concurrently and race on those branches.
+  # Ref-independent so a scheduled run and a manual dispatch can't run together
+  # and race the shared esphome-version-bump/* branches.
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
@@ -36,11 +28,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Track both branches: the pinned ESPHome version is shipped image
-        # content (main builds the :latest and :<version> tags consumers pull
-        # directly), so each branch needs the current version rather than
-        # waiting for develop to flow into main. merge-bot's
-        # merge-esphome-version-bump job enforces the head/base pairing.
+        # Both branches: the pinned version is the shipped image content, so
+        # main can't wait for develop to flow in.
         branch: [main, develop]
     permissions:
       contents: write
@@ -49,9 +38,7 @@ jobs:
     steps:
 
       - name: Generate GitHub App token step
-        # App-authored PR so it triggers PR workflows (PRs authored by the
-        # default GITHUB_TOKEN do not) and merge-bot's actor guard picks it up.
-        # client-id per actions/create-github-app-token v3+.
+        # App-authored so the PR triggers CI and merge-bot (GITHUB_TOKEN does not).
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -79,12 +66,9 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Rewrite only the version field, preserving the $comment field.
           tmp="$(mktemp)"
           jq --arg v "$latest" '.version = $v' esphome-version.json > "$tmp"
-          # jq emits LF, but .editorconfig requires CRLF for *.json and
-          # .gitattributes (* -text) disables git EOL normalization - so convert
-          # to CRLF before committing or every bump PR would flip the file to LF.
+          # Keep CRLF (jq emits LF) so bumps don't churn line endings.
           sed -i 's/$/\r/' "$tmp"
           mv "$tmp" esphome-version.json
           {
@@ -95,11 +79,8 @@ jobs:
 
       - name: Create version bump pull request step
         if: ${{ steps.resolve.outputs.changed == 'true' }}
-        # Single rolling branch per base - at most one bump PR open per branch.
-        # peter-evans force-pushes the latest pending version to the branch on
-        # every tick, so the PR refreshes in place. sign-commits creates the
-        # commit through the GitHub API so it is cryptographically signed. The
-        # App token makes the PR App-authored so it triggers CI and merge-bot.
+        # Rolling branch per base (one open PR each); sign-commits signs the
+        # commit via the API.
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}

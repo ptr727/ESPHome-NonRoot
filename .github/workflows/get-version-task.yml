@@ -3,17 +3,12 @@ name: Get version information task
 on:
   workflow_call:
     inputs:
-      # Git ref to check out and version. Empty string falls back to the
-      # caller's default checkout ref (`github.ref`), preserving the
-      # original behavior. The publisher passes an explicit branch so a
-      # scheduled run - which always reports `github.ref` as the default
-      # branch - can still compute NBGV versions for `develop` too.
+      # Ref to check out and version; empty uses the caller's checkout ref.
       ref:
         required: false
         type: string
         default: ''
     outputs:
-      # Version information outputs
       SemVer2:
         value: ${{ jobs.get-version.outputs.SemVer2 }}
       AssemblyVersion:
@@ -22,9 +17,8 @@ on:
         value: ${{ jobs.get-version.outputs.AssemblyFileVersion }}
       AssemblyInformationalVersion:
         value: ${{ jobs.get-version.outputs.AssemblyInformationalVersion }}
-      # Full SHA of the commit NBGV computed the version from. Used to pin the
-      # GitHub release tag to the exact built commit (immutable), rather than a
-      # moving branch ref.
+      # Commit SHA the version was computed from; pins the release tag to the
+      # exact built commit.
       GitCommitId:
         value: ${{ jobs.get-version.outputs.GitCommitId }}
 
@@ -53,23 +47,8 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
-      # `dotnet/nbgv` is intentionally floated on `master` rather than
-      # pinned to a commit SHA - a deliberate deviation from the
-      # AGENTS.md "pin third-party actions to a commit SHA" rule,
-      # documented here so the deviation isn't accidentally "fixed" by
-      # a future reviewer. Justification:
-      #   - The upstream tag stream is effectively dormant - the latest
-      #     tag `v0.5.1` lags well behind `master` and fixes accumulate
-      #     on `master` between tag bumps.
-      #   - Dependabot's GitHub Actions ecosystem tracks tagged
-      #     releases. A SHA pinned to a post-`v0.5.1` `master` commit
-      #     would either receive no Dependabot updates (silently stale)
-      #     or get an attempted downgrade PR to `v0.5.1`'s SHA. Neither
-      #     beats just floating on `master`.
-      #   - Upstream owner is Microsoft (`dotnet/`), so the
-      #     "tag-/branch-retargeting risk" the AGENTS.md rule guards
-      #     against is materially lower than for a random author.
-      # Revisit if `dotnet/nbgv` resumes regular tagged releases.
+      # Floated on `master` (not SHA-pinned): upstream tags lag `master`, so a
+      # pin would only draw spurious Dependabot downgrade PRs.
       - name: Run Nerdbank.GitVersioning tool step
         id: nbgv
         uses: dotnet/nbgv@master
