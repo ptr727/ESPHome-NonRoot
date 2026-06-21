@@ -50,7 +50,8 @@ RUN \
 # Builder
 WORKDIR /builder
 
-# Pinned upstream versions via build-args so the image is reproducible
+# Optional version pins via build-args; each pins its package independently
+# (empty = latest). The pipeline always passes both.
 ARG ESPHOME_VERSION=""
 ARG DEVICE_BUILDER_VERSION=""
 
@@ -59,17 +60,10 @@ ARG DEVICE_BUILDER_VERSION=""
 # esphome compiler (with display components) plus the device-builder dashboard.
 RUN pip install --no-cache-dir uv \
     && uv venv /opt/venv \
-    && if [ -n "$ESPHOME_VERSION" ] && [ -n "$DEVICE_BUILDER_VERSION" ]; then \
-        uv pip install --python /opt/venv/bin/python --no-cache \
-            setuptools \
-            "esphome[displays]==$ESPHOME_VERSION" \
-            "esphome-device-builder==$DEVICE_BUILDER_VERSION"; \
-    else \
-        uv pip install --python /opt/venv/bin/python --no-cache \
-            setuptools \
-            "esphome[displays]" \
-            "esphome-device-builder"; \
-    fi
+    && uv pip install --python /opt/venv/bin/python --no-cache \
+        setuptools \
+        "esphome[displays]${ESPHOME_VERSION:+==$ESPHOME_VERSION}" \
+        "esphome-device-builder${DEVICE_BUILDER_VERSION:+==$DEVICE_BUILDER_VERSION}"
 
 # Final
 FROM python:3.13-slim

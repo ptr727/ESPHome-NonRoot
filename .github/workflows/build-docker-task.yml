@@ -42,8 +42,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # Pinned ESPHome version from the committed state file; drives the image
-      # tag and the ESPHOME_VERSION build-arg.
+      # Pinned ESPHome + device-builder versions from the committed state file;
+      # the esphome version drives the image tag, both become build-args.
       - name: Get pinned versions step
         id: esphome
         run: |
