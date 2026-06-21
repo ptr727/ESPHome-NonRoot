@@ -22,23 +22,12 @@ Image is rebuilt weekly, or when a new ESPHome version is released, picking up t
 
 ## Release Notes
 
-- Version 1.6:
-  - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
-  - Make `/cache` volume mount optional.
-  - Replace `locales-all` package with `locales` to reduce image size.
-- Version 1.5:
-  - Using Python 3.13 base image.
-- Version 1.4:
-  - Removed custom handling for `ESPHOME_VERBOSE` enabling `--verbose`, [PR](https://github.com/esphome/esphome/pull/6987) merged.
-- Version 1.3:
-  - Added Dev Container [Workspace](./.devcontainer/devcontainer.code-workspace) that maps `config` and `cache` volumes.
-- Version 1.2:
-  - Delete temp directory contents and prune PIO cached content on startup.
-  - Added [Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) that can be used for [ESPHome](https://code.visualstudio.com/docs/python/debugging) or [PlatformIO](https://docs.platformio.org/en/latest/plus/debugging.html) debugging.
-- Version 1.1:
-  - Added daily actions job to trigger a build if the ESPHome version changed.
-- Version 1.0:
-  - Initial public release.
+- Version 1.7:
+  - Migrated the dashboard to ESPHome's new [`esphome-device-builder`](https://github.com/esphome/device-builder) package ([#60](https://github.com/ptr727/ESPHome-NonRoot/issues/60)).
+  - Switched the image build to a `uv` virtual environment.
+  - Pin and auto-track the `esphome-device-builder` version alongside `esphome`.
+
+See [Release History](./HISTORY.md) for complete release notes and older versions.
 
 ## Usage
 
@@ -204,7 +193,7 @@ I have no name!@012d4b62d376:/config$
 
 - Use [Python](https://hub.docker.com/_/python) docker base image simplifying use for Python in a container environment.
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
-- Build [`wheel`](https://pip.pypa.io/en/stable/cli/pip_wheel/) archives for the platform in the builder stage, and install the platform specific generated wheel packages in the final stage.
+- Use [`uv`](https://docs.astral.sh/uv/) to build a virtual environment in the builder stage, and copy the self-contained environment into the slim final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
 - Refer to [`Dockerfile`](./Docker/Dockerfile) for container details.
 - Refer to [`publish-release.yml`](./.github/workflows/publish-release.yml) (the publisher) and [`build-docker-task.yml`](./.github/workflows/build-docker-task.yml) (the image build) for pipeline details.

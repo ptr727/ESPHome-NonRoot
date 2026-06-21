@@ -50,16 +50,25 @@ RUN \
 # Builder
 WORKDIR /builder
 
-# Pin ESPHome version if provided via build-arg to ensure tag matches installed version
+# Pinned upstream versions via build-args so the image is reproducible
 ARG ESPHOME_VERSION=""
+ARG DEVICE_BUILDER_VERSION=""
 
-# Build wheel archives for setuptools and esphome with optional display components
-RUN if [ -n "$ESPHOME_VERSION" ]; then \
-        echo "Building wheel archives for setuptools and esphome[displays] version $ESPHOME_VERSION..."; \
-        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools "esphome[displays]==$ESPHOME_VERSION"; \
+# Build a self-contained virtual environment with uv. The slim final stage
+# copies it whole, so build tools never reach the final image. Installs the
+# esphome compiler (with display components) plus the device-builder dashboard.
+RUN pip install --no-cache-dir uv \
+    && uv venv /opt/venv \
+    && if [ -n "$ESPHOME_VERSION" ] && [ -n "$DEVICE_BUILDER_VERSION" ]; then \
+        uv pip install --python /opt/venv/bin/python --no-cache \
+            setuptools \
+            "esphome[displays]==$ESPHOME_VERSION" \
+            "esphome-device-builder==$DEVICE_BUILDER_VERSION"; \
     else \
-        echo "Building wheel archives for setuptools and latest esphome[displays]..."; \
-        pip wheel --no-cache-dir --progress-bar off --wheel-dir /builder/wheels setuptools "esphome[displays]"; \
+        uv pip install --python /opt/venv/bin/python --no-cache \
+            setuptools \
+            "esphome[displays]" \
+            "esphome-device-builder"; \
     fi
 
 # Final
@@ -68,10 +77,12 @@ FROM python:3.13-slim
 # Label
 ARG \
     LABEL_VERSION="1.0.0.0" \
-    ESPHOME_VERSION="1.0.0.0"
+    ESPHOME_VERSION="1.0.0.0" \
+    DEVICE_BUILDER_VERSION="1.0.0.0"
 LABEL name="ESPHome" \
     version=${LABEL_VERSION} \
     esphome_version=${ESPHOME_VERSION} \
+    device_builder_version=${DEVICE_BUILDER_VERSION} \
     description="ESPHome docker container that supports non-root operation" \
     maintainer="Pieter Viljoen <ptr727@users.noreply.github.com>"
 
@@ -114,17 +125,12 @@ ENV \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
 
-# Copy wheels from builder
-COPY --from=builder /builder/wheels /wheels
+# Copy the virtual environment from the builder and put it on PATH
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# TODO: Keep in sync with cache.sh
-
-# Install all packages from wheels archives
-RUN pip install --no-cache --no-index --find-links /wheels /wheels/* \
-    # Cleanup
-    && rm -rf /home \
-    && rm -rf /root \
-    && rm -rf /wheels \
+# Remove default home directories and prepare writable runtime directories
+RUN rm -rf /home /root \
     # Make sure there is a /tmp and /cache directory with full access for any user
     && mkdir -p /tmp /cache \
     && chmod 0777 /tmp /cache
