@@ -1,0 +1,101 @@
+name: Publish project release action
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+  schedule:
+    # Weekly full publish of both branches; merges otherwise only smoke-test.
+    - cron: '0 2 * * MON'
+
+# Real publishes share one global group so they serialize (they push shared
+# tags/caches regardless of ref); non-publishing pushes get a unique group and
+# only run the no-op `setup` job.
+concurrency:
+  group: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || vars.PUBLISH_ON_MERGE == 'true') && github.workflow || format('{0}-noop-{1}', github.workflow, github.run_id) }}
+  # Queue, don't cancel: a cancelled publish can leave a half-pushed tag set or
+  # release.
+  cancel-in-progress: false
+
+jobs:
+
+  # Decide which branches to publish and whether to publish: push publishes only
+  # when PUBLISH_ON_MERGE is true; schedule/dispatch publish both branches.
+  setup:
+    name: Resolve publish plan job
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.plan.outputs.branches }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - name: Compute publish plan step
+        id: plan
+        env:
+          # Unset reads as empty string -> two-phase default.
+          PUBLISH_ON_MERGE: ${{ vars.PUBLISH_ON_MERGE }}
+        run: |
+          set -euo pipefail
+          case "${{ github.event_name }}" in
+            push)
+              branches='["${{ github.ref_name }}"]'
+              if [[ "${PUBLISH_ON_MERGE:-}" == "true" ]]; then
+                publish=true
+              else
+                publish=false
+              fi
+              ;;
+            *)
+              # schedule / workflow_dispatch
+              branches='["main","develop"]'
+              publish=true
+              ;;
+          esac
+          echo "Event=${{ github.event_name }} branches=$branches publish=$publish"
+          echo "branches=$branches" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  # Full publish per planned branch; the matrix lets one run publish both main
+  # and develop.
+  publish:
+    name: Publish project release job
+    needs: [setup]
+    if: ${{ needs.setup.outputs.publish == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJSON(needs.setup.outputs.branches) }}
+    uses: ./.github/workflows/build-release-task.yml
+    secrets: inherit
+    permissions:
+      contents: write
+    with:
+      ref: ${{ matrix.branch }}
+      branch: ${{ matrix.branch }}
+      smoke: false
+      github: true
+      dockerhub: true
+
+  # Push the Docker Hub README (from main) after a real publish.
+  docker-readme:
+    name: Publish docker hub readme job
+    needs: [setup, publish]
+    if: ${{ needs.setup.outputs.publish == 'true' }}
+    uses: ./.github/workflows/publish-docker-readme-task.yml
+    secrets: inherit
+    with:
+      ref: main
+
+  date-badge:
+    name: Create BYOB date badge job
+    needs: [setup, publish]
+    if: ${{ needs.setup.outputs.publish == 'true' }}
+    strategy:
+      matrix:
+        branch: ${{ fromJSON(needs.setup.outputs.branches) }}
+    uses: ./.github/workflows/build-datebadge-task.yml
+    secrets: inherit
+    permissions:
+      contents: write
+    with:
+      # The badge self-gates to main.
+      branch: ${{ matrix.branch }}

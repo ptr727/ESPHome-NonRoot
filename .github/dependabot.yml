@@ -1,8 +1,12 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-# https://containers.dev/guide/dependabot
+#
+# Each ecosystem targets both main and develop so neither branch goes stale
+# between releases.
 
 version: 2
 updates:
+
+# ----- github-actions -----
 
 # main
 - package-ecosystem: "github-actions"
@@ -23,5 +27,29 @@ updates:
     interval: "daily"
   groups:
     actions-deps:
+      patterns:
+        - "*"
+
+# ----- docker (base image in Docker/Dockerfile) -----
+
+# main
+- package-ecosystem: "docker"
+  target-branch: "main"
+  directory: "/Docker"
+  schedule:
+    interval: "daily"
+  groups:
+    docker-deps:
+      patterns:
+        - "*"
+
+# develop
+- package-ecosystem: "docker"
+  target-branch: "develop"
+  directory: "/Docker"
+  schedule:
+    interval: "daily"
+  groups:
+    docker-deps:
       patterns:
         - "*"

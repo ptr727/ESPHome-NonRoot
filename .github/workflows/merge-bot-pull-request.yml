@@ -1,0 +1,133 @@
+name: Merge bot pull request action
+
+# merge-dependabot / merge-upstream-version enable auto-merge once, on
+# opened/reopened only, so a later maintainer push can disable it without these
+# re-enabling. disable-auto-merge-on-maintainer-push turns it off when a
+# maintainer pushes to a bot PR. The merge method follows the base branch
+# (squash on develop, merge on main). All jobs use an App token: App-authored
+# merges trigger downstream workflows (GITHUB_TOKEN merges do not), and the
+# default token is read-only on a Dependabot PR.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# Queue, don't cancel: opened/synchronize events must run in order, or a
+# cancelled `opened` run could leave auto-merge never enabled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+
+  merge-dependabot:
+    name: Merge dependabot pull request job
+    runs-on: ubuntu-latest
+    # Dependabot PRs from this repo (not forks), on opened/reopened only.
+    if: >-
+      (github.event.action == 'opened' || github.event.action == 'reopened') &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+
+      - name: Generate GitHub App token step
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Merge pull request step
+        run: |
+          set -euo pipefail
+          case "${{ github.event.pull_request.base.ref }}" in
+            develop) method=--squash ;;
+            main) method=--merge ;;
+            *)
+              echo "::error::Unsupported base branch: ${{ github.event.pull_request.base.ref }}"
+              exit 1
+              ;;
+          esac
+          gh pr merge --auto "$method" "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  merge-upstream-version:
+    name: Merge upstream version bump pull request job
+    runs-on: ubuntu-latest
+    # App-authored bump PRs from this repo, on opened/reopened only. The
+    # head/base pairing prevents a develop bump landing on main.
+    if: >-
+      (github.event.action == 'opened' || github.event.action == 'reopened') &&
+      github.event.pull_request.user.login == 'ptr727-codegen[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (
+        (github.event.pull_request.head.ref == 'upstream-version-main' && github.event.pull_request.base.ref == 'main') ||
+        (github.event.pull_request.head.ref == 'upstream-version-develop' && github.event.pull_request.base.ref == 'develop')
+      )
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+
+      - name: Generate GitHub App token step
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Merge pull request step
+        run: |
+          set -euo pipefail
+          case "${{ github.event.pull_request.base.ref }}" in
+            develop) method=--squash ;;
+            main) method=--merge ;;
+            *)
+              echo "::error::Unsupported base branch: ${{ github.event.pull_request.base.ref }}"
+              exit 1
+              ;;
+          esac
+          gh pr merge --auto "$method" "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  disable-auto-merge-on-maintainer-push:
+    name: Disable auto-merge on maintainer push job
+    runs-on: ubuntu-latest
+    # A maintainer pushed to a bot PR (synchronize, actor != the bot): disable
+    # auto-merge so their commits don't ride along. Idempotent.
+    if: >-
+      github.event.action == 'synchronize' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (
+        github.event.pull_request.user.login == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'ptr727-codegen[bot]'
+      ) &&
+      github.actor != github.event.pull_request.user.login
+    permissions:
+      pull-requests: write
+
+    steps:
+
+      - name: Generate GitHub App token step
+        # App token: on a Dependabot PR the default token is read-only
+        # regardless of who triggered the event.
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Disable auto-merge step
+        run: gh pr merge --disable-auto "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
