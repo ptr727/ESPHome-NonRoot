@@ -22,7 +22,7 @@
 # docker exec -it Testing /bin/bash
 
 # Builder
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Prevent EULA and confirmation prompts in installers
 ARG DEBIAN_FRONTEND=noninteractive
@@ -66,7 +66,7 @@ RUN pip install --no-cache-dir uv \
         "esphome-device-builder${DEVICE_BUILDER_VERSION:+==$DEVICE_BUILDER_VERSION}"
 
 # Final
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Label
 ARG \
