@@ -118,7 +118,7 @@ The repo runs a review loop on every PR: local agent iteration plus remote autom
 
 1. Push changes to the PR branch.
 2. Re-request a review for the **current head SHA**. Auto-trigger is unreliable, so request it explicitly via the `requestReviews` GraphQL mutation (now reliable end-to-end - see the runbook); the UI is only a fallback.
-3. Wait for review activity on that head.
+3. Wait for review activity on that head. A completed review that raises **no findings** is a valid terminal outcome for that head - proceed; do not re-trigger it or treat the absence of comments as a missing review.
 4. Triage findings.
 5. Apply fixes or write a rationale for declines.
 6. Reply to each thread and resolve what was addressed.
