@@ -68,17 +68,17 @@ jobs:
         with:
           ref: ${{ needs.get-version.outputs.GitCommitId }}
 
-      # Safety net: a public (main) release must never carry a prerelease identifier - any '-' in SemVer2 (e.g. the
-      # observed '-g<sha>' git-height suffix). Guards against NBGV mis-detecting the public ref (e.g. a dispatch on a
-      # non-default ref) from publishing a malformed non-prerelease release that GitHub would then mark "Latest".
-      # Root-cause-agnostic backstop to the dispatch-ref guard in publish-release.yml.
+      # Backstop (main only): a public release must not carry a prerelease '-', guarding against NBGV mis-versioning the
+      # public ref (e.g. a dispatch on a non-default ref) into a malformed "Latest" release. Strip '+buildmetadata'
+      # first - a '-' there is legitimate; only a '-' in the core/prerelease segment marks a prerelease.
       - name: Verify public release version step
         if: ${{ inputs.branch == 'main' }}
         env:
           SEMVER2: ${{ needs.get-version.outputs.SemVer2 }}
         run: |
           set -euo pipefail
-          if [[ "$SEMVER2" == *-* ]]; then
+          CORE_AND_PRE="${SEMVER2%%+*}"   # drop +buildmetadata; a '-' here is the genuine prerelease separator
+          if [[ "$CORE_AND_PRE" == *-* ]]; then
             echo "::error::Public (main) release version '$SEMVER2' carries a prerelease suffix; refusing to publish."
             exit 1
           fi
