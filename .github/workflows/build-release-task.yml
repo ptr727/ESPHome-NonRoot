@@ -68,6 +68,21 @@ jobs:
         with:
           ref: ${{ needs.get-version.outputs.GitCommitId }}
 
+      # Backstop (main only): a public release must not carry a prerelease '-', guarding against NBGV mis-versioning the
+      # public ref (e.g. a dispatch on a non-default ref) into a malformed "Latest" release. Strip '+buildmetadata'
+      # first - a '-' there is legitimate; only a '-' in the core/prerelease segment marks a prerelease.
+      - name: Verify public release version step
+        if: ${{ inputs.branch == 'main' }}
+        env:
+          SEMVER2: ${{ needs.get-version.outputs.SemVer2 }}
+        run: |
+          set -euo pipefail
+          CORE_AND_PRE="${SEMVER2%%+*}"   # drop +buildmetadata; a '-' here is the genuine prerelease separator
+          if [[ "$CORE_AND_PRE" == *-* ]]; then
+            echo "::error::Public (main) release version '$SEMVER2' carries a prerelease suffix; refusing to publish."
+            exit 1
+          fi
+
       # Collect any release-asset-<branch>-* artifacts. The Docker build pushes
       # directly and uploads none, so this matches nothing (which succeeds) and
       # the release carries just the tag + LICENSE/README.

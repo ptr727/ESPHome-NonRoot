@@ -1,15 +1,9 @@
 name: Check upstream version task
 
-# Skeleton for a wrapper repo that tracks an upstream release. A resolver command
-# computes the upstream version(s) as a JSON object of name -> version, written to
-# a committed state file at the repo root (a build-input version source, beside
-# version.json), and opens a rolling, App-signed bump PR per branch that the
-# merge-bot auto-merges. The JSON object carries one key for the common
-# single-version case or N keys for a wrapper that pins several upstream
-# components (e.g. an image plus a companion tool); the build reads each component
-# by key. A merged bump ships on the next publish, not immediately. Call this from
-# a scheduled entry-point workflow; matrix only the branches that ship the version
-# (a CI-only version uses ["develop"]).
+# Skeleton for a wrapper repo tracking an upstream release: a resolver prints the upstream version(s) as a JSON object
+# of name -> version (one key, or N for a multi-component pin), written to a committed state file beside version.json,
+# and opens a rolling App-signed bump PR per branch that the merge-bot auto-merges. Call from a scheduled entry-point
+# workflow; matrix only the branches that ship the version (a CI-only version uses ["develop"]).
 
 on:
   workflow_call:
@@ -67,10 +61,8 @@ jobs:
           ref: ${{ matrix.branch }}
           token: ${{ steps.app-token.outputs.token }}
 
-      # The resolver prints a JSON object of name -> version. Normalize it (sorted keys, pretty
-      # print) so the committed state file and its diff are stable, then write it. Comparing the
-      # new object against the old state yields the changed keys that drive the bump PR's title
-      # and body (only the components that actually moved are named).
+      # Normalize the resolved JSON (sorted keys) so the committed file and its diff are stable; the old-vs-new key
+      # diff drives the PR title/body, naming only components that moved.
       - name: Resolve upstream version step
         id: resolve
         env:
@@ -79,10 +71,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Require a non-empty JSON object of single-line name -> version strings, so a malformed
-          # resolver (non-object, numeric/nested values, no keys, or a key/value carrying a CR/LF
-          # that would corrupt the single-line `title=`/`body` GITHUB_OUTPUT) fails fast here
-          # instead of committing state that downstream by-key build logic cannot consume.
+          # Require a non-empty JSON object of single-line name -> version strings; a CR/LF would corrupt the
+          # single-line GITHUB_OUTPUT, so reject it here instead of committing unconsumable state.
           raw="$(bash -c "$RESOLVER_COMMAND")"
           if ! new="$(printf '%s' "$raw" | jq -S '.' 2>/dev/null)" \
              || [ "$(printf '%s' "$new" | jq -r 'type == "object" and length > 0 and all(.[]; type == "string" and (test("[\r\n]") | not)) and (keys | all(test("[\r\n]") | not))')" != "true" ]; then
