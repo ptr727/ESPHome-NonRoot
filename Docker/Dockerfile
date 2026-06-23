@@ -1,7 +1,7 @@
 # check=skip=CopyIgnoredFile
 
 # Description: ESPHome docker container that supports non-root operation.
-# Based on: python:3.13-slim
+# Based on: python:3.14-slim
 # Platforms: linux/amd64, linux/arm64
 # Tag: ptr727/esphome-nonroot:latest
 
