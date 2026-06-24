@@ -1,0 +1,121 @@
+name: Build PyPI library task
+
+# Reusable workflow that only builds the PyPI wheel + sdist and uploads them as a run artifact; it does not
+# publish. Publishing lives in publish-release.yml so id-token:write is granted only at that entry point and not
+# propagated to every caller (e.g. the PR smoke build).
+
+on:
+  workflow_call:
+    inputs:
+      # Git ref to check out / version (empty = default checkout ref).
+      ref:
+        required: false
+        type: string
+        default: ''
+      # Logical branch driving the PEP 440 version (develop => .dev0 prerelease, otherwise plain release). Required; the
+      # orchestrator passes it explicitly.
+      branch:
+        required: true
+        type: string
+      # Smoke mode: build for validation only and skip the artifact upload. A PR smoke run has no consumer for the
+      # wheel/sdist (the publish-pypi job runs only on a real publish), so uploading it just burns artifact storage.
+      smoke:
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      artifact-name:
+        value: ${{ jobs.build-pypilibrary.outputs.artifact-name }}
+      artifact-id:
+        value: ${{ jobs.build-pypilibrary.outputs.artifact-id }}
+
+jobs:
+
+  get-version:
+    name: Get version information job
+    uses: ./.github/workflows/get-version-task.yml
+    with:
+      ref: ${{ inputs.ref }}
+
+  build-pypilibrary:
+    name: Build PyPI library project job
+    runs-on: ubuntu-latest
+    needs: [get-version]
+    defaults:
+      run:
+        working-directory: ./PyPiLibrary
+    outputs:
+      artifact-name: pypilibrary-build-${{ inputs.branch }}
+      artifact-id: ${{ steps.artifact-upload-step.outputs.artifact-id }}
+
+    steps:
+
+      - name: Checkout code step
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup uv step
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          # Pin uv to the same version as the devcontainer (UV_VERSION) so CI and local resolves cannot drift; bump in
+          # lockstep.
+          version: "0.11.8"
+          enable-cache: true
+          cache-dependency-glob: "PyPiLibrary/uv.lock"
+
+      - name: Sync dependencies step
+        run: uv sync --all-groups --frozen
+
+      - name: Lint with ruff step
+        run: uv run ruff check
+
+      - name: Verify formatting with ruff step
+        run: uv run ruff format --check
+
+      - name: Type check with pyright step
+        run: uv run pyright
+
+      - name: Run pytest step
+        run: uv run pytest
+
+      # PEP 440 version: develop -> M.N.P.B.dev0 (prerelease), else M.N.P.B. The NBGV git height sits in the release
+      # segment, so develop's normally exceeds main's and `pip install --pre` picks the dev build over the main release.
+      - name: Compute PyPI version step
+        id: pypiver
+        run: |
+          set -euo pipefail
+          if [[ "$BRANCH" == "develop" ]]; then
+            version="${AFV}.dev0"
+          else
+            version="$AFV"
+          fi
+          echo "PyPI version for branch $BRANCH: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        env:
+          AFV: ${{ needs.get-version.outputs.AssemblyFileVersion }}
+          BRANCH: ${{ inputs.branch }}
+
+      # Rewrite the hardcoded __version__ in _version.py (the single source hatchling reads) with the computed version.
+      # Done after tests so the test asserting __version__ is non-empty isn't affected.
+      - name: Write version into _version.py step
+        run: |
+          set -euo pipefail
+          sed -i 's/^__version__ = .*/__version__ = "'"$VERSION"'"/' src/ptr727_projecttemplate_library/_version.py
+        env:
+          VERSION: ${{ steps.pypiver.outputs.version }}
+
+      - name: Build sdist and wheel step
+        run: uv build
+
+      # Branch-suffixed so the publisher's branch matrix can build both branches in one run without colliding.
+      # Skipped on smoke: the publish-pypi job runs only on a real publish, so nothing would consume it.
+      - name: Upload build artifacts step
+        id: artifact-upload-step
+        if: ${{ !inputs.smoke }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pypilibrary-build-${{ inputs.branch }}
+          path: PyPiLibrary/dist/*
+          # Consumed within this run by the publish-pypi job; minimize artifact storage.
+          retention-days: 1
