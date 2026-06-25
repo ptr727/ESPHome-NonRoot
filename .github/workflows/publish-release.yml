@@ -83,28 +83,53 @@ jobs:
       smoke: false
       github: true
       dockerhub: true
+      # Docker-only repo: no NuGet/PyPI/executable targets and no release-asset files.
 
-  # Push the Docker Hub README (from main) after a real publish.
-  docker-readme:
-    name: Publish docker hub readme job
-    needs: [setup, publish]
-    if: ${{ needs.setup.outputs.publish == 'true' }}
-    uses: ./.github/workflows/publish-docker-readme-task.yml
-    secrets: inherit
-    with:
-      ref: main
-
+  # Caller-gated to main: the badge and Docker Hub overview have no per-branch context, so they update only when main
+  # is among the published branches (a develop-only push skips them). One invocation, not a per-branch matrix leg.
   date-badge:
     name: Create BYOB date badge job
     needs: [setup, publish]
-    if: ${{ needs.setup.outputs.publish == 'true' }}
-    strategy:
-      matrix:
-        branch: ${{ fromJSON(needs.setup.outputs.branches) }}
+    if: ${{ needs.setup.outputs.publish == 'true' && contains(fromJSON(needs.setup.outputs.branches), 'main') }}
     uses: ./.github/workflows/build-datebadge-task.yml
     secrets: inherit
     permissions:
       contents: write
+
+  docker-readme:
+    name: Publish Docker Hub readme job
+    needs: [setup, publish]
+    if: ${{ needs.setup.outputs.publish == 'true' && contains(fromJSON(needs.setup.outputs.branches), 'main') }}
+    uses: ./.github/workflows/publish-docker-readme-task.yml
+    secrets: inherit
+    permissions:
+      contents: read
     with:
-      # The badge self-gates to main.
-      branch: ${{ matrix.branch }}
+      ref: main
+
+  # Release artifacts are an intra-run handoff (durable copies live on the GitHub release), so leaving them accumulates
+  # against the small account-wide storage quota; delete them once every consumer has read them.
+  cleanup-artifacts:
+    name: Delete workflow artifacts job
+    needs: [setup, publish, date-badge, docker-readme]
+    if: ${{ always() && needs.setup.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete workflow artifacts step
+        # continue-on-error: best-effort housekeeping must never red the run, even on an unexpected failure.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! ids=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts --paginate \
+            --jq '.artifacts[].id'); then
+            echo "::warning::Could not list run artifacts; skipping cleanup (storage may not be freed)."
+            ids=""
+          fi
+          for artifact_id in $ids; do
+            gh api --method DELETE "repos/${{ github.repository }}/actions/artifacts/$artifact_id" \
+              || echo "::warning::Failed to delete artifact $artifact_id; continuing."
+          done
