@@ -84,7 +84,6 @@ jobs:
       github: true
       dockerhub: true
       # Docker-only repo: no NuGet/PyPI/executable targets and no release-asset files.
-      expect_release_assets: false
 
   # Caller-gated to main: the badge and Docker Hub overview have no per-branch context, so they update only when main
   # is among the published branches (a develop-only push skips them). One invocation, not a per-branch matrix leg.

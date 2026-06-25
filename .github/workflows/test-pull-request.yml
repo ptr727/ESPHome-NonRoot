@@ -53,10 +53,6 @@ jobs:
       branch: ${{ github.base_ref || github.ref_name }}
       enable_docker: ${{ needs.changes.outputs.docker == 'true' }}
       # Docker-only repo: no NuGet/PyPI/executable targets and no release-asset files.
-      enable_nuget: false
-      enable_pypi: false
-      enable_executable: false
-      expect_release_assets: false
 
   # Aggregator giving the PR one required status check across the conditional
   # jobs. Its name is the required-check context in the branch ruleset - do NOT
