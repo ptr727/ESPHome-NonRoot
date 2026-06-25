@@ -3,58 +3,29 @@ name: Build project release task
 on:
   workflow_call:
     inputs:
-      # Whether to create a GitHub release.
       github:
         required: false
         type: boolean
         default: false
-      # Whether to push the library to NuGet.org.
-      nuget:
-        required: false
-        type: boolean
-        default: false
-      # Whether to push the docker image to Docker Hub.
       dockerhub:
         required: false
         type: boolean
         default: false
-      # Git ref to check out / version (empty = default checkout ref).
       ref:
         required: false
         type: string
         default: ''
-      # Logical branch driving config / tags / prerelease for every target. Required (no fallback) because the
-      # publisher builds both `main` and `develop` in one run, so a silent fallback would mislabel the develop leg.
+      # Drives tags/prerelease: main => latest/non-prerelease, else develop.
       branch:
         required: true
         type: string
-      # Smoke mode: reduced, never-published build for fast PR feedback. Forwarded to every target and hard-disables
-      # every push below, so a smoke run can never publish regardless of the publish flags.
+      # Reduced, never-published build for PR feedback; disables every push below.
       smoke:
         required: false
         type: boolean
         default: false
-      # Per-target presence gates. Default true (build everything); a PR smoke run sets these from the paths-filter
-      # so only changed targets build.
+      # Docker build gate; a PR smoke run sets it from the paths-filter.
       enable_docker:
-        required: false
-        type: boolean
-        default: true
-      enable_nuget:
-        required: false
-        type: boolean
-        default: true
-      enable_pypi:
-        required: false
-        type: boolean
-        default: true
-      enable_executable:
-        required: false
-        type: boolean
-        default: true
-      # Set false for a repo that produces no release-asset-* files (e.g. Docker-only): the release is then just the
-      # tag + source zip + README + LICENSE; the artifact download is skipped and the unmatched-files guard relaxes.
-      expect_release_assets:
         required: false
         type: boolean
         default: true
@@ -68,48 +39,6 @@ jobs:
     with:
       ref: ${{ inputs.ref }}
 
-  build-nugetlibrary:
-    name: Build NuGet library job
-    if: ${{ inputs.enable_nuget }}
-    needs: [get-version]
-    uses: ./.github/workflows/build-nugetlibrary-task.yml
-    secrets: inherit
-    with:
-      # Pin to the resolved commit so the artifacts match the release tag even if the branch advances mid-run.
-      ref: ${{ needs.get-version.outputs.GitCommitId }}
-      branch: ${{ inputs.branch }}
-      # Push to NuGet.org, never on a smoke build.
-      push: ${{ inputs.nuget && !inputs.smoke }}
-      # Skip the release-asset upload on smoke (nothing consumes it on a PR).
-      smoke: ${{ inputs.smoke }}
-
-  # PyPI publishing happens in `publish-release.yml`, not here, so `id-token: write` is only granted at the
-  # entry-point job; this workflow just builds and uploads the artifact for that job to download.
-  build-pypilibrary:
-    name: Build PyPI library job
-    if: ${{ inputs.enable_pypi }}
-    needs: [get-version]
-    uses: ./.github/workflows/build-pypilibrary-task.yml
-    secrets: inherit
-    with:
-      # Pin to the resolved commit so the artifacts match the release tag.
-      ref: ${{ needs.get-version.outputs.GitCommitId }}
-      branch: ${{ inputs.branch }}
-      # Skip the wheel/sdist upload on smoke (the publish-pypi job runs only on a real publish).
-      smoke: ${{ inputs.smoke }}
-
-  build-executable:
-    name: Build executable job
-    if: ${{ inputs.enable_executable }}
-    needs: [get-version]
-    uses: ./.github/workflows/build-executable-task.yml
-    secrets: inherit
-    with:
-      # Pin to the resolved commit so the artifacts match the release tag.
-      ref: ${{ needs.get-version.outputs.GitCommitId }}
-      branch: ${{ inputs.branch }}
-      smoke: ${{ inputs.smoke }}
-
   build-docker:
     name: Build Docker job
     if: ${{ inputs.enable_docker }}
@@ -117,24 +46,23 @@ jobs:
     uses: ./.github/workflows/build-docker-task.yml
     secrets: inherit
     with:
-      # Pin to the resolved commit so the artifacts match the release tag.
+      # Pin to the built commit so the image matches the release tag even if the
+      # branch advances mid-run.
       ref: ${{ needs.get-version.outputs.GitCommitId }}
       branch: ${{ inputs.branch }}
       smoke: ${{ inputs.smoke }}
-      # Push to Docker Hub, never on a smoke build.
       push: ${{ inputs.dockerhub && !inputs.smoke }}
 
   github-release:
     name: Publish GitHub release job
-    # `!inputs.smoke` enforces "smoke never publishes" at the job level, so a smoke caller that also set
-    # `github: true` still can't create a release.
+    # Also gate on !smoke so a smoke run can't create a release.
     if: ${{ inputs.github && !inputs.smoke }}
     runs-on: ubuntu-latest
-    needs: [get-version, build-nugetlibrary, build-pypilibrary, build-executable, build-docker]
+    needs: [get-version, build-docker]
 
     steps:
 
-      # Check out the exact built commit so the uploaded release files match the tag even if the branch advances mid-run.
+      # Check out the built commit so release files match the tag.
       - name: Checkout code step
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -155,21 +83,19 @@ jobs:
             exit 1
           fi
 
-      # Collect assets by the `release-asset-<branch>-*` pattern so this step is target-agnostic: subset releases by
-      # deleting the target, not `enable_*: false` (a skipped `needs` job would skip this release job too). The release
-      # step guards `fail_on_unmatched_files: true`, so at least one `release-asset-*` must match; a repo that drops
-      # every file-producing target (e.g. a Docker-only repo, whose release carries only source zip + README + LICENSE)
-      # relaxes that guard.
+      # Collect any release-asset-<branch>-* artifacts. The Docker build pushes
+      # directly and uploads none, so this matches nothing (which succeeds) and
+      # the release carries just the tag + LICENSE/README.
       - name: Download release asset artifacts step
-        if: ${{ inputs.expect_release_assets }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-asset-${{ inputs.branch }}-*
           merge-multiple: true
           path: ./Publish
 
-      # The weekly publisher re-runs even with no new commits, so the version may already be released. Skip the release
-      # step when a release for this tag already exists to avoid a no-op republish.
+      # The weekly publisher may re-run an already-released SemVer2; skip
+      # recreating an existing release (Docker tags and base-image refresh still
+      # ship).
       - name: Check for existing release step
         id: release-exists
         env:
@@ -188,13 +114,9 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # `target_commitish` must be set explicitly: otherwise GitHub's REST API tags the release on the default branch.
-      # Pin it to `GitCommitId` so the tag is on the exact built commit, consistent with the SemVer2 tag and artifacts.
-      # Skip when the release already exists, but always let a manual `workflow_dispatch` through to refresh it.
-      # Every release (any branch, any target) is a tag on the built commit plus the auto-attached source zip, README,
-      # and LICENSE; targets amend it by uploading `release-asset-*` files (binaries/packages) or pushing elsewhere
-      # (image/registry). `fail_on_unmatched_files: true` fails loudly if a promised `release-asset-*` is missing or
-      # misnamed; a no-file-target repo relaxes it (see download step).
+      # Pin the tag to the built commit; without target_commitish GitHub tags
+      # the default branch. Skip when the tag exists, but let workflow_dispatch
+      # through to refresh it.
       - name: Create GitHub release step
         if: ${{ steps.release-exists.outputs.exists == 'false' || github.event_name == 'workflow_dispatch' }}
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
@@ -203,7 +125,6 @@ jobs:
           tag_name: ${{ needs.get-version.outputs.SemVer2 }}
           target_commitish: ${{ needs.get-version.outputs.GitCommitId }}
           prerelease: ${{ inputs.branch != 'main' }}
-          fail_on_unmatched_files: ${{ inputs.expect_release_assets }}
           files: |
             LICENSE
             README.md
