@@ -84,9 +84,6 @@ jobs:
       github: true
       dockerhub: true
       # Docker-only repo: no NuGet/PyPI/executable targets and no release-asset files.
-      enable_nuget: false
-      enable_pypi: false
-      enable_executable: false
       expect_release_assets: false
 
   # Caller-gated to main: the badge and Docker Hub overview have no per-branch context, so they update only when main
