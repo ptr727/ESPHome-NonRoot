@@ -2,6 +2,10 @@
 
 ## Release History
 
+- Version 1.8:
+  - Reworked the CI/CD pipeline to a branch-scoped, one-branch-per-run model: a weekly scheduled run and a path-scoped push on a tracked-upstream-version change publish `main` (stable, Docker `latest`), a manual dispatch publishes the branch it is started from, and the daily upstream-version tracker keeps `upstream-version.json` current; ordinary merges no longer publish.
+  - Version-tagged the container: images also publish a `:SemVer2` tag (`X.Y.<height>`) alongside the moving `latest` / `develop` and pinned `:<esphome-version>` tags, and each version gets a GitHub release.
+  - Added `WORKFLOW.md` (the canonical CI/CD specification) and `repo-config/` (rulesets and repository settings as code).
 - Version 1.7:
   - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
   - Switched the image build to a `uv` virtual environment copied into the slim final stage.
