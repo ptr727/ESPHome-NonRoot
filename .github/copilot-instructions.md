@@ -6,7 +6,7 @@ The **canonical guide is [AGENTS.md](../AGENTS.md)** at the repo root - read it 
 
 This file is intentionally narrow: commit/PR-title conventions (so VS Code's AI commit-message and PR-title generators get them without an extra fetch), plus a GitHub Copilot Review Runbook that documents the provider-specific mechanics behind the review-loop contract defined in AGENTS.md.
 
-This repository ships only a Docker image and has no language source tree, so there is no language-specific style guide; [AGENTS.md](../AGENTS.md) is the single source of truth for all conventions.
+This repository ships only a Docker image and has no language source tree; general formatting and lint rules live in [`CODESTYLE.md`](../CODESTYLE.md), and all other conventions in [AGENTS.md](../AGENTS.md).
 
 ## Commit Messages and Pull Request Titles
 
