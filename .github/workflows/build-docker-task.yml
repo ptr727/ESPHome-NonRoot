@@ -1,39 +1,43 @@
 name: Build Docker image task
 
+# Builds the multi-arch image (linux/amd64,arm64) and, on a main publish, pushes it plus the Docker Hub overview.
+# Branch drives tags: main => latest + the pinned esphome-version tag, else develop, plus the `:SemVer2` tag. Smoke
+# builds amd64 only and never pushes; registry buildcache is branch-scoped. The orchestrator passes `branch` explicitly
+# (the publisher builds one branch per run - the trigger ref - and smoke passes github.ref_name) and the threaded
+# `semver2` from its single NBGV run, so this task never re-runs NBGV on the detached commit.
 on:
   workflow_call:
     inputs:
+      # Push the built image and the Docker Hub overview.
       push:
         required: false
         type: boolean
         default: false
+      # Git ref to check out (empty = default checkout ref).
       ref:
         required: false
         type: string
         default: ''
-      # Drives the image tags: main => latest + pinned version, else develop.
+      # Logical branch: main => latest + pinned version tag, else develop. Required (see header).
       branch:
         required: true
         type: string
-      # amd64 only, no push, no shared cache write - fast PR feedback.
+      # Smoke: build linux/amd64 only, never push, skip the shared cache-to. Fast PR feedback.
       smoke:
         required: false
         type: boolean
         default: false
+      # Version from the orchestrator's single NBGV run (threaded). This task does not
+      # re-run NBGV on the detached commit, which could classify the branch differently.
+      semver2:
+        required: true
+        type: string
 
 jobs:
-
-  get-version:
-    name: Get version information job
-    uses: ./.github/workflows/get-version-task.yml
-    secrets: inherit
-    with:
-      ref: ${{ inputs.ref }}
 
   build-docker:
     name: Build Docker image job
     runs-on: ubuntu-latest
-    needs: [get-version]
 
     steps:
 
@@ -42,8 +46,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # Pinned ESPHome + device-builder versions from the committed state file;
-      # the ESPHome version drives the image tag, both become build-args.
+      # Pinned ESPHome + device-builder versions from the committed state file; the ESPHome version drives the
+      # image tag, both become build-args.
       - name: Get pinned versions step
         id: esphome
         run: |
@@ -61,7 +65,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "device_builder=$device_builder" >> "$GITHUB_OUTPUT"
 
-      # QEMU emulates arm64; skip for amd64-only smoke builds.
+      # QEMU only emulates arm64; smoke is amd64-only, so skip it to save setup cost.
       - name: Setup QEMU step
         if: ${{ !inputs.smoke }}
         uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
@@ -73,10 +77,9 @@ jobs:
         with:
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
 
-      # Log in only when publishing; smoke/PR builds read the public cache
-      # anonymously, so fork PRs (no secret access) can still build.
+      # Always login (even on smoke) for higher pull/cache-read rate limits; the credentials are in both the
+      # Actions and Dependabot secret stores so a Dependabot push CI run can log in too. Forks cannot push here.
       - name: Login to Docker Hub step
-        if: ${{ inputs.push }}
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
@@ -87,24 +90,32 @@ jobs:
         with:
           # Context is Docker/ (the Dockerfile only copies entrypoint/).
           context: ./Docker
-          # Also gate on !smoke so a smoke run can never publish.
-          push: ${{ inputs.push && !inputs.smoke }}
+          push: ${{ inputs.push }}
           file: ./Docker/Dockerfile
-          # main: latest + the pinned version tag; develop: develop only (the
-          # second line is empty off main, which build-push-action ignores).
+          # main: latest + the pinned esphome-version tag; develop: develop only (the middle line is empty off
+          # main, which build-push-action ignores). Every image also carries the `:SemVer2` release tag.
           tags: |
             docker.io/ptr727/esphome-nonroot:${{ inputs.branch == 'main' && 'latest' || 'develop' }}
             ${{ inputs.branch == 'main' && format('docker.io/ptr727/esphome-nonroot:{0}', steps.esphome.outputs.version) || '' }}
+            docker.io/ptr727/esphome-nonroot:${{ inputs.semver2 }}
           platforms: ${{ inputs.smoke && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
-          # Read both branches' caches (near-identical layers); write only this
-          # branch's, and only when publishing. Branch-scoped so the publisher's
-          # main/develop legs don't clobber one shared cache.
+          # Read both branches' caches (near-identical layers), write only this branch's tag and only when pushing.
+          # mode=max caches the builder publish; ignore-error keeps a cache hiccup from failing a publish.
           cache-from: |
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
             type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop
-          cache-to: ${{ inputs.push && !inputs.smoke && format('type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-{0},mode=max,ignore-error=true', inputs.branch) || '' }}
+          cache-to: ${{ inputs.push && format('type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-{0},mode=max,ignore-error=true', inputs.branch) || '' }}
           build-args: |
-            LABEL_VERSION=${{ needs.get-version.outputs.SemVer2 }}
+            LABEL_VERSION=${{ inputs.semver2 }}
             ESPHOME_VERSION=${{ steps.esphome.outputs.version }}
             DEVICE_BUILDER_VERSION=${{ steps.esphome.outputs.device_builder }}
 
+      # Push the trimmed Docker Hub overview from Docker/README.md, main only (one overview, no per-branch context).
+      - name: Update Docker Hub description step
+        if: ${{ inputs.push && inputs.branch == 'main' }}
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          repository: ptr727/esphome-nonroot
+          readme-filepath: ./Docker/README.md
