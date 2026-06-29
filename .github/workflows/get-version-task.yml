@@ -1,5 +1,7 @@
 name: Get version information task
 
+# Run NBGV once and expose the version outputs. The caller passes its branch as ref so the run versions the
+# branch it builds; github.ref matches that branch (one branch per run), so NBGV classifies it without override.
 on:
   workflow_call:
     inputs:
@@ -37,7 +39,7 @@ jobs:
     steps:
 
       - name: Setup .NET SDK step
-        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: 10.x
 
@@ -47,8 +49,8 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
-      # Floated on `master` (not SHA-pinned): upstream tags lag `master`, so a
-      # pin would only draw spurious Dependabot downgrade PRs.
+      # Float nbgv on `master`, not SHA-pinned: its tag stream lags `master`, so Dependabot
+      # tag-tracking would only propose downgrades to stale tags (WORKFLOW.md D9.1).
       - name: Run Nerdbank.GitVersioning tool step
         id: nbgv
         uses: dotnet/nbgv@master
