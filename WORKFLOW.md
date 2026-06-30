@@ -216,7 +216,7 @@ required" signal that publishes the new upstream within ~a day, not just on the 
 ### Flow diagrams
 
 Four diagrams trace the architecture above: the pull-request gate, the self-publisher, the bot
-automation, and the upstream-version trigger chain. They are the same outcomes the section 4 contract specifies,
+automation, and the upstream-version trigger chain. They depict the same outcomes that the section 4 contract specifies,
 drawn from the workflow YAML; if a diagram and a guarantee disagree, one of them is a defect. Triggers
 are blue, gates yellow, durable/published outputs green, and stop/skip outcomes red.
 
