@@ -95,8 +95,9 @@ Legibility rules. Necessary but not sufficient: a perfectly styled workflow can 
   `group: '${{ github.workflow }}-${{ github.ref }}'`, `cancel-in-progress: true`. The publisher overrides
   it: a ref-independent group with `cancel-in-progress: false`, so two publishes never overlap (a schedule, a
   pin push, and a manual dispatch, or back-to-back dispatches) and none is cancelled mid-release. The tracker
-  uses the same ref-independent group so a schedule and a dispatch cannot race the shared `upstream-version-*`
-  branches.
+  uses a ref-independent group (`group: '${{ github.workflow }}'`) but with `cancel-in-progress: true`, distinct
+  from the publisher's `false`: it only opens a pull request, so a later run superseding an in-flight one is
+  safe.
 - **Shells.** Every multi-line bash `run:` starts with `set -euo pipefail`.
 - **Conditionals.** Multi-line `if:` uses the folded scalar `if: >-`.
 - **Boolean inputs.** A boolean used by both `workflow_call` and `workflow_dispatch` is declared in both
@@ -211,6 +212,129 @@ path-scoped trigger fires and ships the new upstream version. Both matrix legs r
 so the committed state is byte-identical on both branches and a `develop -> main` promotion never conflicts on
 the pin. *This is the one ESPHome-specific contract the pure-Docker siblings lack: a 100%-certain "update
 required" signal that publishes the new upstream within ~a day, not just on the weekly base-image refresh.*
+
+### Flow diagrams
+
+Four diagrams trace the architecture above: the pull-request gate, the self-publisher, the bot
+automation, and the upstream-version trigger chain. They are the same outcomes section 4 contracts,
+drawn from the workflow YAML; if a diagram and a guarantee disagree, one of them is a defect. Triggers
+are blue, gates yellow, durable/published outputs green, and stop/skip outcomes red.
+
+**Pull request (CI) - `test-pull-request.yml`.** Every push (all branches, not tags) head-resolves the
+reusable tasks, runs the lint-only validate gate and a non-publishing amd64 smoke build, and a single
+aggregator produces the ruleset-bound required check (D1, D6).
+
+```mermaid
+flowchart TD
+    T(["push: every branch<br/>(or workflow_dispatch)"]):::trig
+    T --> D{"github.event.deleted?"}:::gate
+    D -- "yes: branch deletion" --> X(["validate + smoke-build + aggregator skip<br/>no failed run, no pending check"]):::stop
+    D -- "no" --> V["validate job<br/>(validate-task.yml)"]
+    D -- "no" --> S["smoke-build job<br/>build-release-task.yml<br/>smoke: true, github: false, dockerhub: false"]
+    subgraph VT ["validate-task.yml (lint only, no unit-test)"]
+        L["lint job<br/>markdownlint, cspell (README/HISTORY),<br/>actionlint"]
+    end
+    V --> VT
+    subgraph SBT ["build-release-task.yml (smoke: true)"]
+        SV["get-version job<br/>NBGV runs once"] --> SB["build-docker job<br/>amd64 only, no push,<br/>no GitHub release"]
+    end
+    S --> SBT
+    VT --> A
+    SBT --> A
+    A{"Check pull request workflow status job<br/>validate AND smoke-build succeeded?"}:::gate
+    A -- "yes" --> G(["required check passes<br/>merge unblocked"]):::pub
+    A -- "no" --> R(["required check fails<br/>merge blocked"]):::stop
+    classDef trig fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef gate fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef pub fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef stop fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
+
+**Publish - `publish-release.yml` -> `build-release-task.yml`.** A weekly schedule (main only), a
+path-scoped pin push to main, or a dispatch runs the lint validate gate, versions once with NBGV,
+asserts main-vs-version, builds the pinned commit multi-arch, pushes the Docker tags to Docker Hub,
+and cuts the version-anchor GitHub release (D0, D2, D3, D4).
+
+```mermaid
+flowchart TD
+    P1(["schedule: weekly Mon 02:00 UTC<br/>(main only)"]):::trig --> PG
+    P2(["push: branches=[main]<br/>paths=[upstream-version.json]"]):::trig --> PG
+    P3(["workflow_dispatch<br/>(branch it is started from)"]):::trig --> PG
+    PG{"publish job guard<br/>ref_name in (main, develop)?"}:::gate
+    PG -- "no: feature branch" --> PSKIP(["publish skipped"]):::stop
+    PG -- "yes" --> BRT
+    subgraph BRT ["build-release-task.yml (smoke: false, github+dockerhub: true)"]
+        VAL["validate job<br/>(validate-task.yml lint, !smoke)"]
+        GV["get-version job<br/>NBGV @master, runs once<br/>SemVer2 + GitCommitId"]
+        VAL --> BD
+        GV --> BD["build-docker job<br/>checkout GitCommitId<br/>multi-arch amd64+arm64"]
+        BD --> DH[("Docker Hub push<br/>main: latest + :esphome-version<br/>else: develop; always :SemVer2")]:::pub
+        BD --> DRO[("Docker Hub overview<br/>Docker/README.md, main only")]:::pub
+        GV --> GR
+        BD --> GR{"github-release job<br/>main version has no '-' suffix?"}:::gate
+        GR -- "main carries prerelease '-'" --> VRX(["fail ::error::<br/>refuse to publish"]):::stop
+        GR -- "ok" --> EX{"tag exists AND not dispatch?"}:::gate
+        EX -- "yes" --> NOP(["skip release create<br/>(no-op republish)"]):::stop
+        EX -- "no" --> REL[("GitHub release (version anchor)<br/>tag = SemVer2 at GitCommitId<br/>LICENSE + README.md, no build asset<br/>prerelease = branch != main")]:::pub
+    end
+    classDef trig fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef gate fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef pub fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef stop fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
+
+**Automation - Dependabot + tracker + merge-bot.** Dependabot and the daily upstream-version tracker
+open in-repo bot PRs; the merge-bot enables auto-merge (or disables it on a maintainer push); a merged
+pin change then drives the publisher above, while a merged dependency bump does not (D8).
+
+```mermaid
+flowchart TD
+    DEP(["Dependabot opens PR<br/>github-actions / docker"]):::trig --> MB
+    TRK(["tracker opens upstream-version-&lt;branch&gt; PR<br/>App-signed (see trigger diagram)"]):::trig --> MB
+    subgraph MBT ["merge-bot-pull-request.yml (pull_request_target)"]
+        MB{"event action / PR author"}:::gate
+        MB -- "opened/reopened<br/>dependabot[bot]" --> END{"semver-major nuget?"}:::gate
+        END -- "yes" --> HUM(["wait for human review"]):::stop
+        END -- "no" --> ENA["enable auto-merge<br/>squash develop / merge main"]
+        MB -- "opened/reopened<br/>ptr727-codegen[bot]<br/>head/base pair matches" --> ENU["enable auto-merge<br/>squash develop / merge main"]
+        MB -- "synchronize by maintainer" --> DIS["disable auto-merge"]
+    end
+    ENA --> CK
+    ENU --> CK
+    CK{"required check passes?"}:::gate
+    CK -- "yes" --> MRG(["PR merges (App token)<br/>--delete-branch"]):::pub
+    CK -- "no" --> BLK(["merge blocked<br/>maintainer notified"]):::stop
+    MRG -. "pin change on main only" .-> PUBR(["publisher auto-releases"]):::pub
+    MRG -. "dependency bump<br/>not a shipped input" .-> NOPUB(["no publish<br/>ships next weekly run"]):::stop
+    classDef trig fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef gate fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef pub fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef stop fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
+
+**Upstream-version trigger chain - `check-upstream-version.yml` -> publisher.** The daily tracker
+resolves the PyPI versions, rewrites the pin per branch, opens auto-merged bump PRs; merging the main
+bump is the pin push that fires the publisher, shipping the new upstream within about a day (D8.3, D4.1).
+
+```mermaid
+flowchart TD
+    SCH(["schedule daily 05:00 UTC<br/>(or workflow_dispatch)"]):::trig --> RES
+    subgraph CUT ["check-upstream-version-task.yml (matrix: main, develop)"]
+        RES["resolve esphome + device_builder<br/>from PyPI (App token)"] --> CHG{"upstream-version.json<br/>changed vs committed?"}:::gate
+        CHG -- "no diff" --> NOPR(["no PR (both branches identical)"]):::stop
+        CHG -- "yes" --> PRM["open/refresh upstream-version-main PR<br/>(base main, App-signed, CRLF)"]
+        CHG -- "yes" --> PRD["open/refresh upstream-version-develop PR<br/>(base develop, App-signed, CRLF)"]
+    end
+    PRM --> MMAIN["merge-bot merge-upstream-version<br/>--merge into main, --delete-branch"]
+    PRD --> MDEV["merge-bot merge-upstream-version<br/>--squash into develop, --delete-branch"]
+    MDEV --> DSYNC(["develop pin synced<br/>push trigger is main-only, no publish"]):::stop
+    MMAIN --> PUSH{"push to main<br/>paths match upstream-version.json?"}:::gate
+    PUSH -- "yes" --> PUB(["publish-release fires on main<br/>stable release + new :esphome-version image"]):::pub
+    classDef trig fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef gate fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef pub fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef stop fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
 
 ## 4. Behavioral contract - expected outcomes
 
@@ -328,8 +452,8 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 
 - **D7.1 The publisher does not cancel mid-flight.** Output: ref-independent group, `cancel-in-progress:
   false`. CI uses the `...-${{ github.ref }}` group with `cancel-in-progress: true`; the merge-bot keys on PR
-  number (D8.1); the tracker uses a ref-independent group so a schedule and a dispatch cannot race the shared
-  `upstream-version-*` branches.
+  number (D8.1); the tracker uses a ref-independent group with `cancel-in-progress: true` (distinct from the
+  publisher's `false`), safe because it only opens a pull request.
 - **D7.2 Skipped jobs still need valid permissions.** Output: every reusable job declares valid
   `permissions:`; a callee's extra scope is granted by the caller.
 - **D7.3 Boolean inputs both forms.** Declared in both trigger blocks, compared against `true` and `'true'`.
