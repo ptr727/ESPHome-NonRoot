@@ -454,7 +454,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   false`. CI uses the `...-${{ github.ref }}` group with `cancel-in-progress: true`; the merge-bot keys on PR
   number (D8.1); the tracker uses a ref-independent group with `cancel-in-progress: true` (distinct from the
   publisher's `false`), safe because it only opens a pull request.
-- **D7.2 Skipped jobs still need valid permissions.** Output: every reusable job declares valid
+- **D7.2 Skipped jobs still need valid permissions.** Output: every reusable job runs under valid least-privilege
   `permissions:`; a callee's extra scope is granted by the caller.
 - **D7.3 Boolean inputs both forms.** Declared in both trigger blocks, compared against `true` and `'true'`.
 
