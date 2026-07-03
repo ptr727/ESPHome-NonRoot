@@ -192,10 +192,9 @@ target adds a transfer artifact, it MUST set `retention-days: 1` and never blank
 
 ### Self-sufficiency: automatic updates and upstream tracking
 
-Every Dependabot pull request auto-merges once the required checks pass (the checks are the safety net),
-except a **semver-major NuGet** bump, which waits for human review - this repo has no NuGet ecosystem
-(`github-actions` + `docker` only), so in practice every bump auto-merges; the guard is retained for
-convergence with the sibling repos. A merged Actions/base-image bump does not itself publish - it ships in the
+Every Dependabot pull request auto-merges once the required checks pass - any ecosystem and any tier,
+semver-major included (this repo's ecosystems are `github-actions` + `docker`). The required checks are the
+safety net, not the version bump. A merged Actions/base-image bump does not itself publish - it ships in the
 next weekly publish. This repo **does** run an upstream-version tracker (it tracks the `esphome` and
 `device_builder` PyPI releases) - unlike the pure-Docker siblings, which have neither codegen nor a tracker. A
 person steps in only for a breaking change (a red check) or to dispatch a release.
@@ -293,9 +292,7 @@ flowchart TD
     TRK(["tracker opens upstream-version-&lt;branch&gt; PR<br/>App-signed (see trigger diagram)"]):::trig --> MB
     subgraph MBT ["merge-bot-pull-request.yml (pull_request_target)"]
         MB{"event action / PR author"}:::gate
-        MB -- "opened/reopened<br/>dependabot[bot]" --> END{"semver-major nuget?"}:::gate
-        END -- "yes" --> HUM(["wait for human review"]):::stop
-        END -- "no" --> ENA["enable auto-merge<br/>squash develop / merge main"]
+        MB -- "opened/reopened<br/>dependabot[bot]" --> ENA["enable auto-merge<br/>squash develop / merge main"]
         MB -- "opened/reopened<br/>ptr727-codegen[bot]<br/>head/base pair matches" --> ENU["enable auto-merge<br/>squash develop / merge main"]
         MB -- "synchronize by maintainer" --> DIS["disable auto-merge"]
     end
@@ -464,10 +461,9 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   checking out its code, with `--delete-branch`. Enables auto-merge on `opened`/`reopened`; squash on `develop`,
   merge-commit on `main` by the PR's base ref; disables auto-merge when a maintainer pushes to a bot branch.
   Concurrency keyed on PR number.
-- **D8.2 Dependabot auto-merges on green, semver-major NuGet excepted.** Output: every Dependabot PR
-  auto-merges once the required checks pass, except a semver-major NuGet bump (human review). This repo has no
-  NuGet ecosystem (only `github-actions` + `docker`), so every bump auto-merges in practice; the guard is
-  retained for convergence with the sibling repos. A failing check blocks the merge. A merged bump does **not**
+- **D8.2 Dependabot auto-merges on green, every tier.** Output: every Dependabot PR - any ecosystem,
+  semver-major included - auto-merges once the required checks pass, with no version-tier exception (this
+  repo's ecosystems are `github-actions` + `docker`). A failing check blocks the merge. A merged bump does **not**
   itself publish (dependencies are not shipped inputs); it ships in the next weekly publish.
 - **D8.3 Upstream-version tracker.** Output: the tracker runs daily, resolves the upstream PyPI versions, and
   opens an App-signed dual-target (`main` + `develop`) bump PR rewriting `upstream-version.json`; the merge-bot's
@@ -530,8 +526,8 @@ applicable guarantee with a `file:line` citation:
 - **D7:** the publisher group is ref-independent with `cancel-in-progress: false`; the merge-bot keys on PR
   number; the tracker group is ref-independent; CI uses the standard group; reusable jobs declare permissions.
 - **D8/D9:** the merge-bot runs on `pull_request_target` with the App token, keyed on PR number, merges with
-  `--delete-branch`, and carries `merge-upstream-version`; Dependabot auto-merge excepts semver-major NuGet
-  only; the tracker is daily, App-signed, dual-target; no codegen, date-badge, tool-versions, docker-readme
+  `--delete-branch`, and carries `merge-upstream-version`; Dependabot auto-merge has no semver-major
+  exception; the tracker is daily, App-signed, dual-target; no codegen, date-badge, tool-versions, docker-readme
   task, executable task, `PUBLISH_ON_MERGE`, or `dorny/paths-filter`; actions SHA-pinned except `dotnet/nbgv@master`;
   names/shells/conditionals per section 2.
 
