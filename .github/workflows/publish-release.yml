@@ -2,22 +2,24 @@ name: Publish project release action
 
 # Triggered-Docker publisher, one run = one branch (the trigger ref). The weekly schedule rebuilds `main` only
 # (multi-arch image + GitHub release; refreshes the `latest`/version tags and the python:3.14-slim base for CVEs).
-# A path-scoped push publishes `main` immediately when the daily upstream-check commits a new `upstream-version.json`
-# pin. A manual dispatch publishes the branch it is started from (main => latest, develop => prerelease/`develop`).
+# A path-scoped push publishes the branch it lands on when the daily upstream-check commits a new `upstream-version.json`
+# pin (main => release, develop => prerelease). A manual dispatch publishes the branch it is started from (main => latest, develop => prerelease/`develop`).
 # Building only the trigger branch keeps github.ref aligned with the branch being versioned, so NBGV classifies it
 # with no matrix and no cross-branch ref leak.
 #
-# Ordinary code merges do NOT publish: only a pin change (push, branch-filtered to main) or a schedule/dispatch
-# does. develop's daily pin update is sync-only (the push trigger is main-only). CI/validation runs separately on
+# Ordinary code merges do NOT publish: only a pin change (push to main or develop) or a schedule/dispatch does.
+# Each branch self-releases: main builds multi-arch, develop builds amd64 only. CI/validation runs separately on
 # push (test-pull-request).
 on:
   workflow_dispatch:
   schedule:
     # Weekly rebuild/publish of main (Mon 02:00 UTC) to pick up base-image updates.
     - cron: '0 2 * * MON'
-  # Publish main immediately when the upstream pin changes; the daily upstream-check commits the new version here.
+  # Publish immediately when the upstream pin changes on either branch (main => release, develop => prerelease);
+  # the daily upstream-check commits the new version here. Each push runs on its own ref, so NBGV classifies the
+  # branch it built (no matrix). develop builds amd64 only; main builds multi-arch (see build-docker-task).
   push:
-    branches: [main]
+    branches: [main, develop]
     paths: [upstream-version.json]
 
 # Global, ref-independent group so two publishes never overlap (a schedule + a dispatch + a pin push, or back-to-back
