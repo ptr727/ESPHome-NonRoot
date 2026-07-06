@@ -105,8 +105,9 @@ Applies to code and workflow (`#`) comments alike.
 
 ### Line Endings
 
-- [`.editorconfig`](./.editorconfig) defines the correct ending per file type (CRLF for `.md`, XML/`.csproj`/`.props`, `.yml`/`.yaml`, `.json`, `.cmd`/`.bat`/`.ps1`; LF for `.sh` and `Dockerfile`), and [`.gitattributes`](./.gitattributes) (`* -text`) stops git from normalizing. Carry both files whole even where a rule covers a file type this repo does not ship (the `[*.cs]` block is inert without `.cs` files) so a future re-sync stays a clean whole-file overwrite.
+- [`.editorconfig`](./.editorconfig) defines the correct ending per file type (CRLF for `.md`, XML/`.csproj`/`.props`, non-workflow `.yml`/`.yaml`, `.json`, `.cmd`/`.bat`/`.ps1`; LF for `.sh`, `Dockerfile`, and workflow YAML under `.github/workflows/`), and [`.gitattributes`](./.gitattributes) (`* -text`) stops git from normalizing. Carry both files whole even where a rule covers a file type this repo does not ship (the `[*.cs]` block is inert without `.cs` files) so a future re-sync stays a clean whole-file overwrite.
 - **Editing an existing file: preserve its current line endings** - do not reflow them as a side effect of a content change, even if the file is already non-compliant. After any programmatic edit, verify with `git diff --stat` (only changed lines) and `file <path>` (expected ending). Bring a non-compliant file to its `.editorconfig` ending only as a deliberate, isolated EOL-only change.
+- **Workflow YAML (`.github/workflows/*.{yml,yaml}`) is pinned LF** in `.editorconfig` - Dependabot and Actions rewrite it with LF, so declaring LF keeps it consistent instead of mixed on every bump. This is not a `.gitattributes` pin (git keeps `* -text` and does not normalize); CI's `editorconfig-checker` (EOL-only) catches a mismatch instead. Non-workflow YAML stays CRLF.
 
 ### Quantitative Claims
 
