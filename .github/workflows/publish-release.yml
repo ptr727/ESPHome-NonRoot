@@ -15,9 +15,7 @@ on:
   schedule:
     # Weekly rebuild/publish of main (Mon 02:00 UTC) to pick up base-image updates.
     - cron: '0 2 * * MON'
-  # Publish immediately when the upstream pin changes on either branch (main => release, develop => prerelease);
-  # the daily upstream-check commits the new version here. Each push runs on its own ref, so NBGV classifies the
-  # branch it built (no matrix). develop builds amd64 only; main builds multi-arch (see build-docker-task).
+  # Publish the pushed branch when the upstream pin changes (main => release, develop => prerelease); the daily upstream-check commits it here.
   push:
     branches: [main, develop]
     paths: [upstream-version.json]
