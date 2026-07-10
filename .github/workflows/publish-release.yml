@@ -15,7 +15,7 @@ on:
   schedule:
     # Weekly rebuild/publish of main (Mon 02:00 UTC) to pick up base-image updates.
     - cron: '0 2 * * MON'
-  # Publish the pushed branch when the upstream pin changes (main => release, develop => prerelease); the daily upstream-check commits it here.
+  # Publish main when the upstream-check App commits a new pin here (the plan job gates it to the App identity); a develop prerelease comes via dispatch.
   push:
     branches: [main]
     paths: [upstream-version.json]
