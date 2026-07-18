@@ -658,8 +658,8 @@ applicable guarantee with a `file:line` citation:
 | S12 | `develop` -> `main` promotion (merge commit) | the merge itself does not publish (it does not change the pin); `main`'s accumulated changes ship in the next scheduled run | D4.1, D8.1 |
 | S13 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package; it does **not** auto-merge and does **not** publish | D8.4 |
 | S14 | a runtime library the toolchain links against is dropped from the Dockerfile | push CI stays green; the next publish's compile test fails on the ESP-IDF fixtures and nothing is pushed | D11.1, D11.3 |
-| S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
-| S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
+| S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
+| S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
 | S17 | the tracker opens an upstream pin bump PR that breaks compiles | the change-gate sees `upstream-version.json`, the compile test runs and fails, the required check blocks auto-merge before the pin reaches `main` | D1.1, D8.3, D11.1 |
 
 ### 5C. Live probe (where warranted, never publishing)
