@@ -48,12 +48,17 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          # A non-push event has no diff to reason about on any branch, so compile-test rather than guess.
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "compile-test=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # On a long-lived branch the push itself is the change. On a feature branch diff the whole branch against
           # its merge-base instead, so the gate reflects the pull request and not merely its most recent push - a
           # later docs-only commit must not retire a compile test the branch's image change earned.
           if [[ "$REF_NAME" == "main" || "$REF_NAME" == "develop" ]]; then
-            # A new branch or non-push event has no usable before-commit (all-zeros or empty). Compile-test everything.
-            if [[ "$BEFORE" =~ ^0+$ || -z "$BEFORE" || "${{ github.event_name }}" != "push" ]]; then
+            # A new branch has no usable before-commit (all-zeros or empty). Compile-test everything.
+            if [[ "$BEFORE" =~ ^0+$ || -z "$BEFORE" ]]; then
               echo "compile-test=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
