@@ -423,9 +423,12 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 
 - **D1.1 Every push validates and smoke-builds the image; the compile test is change-gated.** Output: on any
   push, the `validate` job (the reusable `validate-task`) and `smoke-build` (the Docker target through
-  `build-release-task` with `smoke: true`) run, no paths filter. The inline `changes` job diffs the push and
-  sets `validate`'s `compile-test` input, true when `Docker/**`, `.github/compile-test/**`, or
-  `upstream-version.json` moved, and true whenever the diff is unusable (new branch, force-push, dispatch).
+  `build-release-task` with `smoke: true`) run, no paths filter. The inline `changes` job sets `validate`'s
+  `compile-test` input, true when `Docker/**`, `.github/compile-test/**`, or `upstream-version.json` moved, and
+  true whenever the diff is unusable (new branch, force-push, dispatch). A feature branch is diffed against its
+  merge-base with `develop`, not against the push, so a later docs-only commit cannot retire the compile test
+  the branch's own image change earned; `main` and `develop` are diffed by push, which is what catches the
+  change after a squash-merge.
   *Prevents a reusable-workflow or build break shipping untested, without charging every doc push ~5 minutes.*
 - **D1.2 Smoke builds the image.** Output: `smoke-build` builds the Docker image (amd64 only, seeded from the
   branch-scoped cache) to prove it still builds. There is no source-level unit test (nothing compiles here); the
@@ -603,7 +606,8 @@ applicable guarantee with a `file:line` citation:
   matches the versioned branch.
 - **D1:** CI runs on `push` with no paths filter; `validate` + `smoke-build` (the Docker target, `smoke: true`)
   run; `lint` runs markdownlint, cspell on README/HISTORY, actionlint; the inline `changes` job sets
-  `compile-test` from the push diff and fails open on an unusable diff; there is no source-level unit-test,
+  `compile-test` from the merge-base diff on a feature branch and the push diff on `main`/`develop`, failing
+  open on an unusable diff; there is no source-level unit-test,
   CSharpier/`dotnet format`, or Python-lint step; the aggregator `needs:` all three (a `changes` failure blocks)
   and blocks on non-success.
 - **D2:** the main release backstop checks the prerelease `-`, strips `+buildmetadata`, self-skips on smoke.
@@ -640,7 +644,8 @@ applicable guarantee with a `file:line` citation:
 | # | Input | Expected output | Exercises |
 | --- | --- | --- | --- |
 | S1 | push touching `Dockerfile` | `validate` (change-gate fires, so lint **and** compile test) + `smoke-build` run; the image builds, **no push, no release**; aggregator success | D0.1, D1, D11.1 |
-| S2 | push changing only docs | the change-gate sets `compile-test=false`; `validate` runs lint only + `smoke-build` runs; nothing publishes | D1, D1.1, D1.5 |
+| S2 | push changing only docs on a branch that changed nothing else | the change-gate sets `compile-test=false`; `validate` runs lint only + `smoke-build` runs; nothing publishes | D1, D1.1, D1.5 |
+| S2a | docs-only push on a branch that earlier changed `Docker/**` | the merge-base diff still sees the image change, so `compile-test` stays true and the branch cannot pass ungated | D1.1 |
 | S3 | push changing only `.github/workflows/**` | `smoke-build` exercises the changed reusable workflow head-resolved; `lint` runs actionlint; compile test stays off (no image input moved); aggregator success | D1.1, D6.1 |
 | S4 | weekly `schedule` | builds + publishes `main` only: stable release + refreshed `latest` + `:SemVer2` + `:<esphome>` (multi-arch); `target_commitish` = main's SHA; develop is not touched | D4.1, D4.2, D4.4 |
 | S5 | tracker merges a new pin to `main` | the path-scoped pin push fires the publisher on `main`: stable release + refreshed image with the new `:<esphome>` tag | D4.1, D8.3 |
