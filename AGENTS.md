@@ -175,6 +175,17 @@ Bring the user in when:
 
 Anti-pattern: don't keep flipping the code on the same style point. Flip the rule once and stick to the rule.
 
+## Verification Discipline
+
+These rules exist because the failures they prevent all look like success until someone reads closely.
+
+- **Run the whole lint gate before every push, not the parts that look relevant.** The gate is `markdownlint-cli2`, `cspell` (README + HISTORY), `actionlint`, and `editorconfig-checker`; CI runs all four, so a partial local run only defers the failure. The one most likely to catch a given change is the one it seems least about - an edit that manipulates line endings is exactly when `editorconfig-checker` matters.
+- **A green check is not evidence the work happened.** A skipped job and a passing job are indistinguishable in the aggregated required check. When a job exists to exercise something (a build, a compile, a gate), confirm from its log that it actually ran and produced the artifact or output it promises, rather than trusting the tick.
+- **A test must assert the mechanism it names.** Label each case by the behavior it proves, and satisfy yourself it would fail if that mechanism broke. A case that passes for an incidental reason - the right answer reached by the wrong path - is worse than no case, because it is later cited as evidence.
+- **A workflow change is only fully exercised by CI.** Extracting a `run:` block and executing it locally validates the script and nothing else: `secrets: inherit`, `permissions:`, `needs:` wiring, and reusable-workflow inputs are only resolved by a real run. Expect the first CI run to be the true test, and read it rather than assuming the local pass carries over.
+- **Gates, filters, and watchers must fail loud, never narrow quietly.** A pattern that silently matches less, an allowlist that silently stops matching, or a gate that silently stops gating all report success while doing nothing. When a construct exists to notice something, make the not-noticing case produce an error or an annotation.
+- **Editing CRLF files programmatically: `.` matches `\r` in a regex,** so a captured line keeps its carriage return and rejoining with `\r\n` yields `CRCRLF`. Prefer line-based edits (`splitlines(keepends=True)`) or explicit literal replacement over regex reassembly, and verify with `editorconfig-checker` afterwards.
+
 ## Workflow YAML Conventions
 
 The conventions for everything under [`.github/workflows/`](./.github/workflows/) - action pinning (every action SHA-pinned with a version comment, the sole exception being `dotnet/nbgv@master`), file/workflow/job/step naming, concurrency, shells, conditionals, boolean inputs, permissions, artifact handling, Docker layer cache, and release tagging - are specified in [`WORKFLOW.md`](./WORKFLOW.md), the canonical CI/CD guide. New and modified workflows must respect it; do not duplicate those rules here.
