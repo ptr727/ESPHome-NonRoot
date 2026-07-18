@@ -534,9 +534,9 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D4.9 One plan job owns the release-gate decision.** Output: `publish-release`'s `plan` job calls
   [`publish-plan-task.yml`](./.github/workflows/publish-plan-task.yml) with the event, actor, and ref, and the
   `publish` job gates on `needs.plan.outputs.publish == 'true'` instead of re-testing those in its own `if:`.
-  The task returns `publish: true` for a `schedule`, for a `workflow_dispatch` of `main`/`develop`, and for a
-  `push` to `main` by the codegen App or Dependabot; a hand-edited pin and a feature-branch dispatch both
-  resolve to `false`. Its outputs are the **strings** `'true'`/`'false'`, so a caller must compare explicitly -
+  The task sets `publish` to `'true'` for a `schedule`, for a `workflow_dispatch` of `main`/`develop`, and for
+  a `push` to `main` by the codegen App or Dependabot; a hand-edited pin and a feature-branch dispatch both
+  resolve to `'false'`. Its outputs are the **strings** `'true'`/`'false'`, so a caller must compare explicitly -
   a bare `if: ${{ needs.plan.outputs.publish }}` is always truthy, because a non-empty string is truthy in an
   Actions expression. The task also exposes `stable`, which this repo does not consume (main-only behavior is
   already carried by `inputs.branch`); an output a given caller leaves unused is expected of a task shared
@@ -702,8 +702,8 @@ applicable guarantee with a `file:line` citation:
 | S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
 | S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
 | S17 | the tracker opens an upstream pin bump PR that breaks compiles | the change-gate sees `upstream-version.json`, the compile test runs and fails, the required check blocks auto-merge before the pin reaches `main` | D1.1, D8.3, D11.1 |
-| S18 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity -> `publish=true`; `main` publishes the new upstream version same-day | D4.1, D4.9 |
-| S19 | a person hand-edits `upstream-version.json` on `main` | the push matches the path filter but the plan job's actor test fails -> `publish=false`, nothing releases; the edit ships on the next scheduled run | D4.9 |
+| S18 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity -> `publish` is `'true'`; `main` publishes the new upstream version same-day | D4.1, D4.9 |
+| S19 | a person hand-edits `upstream-version.json` on `main` | the push matches the path filter but the plan job's actor test fails -> `publish` is `'false'`, nothing releases; the edit ships on the next scheduled run | D4.9 |
 | S20 | the tracker's pin bump auto-merges to `develop` | the push trigger is `main`-only, so no publish run starts; `develop` stays in sync without releasing | D4.1 |
 
 ### 5C. Live probe (where warranted, never publishing)
