@@ -25,12 +25,14 @@
     "GLOBALLIB",
     "gruntfuggly",
     "lastbuild",
+    "libusb",
     "macvlan",
     "nbgv",
     "Nerdbank",
     "noninteractive",
     "nonroot",
     "numfmt",
+    "openocd",
     "Pieter",
     "piolibs",
     "platformio",
@@ -48,7 +50,8 @@
     "toolversions",
     "tzdata",
     "updatereadme",
-    "Viljoen"
+    "Viljoen",
+    "Xtensa"
   ],
   "ignorePaths": [
     ".git/**",

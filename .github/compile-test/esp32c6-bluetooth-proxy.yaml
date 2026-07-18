@@ -1,0 +1,26 @@
+# ESP32-C6 on ESP-IDF. C3/C6 are RISC-V where ESP32/S3 are Xtensa, so this exercises a
+# separate toolchain binary rather than only a different board definition.
+# Modeled on esphome/bluetooth-proxies esp32-generic/esp32-generic-c6.yaml.
+
+esphome:
+  name: compile-test-esp32c6-ble
+
+esp32:
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ap:
+
+api:
+logger:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+
+esp32_ble_tracker:
+
+bluetooth_proxy:
+  active: true

@@ -1,0 +1,25 @@
+# ESP32 (Xtensa) on ESP-IDF with the BLE stack - the widest component surface of the set.
+# Modeled on esphome/bluetooth-proxies esp32-generic/esp32-generic.yaml.
+
+esphome:
+  name: compile-test-esp32-ble
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+wifi:
+  ap:
+
+api:
+logger:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+
+esp32_ble_tracker:
+
+bluetooth_proxy:
+  active: true

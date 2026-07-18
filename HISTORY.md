@@ -1,7 +1,14 @@
 # ESPHome-NonRoot
 
+[ESPHome][esphome-link] docker container that supports non-root operation.
+
 ## Release History
 
+- Version 1.9:
+  - Added the `libusb-1.0-0` runtime library: ESPHome's ESP-IDF toolchain installer validates the `openocd-esp32` tool by executing it, and that binary dynamically links `libusb-1.0.so.0`, so ESP-IDF builds failed with an ESP-IDF framework installation failure ([#161][issue-161-link]).
+  - Added `ccache`: ESPHome enables it automatically for ESP-IDF builds whenever the binary is present, and its cache lives under the `/cache` volume, so it persists across container restarts.
+  - Added a firmware compile test that gates publishing: the image is built, loaded, and used to compile checked-in configurations as a non-root user, covering the Xtensa ESP-IDF, RISC-V ESP-IDF, wired Ethernet, and PlatformIO/Arduino build paths. It also runs on a pull request that changes the image or the tracked upstream version, so an upstream bump is verified before it merges.
+  - Added a daily upstream-dependency watcher that snapshots the package list ESPHome's own base image installs and opens a pull request for review when that list changes.
 - Version 1.8:
   - Reworked the CI/CD pipeline to a branch-scoped, one-branch-per-run model: a weekly scheduled run and a path-scoped push on a tracked-upstream-version change publish `main` (stable, Docker `latest`), a manual dispatch publishes the branch it is started from, and the daily upstream-version tracker keeps `upstream-version.json` current; ordinary merges no longer publish.
   - Version-tagged the container: images also publish a `:SemVer2` tag (`X.Y.<height>`) alongside the moving `latest` / `develop` and pinned `:<esphome-version>` tags, and each version gets a GitHub release.
@@ -31,7 +38,9 @@
 
 [devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
 [device-builder-link]: https://github.com/esphome/device-builder
+[esphome-link]: https://esphome.io
 [esphome-pr-6987-link]: https://github.com/esphome/esphome/pull/6987
+[issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
 [issue-60-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/60
 [pio-debug-link]: https://docs.platformio.org/en/latest/plus/debugging.html
 [vscode-python-debug-link]: https://code.visualstudio.com/docs/python/debugging
