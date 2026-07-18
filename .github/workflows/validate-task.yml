@@ -13,8 +13,9 @@ on:
         required: false
         type: string
         default: ''
-      # Run the compile test. Off for push CI, which would pay ~5 minutes per push for a break that cannot reach
-      # users without a publish; the publisher turns it on so a broken image never gets pushed.
+      # Run the compile test. Defaults off, so a caller opts in: the publisher always does, and push CI does when
+      # its change-gate sees the image or its test inputs move. A push that cannot affect the image skips the
+      # ~5 minutes, and a broken image still never gets pushed.
       compile-test:
         required: false
         type: boolean
