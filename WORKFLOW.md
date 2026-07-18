@@ -31,7 +31,7 @@ image reads at build time. Two workflows do the publishing work, plus a daily tr
   `develop`), auto-merged by the merge-bot. The `main` bump's push is what fires the publisher.
 - **The upstream-dependency watcher** runs **daily**: it snapshots the apt package list ESPHome's own base image
   installs into `upstream-dependency.json` and opens an App-signed PR against `develop` when the set moves. It is
-  deliberately **not** auto-merged - which of upstream's packages this image needs is a judgement call.
+  deliberately **not** auto-merged - which of upstream's packages this image needs is a judgment call.
 - **The image compile test** is a job in the validation gate: it compiles checked-in configurations in the image as
   a non-root uid. The publisher always runs it, so a failure blocks the push and the release. Push CI runs it only
   when an inline change-gate sees the image or its test inputs move, so an upstream pin bump is compile-tested
@@ -299,7 +299,7 @@ flowchart TD
     D -- "yes: branch deletion" --> X(["validate + smoke-build + aggregator skip<br/>no failed run, no pending check"]):::stop
     D -- "no" --> V["validate job<br/>(validate-task.yml)"]
     D -- "no" --> S["smoke-build job<br/>build-release-task.yml<br/>smoke: true, github: false, dockerhub: false"]
-    subgraph VT ["validate-task.yml (compile-test off on push CI)"]
+    subgraph VT ["validate-task.yml (compile test change-gated)"]
         L["lint job<br/>markdownlint, cspell (README/HISTORY),<br/>actionlint"]
     end
     V --> VT
@@ -658,9 +658,9 @@ applicable guarantee with a `file:line` citation:
 | S12 | `develop` -> `main` promotion (merge commit) | the merge itself does not publish (it does not change the pin); `main`'s accumulated changes ship in the next scheduled run | D4.1, D8.1 |
 | S13 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package; it does **not** auto-merge and does **not** publish | D8.4 |
 | S14 | a runtime library the toolchain links against is dropped from the Dockerfile | push CI stays green; the next publish's compile test fails on the ESP-IDF fixtures and nothing is pushed | D11.1, D11.3 |
+| S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
+| S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
 | S17 | the tracker opens an upstream pin bump PR that breaks compiles | the change-gate sees `upstream-version.json`, the compile test runs and fails, the required check blocks auto-merge before the pin reaches `main` | D1.1, D8.3, D11.1 |
-| S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
-| S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
 
 ### 5C. Live probe (where warranted, never publishing)
 

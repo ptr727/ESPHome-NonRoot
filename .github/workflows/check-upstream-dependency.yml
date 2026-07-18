@@ -3,7 +3,7 @@ name: Check upstream dependency action
 # Tracks the apt package list ESPHome's own base image installs (esphome/docker-base, debian/Dockerfile, `base`
 # stage): snapshots the sorted package names into upstream-dependency.json and opens a PR against develop when the
 # set moves. The head ref deliberately does not match the merge-bot's upstream-version-* pattern, so the PR waits
-# for a human - deciding whether a package upstream added applies to this image is a judgement call, and most of
+# for a human - deciding whether a package upstream added applies to this image is a judgment call, and most of
 # upstream's list does not (the builder stage here is separate and no cairo/magic bindings are installed).
 
 on:
