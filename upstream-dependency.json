@@ -1,0 +1,14 @@
+{
+  "docker_base_packages": [
+    "build-essential",
+    "ccache",
+    "curl",
+    "git",
+    "iputils-ping",
+    "libcairo2",
+    "libmagic1t64",
+    "libusb-1.0-0",
+    "openssh-client",
+    "patch"
+  ]
+}

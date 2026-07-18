@@ -151,4 +151,4 @@ After the final push, sweep-resolve stale older threads for removed code paths.
 
 Read [AGENTS.md](../AGENTS.md) for this repo's conventions. Don't restate its rules in commit bodies or PR descriptions - keep those focused on the change itself.
 
-**In a derived repo:** if you find a discrepancy that should be fixed in the template itself (this file or AGENTS.md is out of date, a rule is missing, something bit this repo and would bite the next), open an issue upstream in [`ptr727/ProjectTemplate`](https://github.com/ptr727/ProjectTemplate) rather than only fixing it locally - see the template's [AGENTS.md "Staying in Sync and Reporting Drift Upstream"](https://github.com/ptr727/ProjectTemplate/blob/main/AGENTS.md#staying-in-sync-and-reporting-drift-upstream).
+**Shared-contract files.** This file, `AGENTS.md`, `.markdownlint-cli2.jsonc`, `.editorconfig`, and `.gitattributes` are kept converged across the maintainer's repos. If one of them is wrong or missing a rule, raise it with the maintainer so the fix lands everywhere rather than only here.

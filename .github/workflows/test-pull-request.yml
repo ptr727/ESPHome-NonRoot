@@ -2,8 +2,10 @@ name: Test pull request action
 
 # CI for every branch. Runs on push so the reusable tasks resolve from the pushed head: a PR that edits a workflow
 # tests its own copy. validate (lint) and smoke-build run on every push with no paths filter, so a reusable-workflow
-# change is always exercised. The aggregator below is the ruleset required status check, produced here on the head
-# SHA. CI never publishes (the publisher runs on schedule/dispatch/pin-push).
+# change is always exercised; only the compile test inside validate is change-gated, since it costs ~5 minutes and
+# nothing it covers can move without the image or its test inputs changing. The aggregator below is the ruleset
+# required status check, produced here on the head SHA. CI never publishes (the publisher runs on
+# schedule/dispatch/pin-push).
 #
 # There is deliberately no pull_request trigger: a fork PR cannot push to this repo, so it produces no run and
 # cannot satisfy the required check. A maintainer lands such a contribution on an in-repo branch (which pushes, and
@@ -20,12 +22,73 @@ concurrency:
 
 jobs:
 
-  # `!github.event.deleted` skips a branch-deletion push (github.sha is all-zeros, so checkout/build fail). The same
-  # lint gate the publisher runs, so the PR gate and the publish gate are identical.
+  # Inline change-gate: diff the push against its before-commit to decide whether the compile test is worth its
+  # ~5 minutes. True when anything that changes the image, or what gets compiled in it, moved - so an upstream pin
+  # bump is compile-tested before it auto-merges. A dispatch or a new branch has no usable before-commit, so run it.
+  # `!github.event.deleted` skips a branch-deletion push (github.sha is all-zeros, so checkout/build fail).
+  changes:
+    name: Detect image changes job
+    if: ${{ !github.event.deleted }}
+    runs-on: ubuntu-latest
+    outputs:
+      compile-test: ${{ steps.filter.outputs.compile-test }}
+
+    steps:
+
+      - name: Checkout code step
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed paths step
+        id: filter
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # A non-push event has no diff to reason about on any branch, so compile-test rather than guess.
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "compile-test=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # On a long-lived branch the push itself is the change. On a feature branch diff the whole branch against
+          # its merge-base instead, so the gate reflects the pull request and not merely its most recent push - a
+          # later docs-only commit must not retire a compile test the branch's image change earned.
+          if [[ "$REF_NAME" == "main" || "$REF_NAME" == "develop" ]]; then
+            # A new branch has no usable before-commit (all-zeros or empty). Compile-test everything.
+            if [[ "$BEFORE" =~ ^0+$ || -z "$BEFORE" ]]; then
+              echo "compile-test=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            FROM="$BEFORE"
+          elif ! FROM="$(git merge-base origin/develop "$AFTER" 2>/dev/null)"; then
+            # No reachable merge-base (unfetched or unrelated history). Compile-test everything.
+            echo "compile-test=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! DIFF=$(git diff --name-only "$FROM" "$AFTER" 2>/dev/null); then
+            # FROM is not in the fetched history (e.g. a force-push that rewrote it). Compile-test everything.
+            echo "compile-test=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -qE '^(Docker/|\.github/compile-test/|upstream-version\.json$)' <<<"$DIFF"; then
+            echo "compile-test=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "compile-test=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The same lint gate the publisher runs, so the PR gate and the publish gate are identical. The compile test is
+  # carried by the same task, run only when the gate above says the image or its test inputs changed.
   validate:
     name: Validate job
     if: ${{ !github.event.deleted }}
+    needs: [changes]
     uses: ./.github/workflows/validate-task.yml
+    secrets: inherit
+    with:
+      compile-test: ${{ needs.changes.outputs.compile-test == 'true' }}
 
   # Build and pack the Docker target (amd64-only, no push) to prove it ships, publishing nothing. Smoke seeds from
   # the branch-scoped cache, so it stays fast.
@@ -43,17 +106,19 @@ jobs:
 
   # Single required status check. Its name is the ruleset-bound context in repo-config/ruleset-*.json. Do not rename
   # it without updating those in lockstep. Must succeed, not merely not-fail. Skips on a branch deletion (when
-  # validate/smoke-build also skip), so the deletion push does not fail this required check.
+  # changes/validate/smoke-build also skip), so the deletion push does not fail this required check.
   check-workflow-status:
     name: Check pull request workflow status job
     runs-on: ubuntu-latest
-    needs: [validate, smoke-build]
+    needs: [changes, validate, smoke-build]
     if: ${{ always() && !github.event.deleted }}
     steps:
+      # A failed change-gate is blocking, not ignorable: it would otherwise let an image-changing push pass
+      # untested by defaulting the compile test to off.
       - name: Check workflow results step
         run: |
           set -euo pipefail
-          for result in "validate:${{ needs.validate.result }}" "smoke-build:${{ needs.smoke-build.result }}"; do
+          for result in "changes:${{ needs.changes.result }}" "validate:${{ needs.validate.result }}" "smoke-build:${{ needs.smoke-build.result }}"; do
             name="${result%%:*}"
             value="${result#*:}"
             if [[ "$value" != "success" ]]; then

@@ -96,10 +96,12 @@ ENV \
 RUN \
     # Update repos and upgrade
     apt update && apt upgrade -y \
-    # Install dependencies
+    # Install dependencies: libusb-1.0-0 for the ESP-IDF openocd-esp32 tool check, ccache for faster repeat compiles
     && apt install -y --no-install-recommends \
+        ccache \
         curl \
         git \
+        libusb-1.0-0 \
         locales \
         tzdata \
     # Generate locale
