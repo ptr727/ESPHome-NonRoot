@@ -24,8 +24,10 @@ image reads at build time. Two workflows do the publishing work, plus a daily tr
   and on a **path-scoped push to `main` when `upstream-version.json` changes** - never on an ordinary merge, and
   it builds **one branch per run** (the trigger ref). The **schedule** rebuilds **`main` only** (stable release +
   refreshed `latest` image, picking up base-image CVEs). The **pin push** publishes `main` the moment the daily
-  tracker commits a new upstream version. A **dispatch** publishes the branch it is started from: from `main` ->
-  stable / `latest`, from `develop` -> prerelease / `develop`.
+  tracker commits a new upstream version - the pin push is scoped to `main` and gated to the tracker's own App
+  identity, so a `develop` pin update is sync-only and a hand-edited pin does not release. A **dispatch**
+  publishes the branch it is started from: from `main` -> stable / `latest`, from `develop` -> prerelease /
+  `develop`. A single **plan job** owns that decision for the whole run.
 - **The upstream-version tracker** runs **daily**: it resolves the latest `esphome` and `esphome-device-builder`
   PyPI releases and records them in `upstream-version.json` via an App-signed bump PR (dual-target `main` +
   `develop`), auto-merged by the merge-bot. The `main` bump's push is what fires the publisher.
@@ -72,6 +74,9 @@ requests merge themselves once their checks pass.
   runs `esphome config` -> `esphome compile` inside it against the fixtures in `.github/compile-test/`, covering
   the distinct execution environments consumers use. Gates the Docker push, so a broken image never ships.
   Catches a missing *runtime* dependency, which a build-only smoke cannot see.
+- **Release plan** - the `plan` job's decision, produced by `publish-plan-task.yml` from the event, actor, and
+  ref: `publish` says whether this run releases at all, `stable` whether the target is `main`. Every gate reads
+  these instead of re-testing the trigger, so the release policy lives in one place.
 - **GitHub App token** - a short-lived installation token from `actions/create-github-app-token`, minted
   from the App credentials (`CODEGEN_APP_CLIENT_ID` / `CODEGEN_APP_PRIVATE_KEY`). The merge-bot and the tracker
   use it, not `GITHUB_TOKEN`: a `GITHUB_TOKEN` push does not trigger downstream workflows, and that token is
@@ -156,6 +161,28 @@ tracker's auto-merged bump PR. Ordinary code merges never touch the pin, so the 
 holds literally: a Dockerfile or docs change to `main` ships on the next weekly run or a manual dispatch, not on
 its merge. The pin push fires `main`, so `github.ref` is `main` and NBGV classifies the release as public. The
 develop pin update is sync-only (the push trigger is `main`-only), so develop never auto-publishes.
+
+### The release gate: one plan job
+
+Whether a run publishes is decided once, by the `plan` job calling
+[`publish-plan-task.yml`](./.github/workflows/publish-plan-task.yml), and every other job reads that answer
+rather than re-deriving it. The policy is therefore in one file instead of spread across job `if:` conditions
+that can drift apart.
+
+It publishes for a `schedule`, for a `workflow_dispatch` of `main` or `develop`, and for a `push` to `main`
+made by the codegen App or Dependabot. The actor test is what distinguishes the tracker's auto-merged pin bump
+from a person hand-editing the pin: the first is the release trigger, the second is an ordinary edit that ships
+on the next scheduled run. Combined with the `main`-only push trigger, this is why a `develop` pin update is
+sync-only and a human commit never releases by accident.
+
+The outputs are the strings `'true'`/`'false'`, not booleans, so callers compare against `'true'` explicitly;
+`if: ${{ needs.plan.outputs.publish }}` would pass unconditionally, since any non-empty string is truthy in an
+Actions expression. The task is shared across repo types and also returns `stable`, which this repo has no use
+for - `inputs.branch` already carries main-vs-develop through the build.
+
+One consequence is worth naming: the actor allowlist is a hardcoded identity. If that identity ever changes,
+the gate closes silently - pin pushes stop publishing, nothing errors, and the weekly schedule keeps releasing,
+so the only symptom is upstream versions shipping up to a week late instead of same-day.
 
 ### Versioning: compute once, thread everywhere
 
@@ -469,8 +496,8 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D4.1 Publish only on schedule, pin push, or dispatch - never on an ordinary merge.** Output:
   `publish-release` triggers are `schedule` (weekly), `workflow_dispatch`, and a path-scoped `push`
   (`branches: [main]`, `paths: [upstream-version.json]`) only. There is **no `PUBLISH_ON_MERGE` variable** and
-  no broad `push` trigger. An ordinary code merge does not touch the pin, so it does not publish. The job is
-  guarded to `github.ref_name` in (`main`, `develop`), so a stray dispatch from a feature branch is a no-op.
+  no broad `push` trigger. An ordinary code merge does not touch the pin, so it does not publish. The `publish`
+  job gates on the plan job's decision (D4.9), so a stray dispatch from a feature branch is a no-op.
   *Prevents per-merge release churn while still publishing a new upstream version the moment the tracker lands
   it on `main`.*
 - **D4.2 A publish builds the one trigger branch in full.** Output: the run builds the Docker image and
@@ -503,6 +530,18 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   (`buildcache-main`, `buildcache-develop`) and writes only its own branch's cache, only when pushing, so a
   `main` and a `develop` publish never overwrite each other's cache. *Prevents one branch's publish destroying
   the other's cache hit-rate.*
+
+- **D4.9 One plan job owns the release-gate decision.** Output: `publish-release`'s `plan` job calls
+  [`publish-plan-task.yml`](./.github/workflows/publish-plan-task.yml) with the event, actor, and ref, and the
+  `publish` job gates on `needs.plan.outputs.publish == 'true'` instead of re-testing those in its own `if:`.
+  The task sets `publish` to `'true'` for a `schedule`, for a `workflow_dispatch` of `main`/`develop`, and for
+  a `push` to `main` by the codegen App or Dependabot; a hand-edited pin and a feature-branch dispatch both
+  resolve to `'false'`. Its outputs are the **strings** `'true'`/`'false'`, so a caller must compare explicitly -
+  a bare `if: ${{ needs.plan.outputs.publish }}` is always truthy, because a non-empty string is truthy in an
+  Actions expression. The task also exposes `stable`, which this repo does not consume (main-only behavior is
+  already carried by `inputs.branch`); an output a given caller leaves unused is expected of a task shared
+  across repo types and is not a D9.5 violation. *Prevents the gate drifting between scattered job conditions,
+  and keeps a hand-edited pin from publishing.*
 
 ### D5 - Resource cleanup
 
@@ -615,7 +654,9 @@ applicable guarantee with a `file:line` citation:
   `^refs/heads/main$`; the esphome tag reads `upstream-version.json`, the `:SemVer2` tag reads the threaded NBGV.
 - **D4:** `publish-release` triggers are `schedule` + `workflow_dispatch` + path-scoped `push`
   (`branches: [main]`, `paths: [upstream-version.json]`) only (no broad `push`, no `PUBLISH_ON_MERGE`); the
-  single `publish` job is guarded to `github.ref_name` in (`main`, `develop`) and passes it as `ref`/`branch`;
+  single `publish` job gates on `needs.plan.outputs.publish == 'true'` (compared as a string) and passes
+  `github.ref_name` as `ref`/`branch`; the `plan` job threads `github.event_name`/`actor`/`ref_name` into
+  `publish-plan-task`;
   `target_commitish` is `GitCommitId`; the `prerelease` boolean `== (inputs.branch != 'main')`; the release
   attaches `LICENSE` + `README.md` with **no `fail_on_unmatched_files`** and no build artifact; the Docker job
   logs in with `DOCKER_HUB_*` and pushes `latest`/`develop` + `:SemVer2` (+ main `:<esphome>`); release-create
@@ -661,6 +702,9 @@ applicable guarantee with a `file:line` citation:
 | S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
 | S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
 | S17 | the tracker opens an upstream pin bump PR that breaks compiles | the change-gate sees `upstream-version.json`, the compile test runs and fails, the required check blocks auto-merge before the pin reaches `main` | D1.1, D8.3, D11.1 |
+| S18 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity -> `publish` is `'true'`; `main` publishes the new upstream version same-day | D4.1, D4.9 |
+| S19 | a person hand-edits `upstream-version.json` on `main` | the push matches the path filter but the plan job's actor test fails -> `publish` is `'false'`, nothing releases; the edit ships on the next scheduled run | D4.9 |
+| S20 | the tracker's pin bump auto-merges to `develop` | the push trigger is `main`-only, so no publish run starts; `develop` stays in sync without releasing | D4.1 |
 
 ### 5C. Live probe (where warranted, never publishing)
 
