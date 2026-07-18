@@ -38,6 +38,7 @@ jobs:
     name: Validate job
     if: ${{ !inputs.smoke }}
     uses: ./.github/workflows/validate-task.yml
+    secrets: inherit
     with:
       ref: ${{ inputs.ref }}
       compile-test: true

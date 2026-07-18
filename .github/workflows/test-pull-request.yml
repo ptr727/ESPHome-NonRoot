@@ -69,9 +69,10 @@ jobs:
     name: Validate job
     if: ${{ !github.event.deleted }}
     needs: [changes]
+    uses: ./.github/workflows/validate-task.yml
+    secrets: inherit
     with:
       compile-test: ${{ needs.changes.outputs.compile-test == 'true' }}
-    uses: ./.github/workflows/validate-task.yml
 
   # Build and pack the Docker target (amd64-only, no push) to prove it ships, publishing nothing. Smoke seeds from
   # the branch-scoped cache, so it stays fast.

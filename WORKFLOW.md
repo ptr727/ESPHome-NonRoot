@@ -632,7 +632,8 @@ applicable guarantee with a `file:line` citation:
   and `test-pull-request` passes its change-gate result; the job is gated on it, builds with `load: true` / `push: false` and no
   `cache-to`, compiles the checked-in `.github/compile-test/` fixtures with `esphome config` run before
   `esphome compile`, covers Xtensa ESP-IDF + RISC-V ESP-IDF + Ethernet + PlatformIO, fetches no configuration at
-  run time, and runs the container `--user 1000:1000`.
+  run time, and runs the container `--user 1000:1000`. Both callers pass `secrets: inherit`, without which the
+  job's Docker Hub login fails and the gate cannot run.
 
 ### 5B. End-to-end trace scenarios (deterministic from the YAML)
 
