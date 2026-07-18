@@ -1,0 +1,30 @@
+# ESP32 on ESP-IDF with a wired Ethernet PHY, covering the LAN driver path the wifi
+# configurations never compile.
+# Modeled on esphome/bluetooth-proxies olimex/olimex-esp32-poe-iso.yaml.
+
+esphome:
+  name: compile-test-esp32-ethernet
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk:
+    pin: GPIO17
+    mode: CLK_OUT
+  phy_addr: 0
+  power_pin:
+    number: GPIO12
+    ignore_strapping_warning: true
+
+api:
+logger:
+
+ota:
+  - platform: esphome
+    id: ota_esphome

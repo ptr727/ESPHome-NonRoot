@@ -1,0 +1,18 @@
+# ESP8266, which builds through PlatformIO and the Arduino framework rather than ESP-IDF -
+# a different build system, not just a different target.
+
+esphome:
+  name: compile-test-esp8266
+
+esp8266:
+  board: d1_mini
+
+wifi:
+  ap:
+
+api:
+logger:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
