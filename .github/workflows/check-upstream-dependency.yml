@@ -52,9 +52,11 @@ jobs:
 
           # Only the `base` stage feeds the ESPHome runtime image; drop the ha-addon stage below it. Upstream pins
           # every package as name=version; the snapshot keeps names only, so a Debian point release is not a diff.
+          # The line-continuation backslash is optional: a final entry written without one would otherwise be
+          # dropped silently, quietly weakening the signal rather than failing.
           packages="$(curl --silent --show-error --location --fail "$DOCKER_BASE_URL" \
             | sed '/^FROM base AS/,$d' \
-            | sed -n 's/^[[:space:]]*\([a-z0-9][a-z0-9.+-]*\)=[^[:space:]]*[[:space:]]*\\$/\1/p' \
+            | sed -n 's/^[[:space:]]*\([a-z0-9][a-z0-9.+-]*\)=[^[:space:]]*[[:space:]]*\\\{0,1\}$/\1/p' \
             | sort -u)"
           if [ -z "$packages" ]; then
             echo "::error::Could not extract the apt package list from $DOCKER_BASE_URL" >&2
