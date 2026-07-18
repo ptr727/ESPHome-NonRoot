@@ -1,8 +1,9 @@
 name: Validate task
 
-# The single validation gate: the full lint set (the editor's checks, enforced in CI). This is a Docker-only repo
-# with no language source tree, so there is no unit-test or compiler step - lint is the whole gate. Reused by
-# test-pull-request (produces the required check) and the publisher, so the CI and publish gates are identical.
+# The validation gate: the full lint set (the editor's checks, enforced in CI), plus the compile test when the
+# caller asks for it. Reused by test-pull-request (produces the required check) and the publisher, so the CI and
+# publish gates are identical. There is no language source tree here, so lint is the whole source-level gate; the
+# compile test is the artifact-level one and needs a built image, which is why it is opt-in rather than always on.
 on:
   workflow_call:
     inputs:
@@ -12,8 +13,101 @@ on:
         required: false
         type: string
         default: ''
+      # Run the compile test. Off for push CI, which would pay ~5 minutes per push for a break that cannot reach
+      # users without a publish; the publisher turns it on so a broken image never gets pushed.
+      compile-test:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
+
+  # The artifact-level test: compile real firmware in the image. The toolchains ESPHome downloads at first compile
+  # link against system libraries, so a missing runtime package fails here and nowhere else - lint and a build-only
+  # smoke cannot see it. Unlike lint, this needs a built image, so it runs only when the caller opts in.
+  compile-test:
+    name: Compile test job
+    if: ${{ inputs.compile-test }}
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code step
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Get pinned versions step
+        id: esphome
+        run: |
+          set -euo pipefail
+          version="$(jq -r .esphome upstream-version.json)"
+          if [[ -z "$version" || "$version" == "null" ]]; then
+            echo "::error::Could not read .esphome from upstream-version.json"
+            exit 1
+          fi
+          device_builder="$(jq -r .device_builder upstream-version.json)"
+          if [[ -z "$device_builder" || "$device_builder" == "null" ]]; then
+            echo "::error::Could not read .device_builder from upstream-version.json"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "device_builder=$device_builder" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Buildx step
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        with:
+          platforms: linux/amd64
+
+      # Login for higher pull and cache-read rate limits; this job pushes nothing.
+      - name: Login to Docker Hub step
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # amd64 only, loaded into the local daemon so the next step can run it; reads the shared cache, never writes it.
+      - name: Docker build step
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ./Docker
+          file: ./Docker/Dockerfile
+          load: true
+          push: false
+          tags: esphome-nonroot:compile-test
+          platforms: linux/amd64
+          cache-from: |
+            type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
+            type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop
+          build-args: |
+            ESPHOME_VERSION=${{ steps.esphome.outputs.version }}
+            DEVICE_BUILDER_VERSION=${{ steps.esphome.outputs.device_builder }}
+
+      - name: Compile test configurations step
+        run: |
+          set -euo pipefail
+
+          # The container runs as a non-root uid that owns nothing on the runner, so both mounts must be world-writable.
+          workdir="$(mktemp -d)"
+          mkdir -p "$workdir/config" "$workdir/cache"
+          cp .github/compile-test/*.yaml "$workdir/config/"
+          chmod -R 0777 "$workdir/config" "$workdir/cache"
+
+          cat > "$workdir/config/compile.sh" <<'SH'
+          set -euo pipefail
+          for config in /config/*.yaml; do
+            echo "::group::Compile $(basename "$config")"
+            esphome config "$config" > /dev/null
+            esphome compile "$config"
+            echo "::endgroup::"
+          done
+          SH
+
+          docker run --rm --user 1000:1000 \
+            --volume "$workdir/config":/config \
+            --volume "$workdir/cache":/cache \
+            esphome-nonroot:compile-test \
+            bash /config/compile.sh
 
   # The editor's checks, enforced in CI from the same config files.
   lint:
@@ -44,5 +138,5 @@ jobs:
       - name: Lint workflows step
         uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
 
-      - name: Check line endings step
-        run: docker run --rm -v "$PWD":/check --workdir /check mstruebing/editorconfig-checker@sha256:67b9e9b16a674e36f7c05919da789f03a01d343ca8423eb8797179399af07c00 # editorconfig-checker v3.4.0
+      - name: Check EditorConfig step
+        run: docker run --rm -v "$PWD":/check --workdir /check mstruebing/editorconfig-checker:latest

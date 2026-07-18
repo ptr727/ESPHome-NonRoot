@@ -17,15 +17,11 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
 
 ## Release Notes
 
-- Version 1.8:
-  - Reworked the CI/CD pipeline to a branch-scoped, one-branch-per-run model: a weekly scheduled run and a path-scoped push when the tracked upstream version changes publish `main` (stable, Docker `latest`), a manual dispatch publishes the branch it is started from, and the daily upstream-version tracker keeps the pin current. Ordinary merges no longer publish.
-  - Version-tagged the container: each image also carries a `:SemVer2` tag (`X.Y.<height>`) alongside the moving `latest` / `develop` and pinned `:<esphome-version>` tags, and each version gets a GitHub release.
-  - Added `WORKFLOW.md` (the canonical CI/CD specification) and `repo-config/` (rulesets and repository settings as code).
-- Version 1.7:
-  - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
-  - Switched the image build to a `uv` virtual environment.
-  - Pinned and auto-tracked the `esphome-device-builder` version alongside `esphome`.
-  - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
+- Version 1.9:
+  - Added the `libusb-1.0-0` runtime library that the ESP-IDF `openocd-esp32` tool check requires, fixing ESP-IDF firmware compile failures ([#161][issue-161-link]).
+  - Added `ccache`, which ESPHome enables automatically for ESP-IDF builds to speed up repeat compiles.
+  - Publishing now compiles real firmware inside the image first, so a missing runtime dependency blocks the release instead of reaching Docker Hub.
+  - Added a daily check for dependency changes in the ESPHome base image the container tracks.
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 
@@ -210,7 +206,6 @@ Licensed under the [MIT License][license-link]\
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
-[device-builder-link]: https://github.com/esphome/device-builder
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
 [esphome-buildpath-link]: https://esphome.io/components/esphome.html
@@ -232,7 +227,7 @@ Licensed under the [MIT License][license-link]\
 [issue-2752-link]: https://github.com/esphome/issues/issues/2752
 [issue-3558-link]: https://github.com/esphome/issues/issues/3558
 [issue-3929-link]: https://github.com/esphome/issues/issues/3929
-[issue-60-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/60
+[issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
 [last-build-shield]: https://byob.yarr.is/ptr727/ESPHome-NonRoot/lastbuild
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
 [license-link]: ./LICENSE

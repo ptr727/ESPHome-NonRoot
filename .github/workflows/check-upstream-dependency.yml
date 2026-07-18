@@ -1,0 +1,111 @@
+name: Check upstream dependency action
+
+# Tracks the apt package list ESPHome's own base image installs (esphome/docker-base, debian/Dockerfile, `base`
+# stage): snapshots the sorted package names into upstream-dependency.json and opens a PR against develop when the
+# set moves. The head ref deliberately does not match the merge-bot's upstream-version-* pattern, so the PR waits
+# for a human - deciding whether a package upstream added applies to this image is a judgment call, and most of
+# upstream's list does not (the builder stage here is separate and no cairo/magic bindings are installed).
+
+on:
+  schedule:
+    # Daily, an hour after the version tracker so the two do not contend for the same runner window.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # Ref-independent so a scheduled run and a manual dispatch cannot race the shared bump branch.
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  check-upstream-dependency:
+    name: Check upstream dependency job
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+
+      # App token so the pull request is signed.
+      - name: Generate GitHub App token step
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Checkout code step
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: develop
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve upstream dependency step
+        id: resolve
+        env:
+          DOCKER_BASE_URL: https://raw.githubusercontent.com/esphome/docker-base/main/debian/Dockerfile
+          STATE_FILE: upstream-dependency.json
+        run: |
+          set -euo pipefail
+
+          # Only the `base` stage feeds the ESPHome runtime image; drop the ha-addon stage below it. Upstream pins
+          # every package as name=version; the snapshot keeps names only, so a Debian point release is not a diff.
+          # The line-continuation backslash is optional: a final entry written without one would otherwise be
+          # dropped silently, quietly weakening the signal rather than failing.
+          packages="$(curl --silent --show-error --location --fail "$DOCKER_BASE_URL" \
+            | sed '/^FROM base AS/,$d' \
+            | sed -n 's/^[[:space:]]*\([a-z0-9][a-z0-9.+-]*\)=[^[:space:]]*[[:space:]]*\\\{0,1\}$/\1/p' \
+            | sort -u)"
+          if [ -z "$packages" ]; then
+            echo "::error::Could not extract the apt package list from $DOCKER_BASE_URL" >&2
+            exit 1
+          fi
+          new="$(printf '%s\n' "$packages" | jq -R . | jq -S -s '{docker_base_packages: .}')"
+
+          # Missing, non-JSON, or non-object state => empty object, so the first run and any unusable prior file
+          # both diff cleanly against the resolved object instead of failing.
+          if [ -f "$STATE_FILE" ] && old="$(jq -S 'if type == "object" then . else empty end' "$STATE_FILE" 2>/dev/null)" && [ -n "$old" ]; then :; else old='{}'; fi
+
+          # Write as CRLF (jq emits LF) to match .editorconfig's .json rule. Unchanged content => no diff => no PR.
+          printf '%s\n' "$new" | sed 's/$/\r/' > "$STATE_FILE"
+
+          added="$(jq -n --argjson old "$old" --argjson new "$new" \
+            '[($new.docker_base_packages - ($old.docker_base_packages // []))[]] | join(", ")' -r)"
+          removed="$(jq -n --argjson old "$old" --argjson new "$new" \
+            '[(($old.docker_base_packages // []) - $new.docker_base_packages)[]] | join(", ")' -r)"
+
+          # Title names the direction that moved; a both-ways change stays generic to hold the 72-character limit.
+          if [ -n "$added" ] && [ -z "$removed" ]; then
+            title="Review upstream base image packages added: $added"
+          elif [ -z "$added" ] && [ -n "$removed" ]; then
+            title="Review upstream base image packages removed: $removed"
+          else
+            title="Review upstream base image dependency changes"
+          fi
+          title="$(printf '%.72s' "$title")"
+
+          {
+            echo "title=$title"
+            echo "body<<EOF"
+            echo "The apt package list in esphome/docker-base \`debian/Dockerfile\` (\`base\` stage) changed."
+            echo
+            [ -n "$added" ] && echo "- Added upstream: $added"
+            [ -n "$removed" ] && echo "- Removed upstream: $removed"
+            echo
+            echo "Decide per package whether this image needs it before merging - upstream ships a single-stage runtime image, so not every entry applies here. Merging records the new snapshot and closes the signal, so make any Dockerfile change in this pull request."
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open review pull request step
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          base: develop
+          branch: upstream-dependency-develop
+          title: ${{ steps.resolve.outputs.title }}
+          commit-message: ${{ steps.resolve.outputs.title }}
+          body: ${{ steps.resolve.outputs.body }}
+          sign-commits: true
+          delete-branch: true

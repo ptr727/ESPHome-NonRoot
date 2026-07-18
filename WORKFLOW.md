@@ -29,6 +29,13 @@ image reads at build time. Two workflows do the publishing work, plus a daily tr
 - **The upstream-version tracker** runs **daily**: it resolves the latest `esphome` and `esphome-device-builder`
   PyPI releases and records them in `upstream-version.json` via an App-signed bump PR (dual-target `main` +
   `develop`), auto-merged by the merge-bot. The `main` bump's push is what fires the publisher.
+- **The upstream-dependency watcher** runs **daily**: it snapshots the apt package list ESPHome's own base image
+  installs into `upstream-dependency.json` and opens an App-signed PR against `develop` when the set moves. It is
+  deliberately **not** auto-merged - which of upstream's packages this image needs is a judgment call.
+- **The image compile test** is a job in the validation gate: it compiles checked-in configurations in the image as
+  a non-root uid. The publisher always runs it, so a failure blocks the push and the release. Push CI runs it only
+  when an inline change-gate sees the image or its test inputs move, so an upstream pin bump is compile-tested
+  before it auto-merges while a doc-only push pays nothing.
 
 There is no publish-on-merge of arbitrary code, no per-push release, and no two-branch matrix - building only the
 trigger branch keeps `github.ref` aligned with the branch being versioned. Ordinary code merges accumulate and
@@ -56,6 +63,15 @@ requests merge themselves once their checks pass.
 - **Upstream-version tracker** - the daily scheduled workflow that resolves the latest upstream PyPI versions and
   records them in `upstream-version.json` via an App-signed, auto-merged bump PR. The pin it writes is the
   shipped input the Docker build reads.
+- **Upstream-dependency watcher** - the daily scheduled workflow that snapshots the apt package list from
+  ESPHome's base image (`esphome/docker-base`, `debian/Dockerfile`, `base` stage) into `upstream-dependency.json`
+  and opens a PR when it changes. The snapshot is a **review signal, not a shipped input**: nothing in the build
+  reads it, and its head ref is outside the merge-bot's auto-merge pattern so a human triages it.
+- **Image compile test** - the `compile-test` job in `validate-task.yml`, opt-in via the `compile-test` input. It
+  loads the image locally and
+  runs `esphome config` -> `esphome compile` inside it against the fixtures in `.github/compile-test/`, covering
+  the distinct execution environments consumers use. Gates the Docker push, so a broken image never ships.
+  Catches a missing *runtime* dependency, which a build-only smoke cannot see.
 - **GitHub App token** - a short-lived installation token from `actions/create-github-app-token`, minted
   from the App credentials (`CODEGEN_APP_CLIENT_ID` / `CODEGEN_APP_PRIVATE_KEY`). The merge-bot and the tracker
   use it, not `GITHUB_TOKEN`: a `GITHUB_TOKEN` push does not trigger downstream workflows, and that token is
@@ -212,6 +228,59 @@ so the committed state is byte-identical on both branches and a `develop -> main
 the pin. *This is the one ESPHome-specific contract the pure-Docker siblings lack: a 100%-certain "update
 required" signal that publishes the new upstream within ~a day, not just on the weekly base-image refresh.*
 
+### The upstream-dependency watcher
+
+[`check-upstream-dependency.yml`](./.github/workflows/check-upstream-dependency.yml) runs daily (and on
+dispatch). It reads the apt package list from the `base` stage of `esphome/docker-base`'s `debian/Dockerfile`,
+records the sorted names in `upstream-dependency.json` (CRLF), and opens an App-signed PR on
+`upstream-dependency-develop` when the set moves. Names only: upstream pins `name=version`, so keeping versions
+would turn every Debian point release into a diff.
+
+Two properties are deliberate. The head ref does **not** match the merge-bot's `upstream-version-*` pattern, so
+the PR waits for a person - upstream ships a single-stage runtime image and this one splits builder from final,
+so a package upstream adds may belong in either stage or neither. And the file is not a shipped input: no build
+step reads it, so committing it never fires the publisher's pin-push trigger. Merging the PR records the new
+snapshot and closes the signal, so any Dockerfile change it implies belongs in that same PR.
+
+### The image compile test
+
+The `compile-test` job in [`validate-task.yml`](./.github/workflows/validate-task.yml) builds the commit being
+validated (amd64, loaded locally, cache read-only, never pushed) and runs `esphome compile` inside it as uid
+1000. It sits beside `lint` because validation is where tests belong: lint is the source-level gate, and this is
+the artifact-level one. It differs from lint in needing a built image, which is why it is opt-in through the
+`compile-test` input rather than always on. `build-docker` already needs `validate`, so a firmware break blocks
+the push and the release with no extra wiring.
+
+It is deliberately neither a standalone daily job nor part of push CI. The image only changes when a build
+fires - a weekly rebuild, a pin push, or a dispatch - so testing on that trigger covers every distinct image
+while a blind daily schedule would mostly recompile yesterday's bits. The tracker's daily pin bump is what makes the
+upper bound roughly once a day. Push CI leaves it off because ~5 minutes on every push is a poor trade for a
+class of break that cannot reach users without a publish.
+
+It exists because a build-only smoke cannot see this class of break: ESPHome downloads its toolchains on first
+compile, and those binaries link against system libraries, so a missing runtime package surfaces only when a
+compile actually runs. Each fixture in `.github/compile-test/` is validated with `esphome config` and only then
+compiled, so a configuration break and a toolchain break give distinct signals, and the non-root uid asserts
+the property this image exists to provide.
+
+The fixtures are chosen to span the *execution environments* a consumer hits, not to enumerate boards - each
+adds a dimension the others cannot reach:
+
+| Fixture | Dimension it covers |
+| --- | --- |
+| `esp32-bluetooth-proxy.yaml` | Xtensa ESP-IDF, and the widest component surface (BLE stack) |
+| `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF - a separate compiler binary, not just another board |
+| `esp32-ethernet.yaml` | wired Ethernet PHY drivers, which the wifi configurations never compile |
+| `esp8266-d1-mini.yaml` | PlatformIO + Arduino - a different build system, not a different target |
+
+They are hand-authored and checked in, each naming the upstream ESPHome project it is modeled on
+(`esphome/bluetooth-proxies`, `esphome/ready-made-project-template`) so a refresh has a reference point.
+Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used: both
+couple a daily monitor to something outside this repo that can change under it, and a scheduled job whose
+common failure is its own breakage stops being believed. Checked-in fixtures rot too - an ESPHome schema
+change fails `esphome config` - but that rot is loud, obvious, and a one-line fix. Detecting upstream drift is
+the dependency watcher's job, not this one's.
+
 ### Flow diagrams
 
 Four diagrams trace the architecture above: the pull-request gate, the self-publisher, the bot
@@ -230,7 +299,7 @@ flowchart TD
     D -- "yes: branch deletion" --> X(["validate + smoke-build + aggregator skip<br/>no failed run, no pending check"]):::stop
     D -- "no" --> V["validate job<br/>(validate-task.yml)"]
     D -- "no" --> S["smoke-build job<br/>build-release-task.yml<br/>smoke: true, github: false, dockerhub: false"]
-    subgraph VT ["validate-task.yml (lint only, no unit-test)"]
+    subgraph VT ["validate-task.yml (compile test change-gated)"]
         L["lint job<br/>markdownlint, cspell (README/HISTORY),<br/>actionlint"]
     end
     V --> VT
@@ -352,11 +421,18 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 
 ### D1 - CI fast feedback
 
-- **D1.1 Every push validates and smoke-builds the image.** Output: on any push, the `validate` job (the
-  reusable `validate-task`) and `smoke-build` (the Docker target through `build-release-task` with
-  `smoke: true`) run, no paths filter. *Prevents a reusable-workflow or build break shipping untested.*
+- **D1.1 Every push validates and smoke-builds the image; the compile test is change-gated.** Output: on any
+  push, the `validate` job (the reusable `validate-task`) and `smoke-build` (the Docker target through
+  `build-release-task` with `smoke: true`) run, no paths filter. The inline `changes` job sets `validate`'s
+  `compile-test` input, true when `Docker/**`, `.github/compile-test/**`, or `upstream-version.json` moved, and
+  true whenever the diff is unusable (new branch, force-push, dispatch). A feature branch is diffed against its
+  merge-base with `develop`, not against the push, so a later docs-only commit cannot retire the compile test
+  the branch's own image change earned; `main` and `develop` are diffed by push, which is what catches the
+  change after a squash-merge.
+  *Prevents a reusable-workflow or build break shipping untested, without charging every doc push ~5 minutes.*
 - **D1.2 Smoke builds the image.** Output: `smoke-build` builds the Docker image (amd64 only, seeded from the
-  branch-scoped cache) to prove it still builds; there is no unit-test job (no compiled code to test).
+  branch-scoped cache) to prove it still builds. There is no source-level unit test (nothing compiles here); the
+  artifact-level `compile-test` job exists but stays off on push CI (D11.1).
 - **D1.3 Lint enforces the editor checks in CI.** Output: `validate-task`'s `lint` job runs `markdownlint-cli2`,
   `cspell` on the user-facing docs (README, HISTORY), and `actionlint` (which shellchecks every `run:`). Same
   checks the editor runs. There is no CSharpier / `dotnet format` step and no Python lint - nothing compiles
@@ -471,6 +547,12 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   pin-push trigger. This repo has a tracker but no codegen (`run-codegen-*`); the merge-bot carries
   `merge-dependabot` + `merge-upstream-version` + `disable-auto-merge-on-maintainer-push`, not `merge-codegen`.
   *Prevents a new upstream release going unshipped until the weekly run.*
+- **D8.4 Upstream-dependency watcher.** Output: the watcher runs daily, snapshots the `base`-stage apt package
+  names from `esphome/docker-base` into `upstream-dependency.json` (sorted, CRLF, names only), and opens an
+  App-signed PR on `upstream-dependency-develop` when the set moves. Its head ref is outside the merge-bot's
+  `upstream-version-*` pattern, so it does **not** auto-merge; the file is not a shipped input, so committing it
+  does not fire the publisher. *Prevents an upstream runtime dependency being noticed only through a user bug
+  report.*
 
 ### D9 - Style, static, and dropped workflows (see section 2)
 
@@ -495,6 +577,22 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D10.1 Required configuration is present.** Output: the secrets, branch rulesets, and repository settings
   section 6 lists are all in place. The detail and validation are in section 6; the audit is 5D.
 
+### D11 - Runtime image verification
+
+- **D11.1 The image compiles firmware before it ships.** Output: `validate-task`'s `compile-test` job runs when
+  the caller sets `compile-test: true` - the publisher always does, push CI when its change-gate fires (D1.1);
+  it builds the validated commit (amd64, `load: true`, `push: false`, cache read-only) and runs `esphome compile`
+  inside it, and `build-docker` needs `validate`. *Prevents a runtime dependency missing from the final stage
+  reaching Docker Hub - invisible to a build-only smoke, because the toolchains that link against it are
+  downloaded on first compile.*
+- **D11.2 Configurations are checked in and validated before compiling.** Output: each fixture lives in
+  `.github/compile-test/`, is hand-authored rather than fetched or generated at run time, names the upstream
+  project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents a daily
+  monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
+- **D11.3 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
+  wired Ethernet, and PlatformIO/Arduino, and the container runs as uid 1000. *Prevents a break confined to one
+  toolchain, build system, or network stack - or a root-only regression - passing as green.*
+
 ## 5. Test methodology
 
 ### 5A. Static audit (no execution)
@@ -507,8 +605,11 @@ applicable guarantee with a `file:line` citation:
   `needs:` (no nested `get-version` in `build-docker-task`); the run builds the trigger ref so `GITHUB_REF`
   matches the versioned branch.
 - **D1:** CI runs on `push` with no paths filter; `validate` + `smoke-build` (the Docker target, `smoke: true`)
-  run; `lint` runs markdownlint, cspell on README/HISTORY, actionlint; there is no unit-test, CSharpier/
-  `dotnet format`, or Python-lint step; the aggregator `needs:` both and blocks on non-success.
+  run; `lint` runs markdownlint, cspell on README/HISTORY, actionlint; the inline `changes` job sets
+  `compile-test` from the merge-base diff on a feature branch and the push diff on `main`/`develop`, failing
+  open on an unusable diff; there is no source-level unit-test,
+  CSharpier/`dotnet format`, or Python-lint step; the aggregator `needs:` all three (a `changes` failure blocks)
+  and blocks on non-success.
 - **D2:** the main release backstop checks the prerelease `-`, strips `+buildmetadata`, self-skips on smoke.
 - **D3:** `main` appears in the backstop and the `prerelease` expression; `publicReleaseRefSpec` is
   `^refs/heads/main$`; the esphome tag reads `upstream-version.json`, the `:SemVer2` tag reads the threaded NBGV.
@@ -527,17 +628,25 @@ applicable guarantee with a `file:line` citation:
   number; the tracker group is ref-independent; CI uses the standard group; reusable jobs declare permissions.
 - **D8/D9:** the merge-bot runs on `pull_request_target` with the App token, keyed on PR number, merges with
   `--delete-branch`, and carries `merge-upstream-version`; Dependabot auto-merge has no semver-major
-  exception; the tracker is daily, App-signed, dual-target; no codegen, date-badge, tool-versions, docker-readme
-  task, executable task, `PUBLISH_ON_MERGE`, or `dorny/paths-filter`; actions SHA-pinned except `dotnet/nbgv@master`;
-  names/shells/conditionals per section 2.
+  exception; the tracker is daily, App-signed, dual-target; the dependency watcher is daily, App-signed, targets
+  `develop` on a head ref the merge-bot does not match, and writes a file no build step reads; no codegen,
+  date-badge, tool-versions, docker-readme task, executable task, `PUBLISH_ON_MERGE`, or `dorny/paths-filter`;
+  actions SHA-pinned except `dotnet/nbgv@master`; names/shells/conditionals per section 2.
+- **D11:** `validate-task` declares the `compile-test` boolean input defaulting false; the publisher passes true
+  and `test-pull-request` passes its change-gate result; the job is gated on it, builds with `load: true` / `push: false` and no
+  `cache-to`, compiles the checked-in `.github/compile-test/` fixtures with `esphome config` run before
+  `esphome compile`, covers Xtensa ESP-IDF + RISC-V ESP-IDF + Ethernet + PlatformIO, fetches no configuration at
+  run time, and runs the container `--user 1000:1000`. Both callers pass `secrets: inherit`, without which the
+  job's Docker Hub login fails and the gate cannot run.
 
 ### 5B. End-to-end trace scenarios (deterministic from the YAML)
 
 | # | Input | Expected output | Exercises |
 | --- | --- | --- | --- |
-| S1 | push touching `Dockerfile` | `validate` + `smoke-build` run; the image builds, **no push, no release**; aggregator success | D0.1, D1 |
-| S2 | push changing only docs | `validate` (lint checks markdown) + `smoke-build` run; nothing publishes | D1, D1.5 |
-| S3 | push changing only `.github/workflows/**` | `smoke-build` exercises the changed reusable workflow head-resolved; `lint` runs actionlint; aggregator success | D1.1, D6.1 |
+| S1 | push touching `Dockerfile` | `validate` (change-gate fires, so lint **and** compile test) + `smoke-build` run; the image builds, **no push, no release**; aggregator success | D0.1, D1, D11.1 |
+| S2 | push changing only docs on a branch that changed nothing else | the change-gate sets `compile-test=false`; `validate` runs lint only + `smoke-build` runs; nothing publishes | D1, D1.1, D1.5 |
+| S2a | docs-only push on a branch that earlier changed `Docker/**` | the merge-base diff still sees the image change, so `compile-test` stays true and the branch cannot pass ungated | D1.1 |
+| S3 | push changing only `.github/workflows/**` | `smoke-build` exercises the changed reusable workflow head-resolved; `lint` runs actionlint; compile test stays off (no image input moved); aggregator success | D1.1, D6.1 |
 | S4 | weekly `schedule` | builds + publishes `main` only: stable release + refreshed `latest` + `:SemVer2` + `:<esphome>` (multi-arch); `target_commitish` = main's SHA; develop is not touched | D4.1, D4.2, D4.4 |
 | S5 | tracker merges a new pin to `main` | the path-scoped pin push fires the publisher on `main`: stable release + refreshed image with the new `:<esphome>` tag | D4.1, D8.3 |
 | S6 | `workflow_dispatch` from `develop` | builds + publishes `develop`: prerelease `X.Y.<height>-g<sha>` + `develop` image; `github.ref` is develop, so NBGV classifies it non-public | D4.1, D4.2, D3.2 |
@@ -547,6 +656,11 @@ applicable guarantee with a `file:line` citation:
 | S10 | PR with a markdown / spelling / workflow-YAML violation | the `lint` job fails -> aggregator blocks the merge | D1.3, D1.5 |
 | S11 | `version.json` floor bump merged | not a pin change, merges don't publish -> no immediate release; the new floor ships in the next publish | D3.3, D4.1 |
 | S12 | `develop` -> `main` promotion (merge commit) | the merge itself does not publish (it does not change the pin); `main`'s accumulated changes ship in the next scheduled run | D4.1, D8.1 |
+| S13 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package; it does **not** auto-merge and does **not** publish | D8.4 |
+| S14 | a runtime library the toolchain links against is dropped from the Dockerfile | push CI stays green; the next publish's compile test fails on the ESP-IDF fixtures and nothing is pushed | D11.1, D11.3 |
+| S15 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D11.2 |
+| S16 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D11.3 |
+| S17 | the tracker opens an upstream pin bump PR that breaks compiles | the change-gate sees `upstream-version.json`, the compile test runs and fails, the required check blocks auto-merge before the pin reaches `main` | D1.1, D8.3, D11.1 |
 
 ### 5C. Live probe (where warranted, never publishing)
 

@@ -1,7 +1,9 @@
 name: Build project release task
 
 # Orchestrate one branch's release: validate, version once (get-version), build the Docker image, then create the
-# GitHub release. github/dockerhub gate the two publish targets; smoke builds the image, publishes nothing.
+# GitHub release. Validation here runs with the compile test on, so firmware is built in the image before anything
+# is pushed. github/dockerhub gate the two publish targets; smoke builds the image, publishes nothing, and skips
+# validation entirely (the PR run does its own lint, and a smoke build ships no asset worth compile-testing).
 on:
   workflow_call:
     inputs:
@@ -30,14 +32,16 @@ on:
 
 jobs:
 
-  # Validate the branch being published (lint), gating the build/publish below. Skipped on smoke: the PR runs its
-  # own validate job, so a smoke build does not double-validate.
+  # Validate the branch being published (lint + compile test), gating the build/publish below. Skipped on smoke: the
+  # PR runs its own validate job, so a smoke build does not double-validate.
   validate:
     name: Validate job
     if: ${{ !inputs.smoke }}
     uses: ./.github/workflows/validate-task.yml
+    secrets: inherit
     with:
       ref: ${{ inputs.ref }}
+      compile-test: true
 
   get-version:
     name: Get version information job
@@ -46,7 +50,8 @@ jobs:
     with:
       ref: ${{ inputs.ref }}
 
-  # Build only when validation passed (success) or was skipped (smoke); never when it failed.
+  # Build only when validation passed (success) or was skipped (smoke); never when it failed. Validation carries the
+  # compile test on a publish, so a firmware break blocks the push here too.
   build-docker:
     name: Build Docker job
     needs: [get-version, validate]
@@ -123,7 +128,7 @@ jobs:
       # The Docker-only target ships no asset, so fail_on_unmatched_files is omitted (the glob matches zero files).
       - name: Create GitHub release step
         if: ${{ steps.release-exists.outputs.exists == 'false' || github.event_name == 'workflow_dispatch' }}
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           generate_release_notes: true
           tag_name: ${{ needs.get-version.outputs.SemVer2 }}
