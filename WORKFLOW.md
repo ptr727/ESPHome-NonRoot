@@ -288,7 +288,9 @@ It exists because a build-only smoke cannot see this class of break: ESPHome dow
 compile, and those binaries link against system libraries, so a missing runtime package surfaces only when a
 compile actually runs. Each fixture in `.github/compile-test/` is validated with `esphome config` and only then
 compiled, so a configuration break and a toolchain break give distinct signals, and the non-root uid asserts
-the property this image exists to provide.
+the property this image exists to provide. Passing a command bypasses the image entrypoint, so the run invokes
+`/entrypoint/cache.sh` first: the cache is initialized the way a real container start does, and that script -
+otherwise exercised by nothing - is covered too.
 
 The fixtures are chosen to span the *execution environments* a consumer hits, not to enumerate boards - each
 adds a dimension the others cannot reach:
