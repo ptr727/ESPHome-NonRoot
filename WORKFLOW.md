@@ -459,7 +459,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   *Prevents a reusable-workflow or build break shipping untested, without charging every doc push ~5 minutes.*
 - **D1.2 Smoke builds the image.** Output: `smoke-build` builds the Docker image (amd64 only, seeded from the
   branch-scoped cache) to prove it still builds. There is no source-level unit test (nothing compiles here); the
-  artifact-level `compile-test` job exists but stays off on push CI (D11.1).
+  artifact-level `compile-test` job is change-gated on push CI (D1.1) and always on for a publish (D11.1).
 - **D1.3 Lint enforces the editor checks in CI.** Output: `validate-task`'s `lint` job runs `markdownlint-cli2`,
   `cspell` on the user-facing docs (README, HISTORY), and `actionlint` (which shellchecks every `run:`). Same
   checks the editor runs. There is no CSharpier / `dotnet format` step and no Python lint - nothing compiles
