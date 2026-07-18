@@ -96,6 +96,9 @@ jobs:
 
           cat > "$workdir/config/compile.sh" <<'SH'
           set -euo pipefail
+          # Passing a command bypasses the image entrypoint, so initialize the cache the way a real run does
+          # rather than leaning on each tool to create its own tree under the world-writable mount.
+          /entrypoint/cache.sh
           for config in /config/*.yaml; do
             echo "::group::Compile $(basename "$config")"
             esphome config "$config" > /dev/null
