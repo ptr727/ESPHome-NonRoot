@@ -23,6 +23,7 @@
     "extensionpack",
     "gcompat",
     "GLOBALLIB",
+    "gpgsign",
     "gruntfuggly",
     "lastbuild",
     "libusb",

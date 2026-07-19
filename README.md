@@ -22,10 +22,13 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
   - Added `ccache`, which ESPHome enables automatically for ESP-IDF builds to speed up repeat compiles.
   - Publishing now compiles real firmware inside the image first, so a missing runtime dependency blocks the release instead of reaching Docker Hub.
   - Added a daily check for dependency changes in the ESPHome base image the container tracks.
+  - Disabled Device Builder's version history feature, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 
 ## Usage
+
+> ⚠️ **Warning:** Device Builder's version history feature commits every YAML change under `/config` to git. Where `/config` is a bind mount into an existing repository, those commits land in that repository: attributed to a fabricated `ESPHome Device Builder <device-builder@esphome.io>` identity the repository owner does not control, forced unsigned with `commit.gpgsign=false`, and bypassing every commit hook with `--no-verify`. Upstream [documents this as intended][device-builder-version-history-link] and will not change the default. The result is poor repository hygiene, and it breaks CI pipelines that validate commits. This container disables the setting at every launch, warning and continuing if `/config` cannot be written; set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
 
 ### Configuration
 
@@ -45,6 +48,7 @@ See [Release History](./HISTORY.md) for complete release notes and older version
     - `sudo chmod -R ug=rwx,o=rx /data/esphome`
 - `environment` :
   - `ESPHOME_VERBOSE` (Optional) : Enables [verbose][esphome-verbose-link] log output, e.g. `ESPHOME_VERBOSE=true`.
+  - `ESPHOME_VERSION_HISTORY` (Optional) : Enables Device Builder's git version history auto-commit, e.g. `ESPHOME_VERSION_HISTORY=true`, default is `false`.
   - `TZ` (Optional) : Sets the [timezone][tz-link], e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
 
 ### Docker Compose Dashboard
@@ -206,6 +210,7 @@ Licensed under the [MIT License][license-link]\
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
+[device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
 [esphome-buildpath-link]: https://esphome.io/components/esphome.html
