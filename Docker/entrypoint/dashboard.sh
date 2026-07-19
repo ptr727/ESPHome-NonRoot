@@ -6,8 +6,8 @@ set -e
 # <device-builder@esphome.io>", hooks skipped. Upstream defaults it on and
 # offers no env override, and /config is usually a bind mount that may be the
 # user's own git repository. Seed the preference before the dashboard starts.
-# Upstream: https://github.com/esphome/device-builder/issues/2193
-# Upstream: https://github.com/esphome/device-builder/issues/2194
+# Upstream documents this as intended and will not change the default:
+# https://github.com/esphome/device-builder/blob/main/README.md#version-history
 python3 - "/config/.device-builder-preferences.json" "${ESPHOME_VERSION_HISTORY:-false}" <<'PYTHON' || echo "Warning: could not run the seeding script, version_history_enabled in /config/.device-builder-preferences.json stays at the upstream default" >&2
 import json
 import os

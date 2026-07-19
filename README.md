@@ -22,13 +22,13 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
   - Added `ccache`, which ESPHome enables automatically for ESP-IDF builds to speed up repeat compiles.
   - Publishing now compiles real firmware inside the image first, so a missing runtime dependency blocks the release instead of reaching Docker Hub.
   - Added a daily check for dependency changes in the ESPHome base image the container tracks.
-  - Disabled Device Builder's version history feature, stopping it from committing `/config` changes to git ([device-builder#2193][device-builder-version-history-link], [device-builder#2194][device-builder-version-history-followup-link]).
+  - Disabled Device Builder's version history feature, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 
-> ⚠️ **Warning:** Device Builder's version history feature commits every YAML change under `/config` to git, using an `ESPHome Device Builder <device-builder@esphome.io>` identity, unsigned, and bypassing hooks. Where `/config` is a bind mount into an existing repository, those commits land in that repository ([device-builder#2193][device-builder-version-history-link], [device-builder#2194][device-builder-version-history-followup-link]). This container disables the setting at every launch, warning and continuing if `/config` cannot be written; set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
-
 ## Usage
+
+> ⚠️ **Warning:** Device Builder's version history feature commits every YAML change under `/config` to git. Where `/config` is a bind mount into an existing repository, those commits land in that repository: attributed to a fabricated `ESPHome Device Builder <device-builder@esphome.io>` identity the repository owner does not control, forced unsigned with `commit.gpgsign=false`, and bypassing every commit hook with `--no-verify`. Upstream [documents this as intended][device-builder-version-history-link] and will not change the default. The result is poor repository hygiene, and it breaks CI pipelines that validate commits. This container disables the setting at every launch, warning and continuing if `/config` cannot be written; set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
 
 ### Configuration
 
@@ -210,8 +210,7 @@ Licensed under the [MIT License][license-link]\
 [actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
 [commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
 [devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
-[device-builder-version-history-followup-link]: https://github.com/esphome/device-builder/issues/2194
-[device-builder-version-history-link]: https://github.com/esphome/device-builder/issues/2193
+[device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
 [esphome-buildpath-link]: https://esphome.io/components/esphome.html
