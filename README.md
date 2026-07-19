@@ -22,7 +22,7 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
   - Added `ccache`, which ESPHome enables automatically for ESP-IDF builds to speed up repeat compiles.
   - Publishing now compiles real firmware inside the image first, so a missing runtime dependency blocks the release instead of reaching Docker Hub.
   - Added a daily check for dependency changes in the ESPHome base image the container tracks.
-  - Disabled Device Builder's version history feature, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
+  - Disabled Device Builder's version history feature by default, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 

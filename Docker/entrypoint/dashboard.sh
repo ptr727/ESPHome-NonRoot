@@ -1,12 +1,8 @@
 #!/bin/bash
 set -e
 
-# Device Builder's version history feature auto-commits every YAML change under
-# /config to git: unsigned, authored "ESPHome Device Builder
-# <device-builder@esphome.io>", hooks skipped. Upstream defaults it on and
-# offers no env override, and /config is usually a bind mount that may be the
-# user's own git repository. Seed the preference before the dashboard starts.
-# Upstream documents this as intended and will not change the default:
+# Version history auto-commits /config YAML to git, unsigned and under a foreign identity, and the default is on.
+# The store is RAM-canonical with a debounced write, so the setting must be seeded before the dashboard starts.
 # https://github.com/esphome/device-builder/blob/main/README.md#version-history
 python3 - "/config/.device-builder-preferences.json" "${ESPHOME_VERSION_HISTORY:-false}" <<'PYTHON' || echo "Warning: could not run the seeding script, version_history_enabled in /config/.device-builder-preferences.json stays at the upstream default" >&2
 import json
