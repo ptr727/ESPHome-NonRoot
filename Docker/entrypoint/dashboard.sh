@@ -38,9 +38,12 @@ if prefs.get("version_history_enabled") is want:
 prefs["version_history_enabled"] = want
 tmp = f"{path}.entrypoint.tmp"
 try:
-    with open(tmp, "w") as handle:
+    # Create at 0600 rather than chmod after the fact: the file is never briefly
+    # world-readable, and a filesystem that cannot honor the mode still gets the
+    # setting applied instead of failing the whole write.
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as handle:
         json.dump(prefs, handle, indent=2)
-    os.chmod(tmp, 0o600)
     os.replace(tmp, path)
 except Exception as error:
     warn(f"could not write {path}, version history stays at the upstream default: {error}")
