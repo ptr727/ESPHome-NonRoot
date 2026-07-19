@@ -26,7 +26,7 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
 
 See [Release History](./HISTORY.md) for complete release notes and older versions.
 
-> ⚠️ **Warning:** Device Builder's version history feature commits every YAML change under `/config` to git, using an `ESPHome Device Builder <device-builder@esphome.io>` identity, unsigned, and bypassing hooks. Where `/config` is a bind mount into an existing repository, those commits land in that repository ([device-builder#2193][device-builder-version-history-link]). This container disables the setting on every launch; set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
+> ⚠️ **Warning:** Device Builder's version history feature commits every YAML change under `/config` to git, using an `ESPHome Device Builder <device-builder@esphome.io>` identity, unsigned, and bypassing hooks. Where `/config` is a bind mount into an existing repository, those commits land in that repository ([device-builder#2193][device-builder-version-history-link]). This container disables the setting at every launch, warning and continuing if `/config` cannot be written; set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
 
 ## Usage
 
