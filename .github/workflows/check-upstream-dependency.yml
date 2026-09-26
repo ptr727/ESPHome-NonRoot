@@ -68,8 +68,8 @@ jobs:
           # both diff cleanly against the resolved object instead of failing.
           if [ -f "$STATE_FILE" ] && old="$(jq -S 'if type == "object" then . else empty end' "$STATE_FILE" 2>/dev/null)" && [ -n "$old" ]; then :; else old='{}'; fi
 
-          # Write as CRLF (jq emits LF) to match .editorconfig's .json rule. Unchanged content => no diff => no PR.
-          printf '%s\n' "$new" | sed 's/$/\r/' > "$STATE_FILE"
+          # Unchanged content => no diff => no PR.
+          printf '%s\n' "$new" > "$STATE_FILE"
 
           added="$(jq -n --argjson old "$old" --argjson new "$new" \
             '[($new.docker_base_packages - ($old.docker_base_packages // []))[]] | join(", ")' -r)"

@@ -127,7 +127,7 @@ Legibility rules. Necessary but not sufficient: a perfectly styled workflow can 
   job needs valid permissions. Grant least privilege; a callee's extra scope is granted by the caller.
 - **Allowlist `success` and `skipped` explicitly** across an optional dependency: use
   `(needs.X.result == 'success' || needs.X.result == 'skipped')`, not `!= 'failure'`.
-- **Line endings.** Workflow YAML follows [`.editorconfig`](./.editorconfig) (CRLF). Preserve on every edit.
+- **Line endings.** Workflow YAML follows [`.editorconfig`](./.editorconfig) (LF). Preserve on every edit.
 
 ## 3. Architecture
 
@@ -247,7 +247,7 @@ person steps in only for a breaking change (a red check) or to dispatch a releas
 [`check-upstream-version.yml`](./.github/workflows/check-upstream-version.yml) runs daily (and on dispatch). It
 resolves the latest `esphome` and `esphome-device-builder` versions from PyPI and calls the reusable
 [`check-upstream-version-task.yml`](./.github/workflows/check-upstream-version-task.yml), which matrixes over
-`main` and `develop`: each leg rewrites `upstream-version.json` (sorted keys, CRLF) and opens an App-signed
+`main` and `develop`: each leg rewrites `upstream-version.json` (sorted keys, LF) and opens an App-signed
 rolling bump PR on `upstream-version-<branch>`. The merge-bot's `merge-upstream-version` job auto-merges each
 (squash to develop, merge-commit to main). The `main` merge is a push that touches the pin -> the publisher's
 path-scoped trigger fires and ships the new upstream version. Both matrix legs resolve the same PyPI versions,
@@ -259,7 +259,7 @@ required" signal that publishes the new upstream within ~a day, not just on the 
 
 [`check-upstream-dependency.yml`](./.github/workflows/check-upstream-dependency.yml) runs daily (and on
 dispatch). It reads the apt package list from the `base` stage of `esphome/docker-base`'s `debian/Dockerfile`,
-records the sorted names in `upstream-dependency.json` (CRLF), and opens an App-signed PR on
+records the sorted names in `upstream-dependency.json` (LF), and opens an App-signed PR on
 `upstream-dependency-develop` when the set moves. Names only: upstream pins `name=version`, so keeping versions
 would turn every Debian point release into a diff.
 
@@ -417,8 +417,8 @@ flowchart TD
     subgraph CUT ["check-upstream-version-task.yml (matrix: main, develop)"]
         RES["resolve esphome + device_builder<br/>from PyPI (App token)"] --> CHG{"upstream-version.json<br/>changed vs committed?"}:::gate
         CHG -- "no diff" --> NOPR(["no PR (both branches identical)"]):::stop
-        CHG -- "yes" --> PRM["open/refresh upstream-version-main PR<br/>(base main, App-signed, CRLF)"]
-        CHG -- "yes" --> PRD["open/refresh upstream-version-develop PR<br/>(base develop, App-signed, CRLF)"]
+        CHG -- "yes" --> PRM["open/refresh upstream-version-main PR<br/>(base main, App-signed, LF)"]
+        CHG -- "yes" --> PRD["open/refresh upstream-version-develop PR<br/>(base develop, App-signed, LF)"]
     end
     PRM --> MMAIN["merge-bot merge-upstream-version<br/>--merge into main, --delete-branch"]
     PRD --> MDEV["merge-bot merge-upstream-version<br/>--squash into develop, --delete-branch"]
@@ -491,7 +491,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D3.3 Version floor + git height.** Output: `version.json` sets the major.minor floor, NBGV appends the
   git height as the patch, never bumped on a cadence. The NBGV version drives the GitHub-release tag and the
   `LABEL_VERSION` build-arg; the image's `esphome` tag is independent (from `upstream-version.json`). *(Who
-  raises the floor and when is a human-process rule in `AGENTS.md`.)*
+  raises the floor and when is a human-process rule in `GOVERNANCE.md` "Release Model".)*
 
 ### D4 - Release / publish
 
@@ -589,7 +589,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   `merge-dependabot` + `merge-upstream-version` + `disable-auto-merge-on-maintainer-push`, not `merge-codegen`.
   *Prevents a new upstream release going unshipped until the weekly run.*
 - **D8.4 Upstream-dependency watcher.** Output: the watcher runs daily, snapshots the `base`-stage apt package
-  names from `esphome/docker-base` into `upstream-dependency.json` (sorted, CRLF, names only), and opens an
+  names from `esphome/docker-base` into `upstream-dependency.json` (sorted, LF, names only), and opens an
   App-signed PR on `upstream-dependency-develop` when the set moves. Its head ref is outside the merge-bot's
   `upstream-version-*` pattern, so it does **not** auto-merge; the file is not a shipped input, so committing it
   does not fire the publisher. *Prevents an upstream runtime dependency being noticed only through a user bug
@@ -604,8 +604,8 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D9.2** File/workflow/job/step names follow the suffix rules; a ruleset-bound `context:` name moves only in
   lockstep with `repo-config/`.
 - **D9.3** Bash `run:` blocks start `set -euo pipefail`; multi-line `if:` uses `>-`.
-- **D9.4** Line endings follow `.editorconfig`. `upstream-version.json` stays CRLF (the tracker writes it CRLF
-  via `sed 's/$/\r/'`).
+- **D9.4** Line endings follow `.editorconfig`, LF throughout. The tracker and the watcher write their JSON state
+  as LF, which is what `jq` emits.
 - **D9.5 No decorative / dropped workflows.** No date-badge (`build-datebadge-*`), no tool-versions task, no
   separate docker-readme task, no executable/`build-executable-task`, no `PUBLISH_ON_MERGE` variable, no
   `dorny/paths-filter`. Their presence is a defect to remove. The `check-upstream-version*` tracker and the

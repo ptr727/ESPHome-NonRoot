@@ -1,0 +1,4 @@
+{
+    "note": "This repository's own host-tool declaration, layered over the fleet declaration in the hub's spec/host-tools.json by the hub's scripts/host_gate.py, which reads this file relative to its --repo argument. Layering is tighten-only: an entry here may add a tool, raise a floor, or turn an optional tool required, and may not lower a floor or turn a required tool optional. It carries no $schema pointer, because the schemas are hub-only and no selector carries one, so a relative pointer here would resolve to a path this repository does not have. No tool is declared, because the image build, the compile test, and the lint gate all run through Docker, which the fleet declaration already carries. The file is present rather than absent so the declaration is somewhere a reader can find.",
+    "tools": []
+}
