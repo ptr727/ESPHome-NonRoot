@@ -16,7 +16,9 @@ ESPHome-NonRoot ships **one target**: a **multi-arch Docker image** (Docker Hub 
 layers a non-root [ESPHome](https://esphome.io/) plus the `esphome-device-builder` dashboard onto a
 `python:3.14-slim` base. There is no compiled code in this repo - the Dockerfile and its `Docker/` context define
 the image. The shipped ESPHome and device-builder versions are pinned in `upstream-version.json`, which the
-workflow reads and passes to the build as build args. Two workflows do the publishing work, plus a daily tracker that keeps the pin current:
+workflow reads and passes to the build as build args, and NBGV computes the image version from `version.json`,
+passed as the `LABEL_VERSION` build arg and the `SemVer2` tag. Two workflows do the publishing work, plus a daily
+tracker that keeps the pin current:
 
 - **CI** runs on **push to every branch**: it validates (lint) and smoke-builds the image, publishing nothing.
   A pull request merges only when its required check is green.
