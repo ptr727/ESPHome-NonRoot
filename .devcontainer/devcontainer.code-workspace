@@ -4,7 +4,7 @@
 			"path": "../."
 		},
 		{
-			"path": "../../../opt/venv/lib/python3.13/site-packages"
+			"path": "../../../opt/venv/lib/python3.14/site-packages"
 		},
 		{
 			"path": "../../../config"
@@ -14,28 +14,6 @@
 		}
 	],
 	"settings": {
-		"cSpell.words": [
-			"adduser",
-			"appdata",
-			"azuretools",
-			"cairosvg",
-			"changequote",
-			"commandline",
-			"cpptools",
-			"davidanson",
-			"devcontainer",
-			"devcontainers",
-			"eamodio",
-			"esphome",
-			"extensionpack",
-			"GLOBALLIB",
-			"gruntfuggly",
-			"macvlan",
-			"nonroot",
-			"piolibs",
-			"platformio",
-			"pylint"
-		],
 		"files.trimTrailingWhitespace": true,
 		"[markdown]": {
 			"files.trimTrailingWhitespace": false

@@ -58,5 +58,8 @@
     ".git/**",
     ".artifacts/**",
     "Docker/**/piolibs/**"
+  ],
+  "ignoreRegExpList": [
+    "/```mermaid[\\s\\S]*?```/g"
   ]
 }

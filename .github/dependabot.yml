@@ -1,6 +1,6 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 # Each ecosystem appears once per branch (main + develop) so both stay current independently; rationale in
-# AGENTS.md "Branching Model". This repo ships a Docker image only: github-actions plus the Docker base image.
+# GOVERNANCE.md "Branching Model". This repo ships a Docker image only: github-actions plus the Docker base image.
 version: 2
 updates:
 
