@@ -108,9 +108,9 @@ Applies to code and workflow (`#`) comments alike.
 
 ### Line Endings
 
-- [`.editorconfig`](./.editorconfig) defines the correct ending per file type (CRLF for `.md`, XML/`.csproj`/`.props`, non-workflow `.yml`/`.yaml`, `.json`, `.cmd`/`.bat`/`.ps1`; LF for `.sh`, `Dockerfile`, and workflow YAML under `.github/workflows/`), and [`.gitattributes`](./.gitattributes) (`* -text`) stops git from normalizing. Carry both files whole even where a rule covers a file type this repo does not ship (the `[*.cs]` block is inert without `.cs` files) so a future re-sync stays a clean whole-file overwrite.
-- **Editing an existing file: preserve its current line endings** - do not reflow them as a side effect of a content change, even if the file is already non-compliant. After any programmatic edit, verify with `git diff --stat` (only changed lines) and `file <path>` (expected ending). Bring a non-compliant file to its `.editorconfig` ending only as a deliberate, isolated EOL-only change.
-- **Workflow YAML (`.github/workflows/*.{yml,yaml}`) is pinned LF** in `.editorconfig` - Dependabot and Actions rewrite it with LF, so declaring LF keeps it consistent instead of mixed on every bump. This is not a `.gitattributes` pin (git keeps `* -text` and does not normalize); CI's `editorconfig-checker` (EOL-only) catches a mismatch instead. Non-workflow YAML stays CRLF.
+- [`.editorconfig`](./.editorconfig) declares LF for every file (`[*]`), with `*.bat`/`*.cmd` the one CRLF exception, and [`.gitattributes`](./.gitattributes) (`* text=auto eol=lf`) mirrors that as git's normalization fallback. Carry both files whole even where a rule covers a file type this repo does not ship (the `[*.cs]` block and the CRLF exception are inert here) so a future re-sync stays a clean whole-file overwrite.
+- **Editing an existing file: preserve its current line endings** - do not reflow them as a side effect of a content change. Bring a non-compliant file to its `.editorconfig` ending only as a deliberate, isolated EOL-only change. After any programmatic edit, verify with `git diff --stat` (only changed lines) and `file <path>` (expected ending).
+- **Generated state files are written LF.** The upstream-version tracker and the upstream-dependency watcher write their JSON as `jq` emits it, so a bot PR never fights `.gitattributes`.
 
 ### Quantitative Claims
 
@@ -198,7 +198,7 @@ Pin **every** action - first-party (`actions/*`) and third-party - to a commit S
 
 ## Shared Configuration and Tooling
 
-- **Config files.** [`.editorconfig`](./.editorconfig) (per-file-type EOL plus the inert C# / ReSharper style block), [`.gitattributes`](./.gitattributes) (`* -text`, with the `*.sh` and `Dockerfile` LF pins), [`.markdownlint-cli2.jsonc`](./.markdownlint-cli2.jsonc), and [`CODESTYLE.md`](./CODESTYLE.md) hold the repo's formatting, linting, and code-style rules. Keep [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) narrow (Copilot / VS Code review mechanics plus the commit/PR-title summary); project-specific conventions live in this file.
+- **Config files.** [`.editorconfig`](./.editorconfig) (the LF default plus the inert C# / ReSharper style block), [`.gitattributes`](./.gitattributes) (`* text=auto eol=lf`, with the `*.bat`/`*.cmd` CRLF exception), [`.markdownlint-cli2.jsonc`](./.markdownlint-cli2.jsonc), and [`CODESTYLE.md`](./CODESTYLE.md) hold the repo's formatting, linting, and code-style rules. Keep [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) narrow (Copilot / VS Code review mechanics plus the commit/PR-title summary); project-specific conventions live in this file.
 - **Spell check.** The cspell word list and path exclusions live in [`cspell.json`](./cspell.json), the single source shared by the editor and CI. Do not keep a parallel word list in the `.code-workspace` file.
 - **Release notes.** Keep a short summary in [`README.md`](./README.md) and the full history in [`HISTORY.md`](./HISTORY.md); update both when cutting a release.
 
