@@ -491,7 +491,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
 - **D3.3 Version floor + git height.** Output: `version.json` sets the major.minor floor, NBGV appends the
   git height as the patch, never bumped on a cadence. The NBGV version drives the GitHub-release tag and the
   `LABEL_VERSION` build-arg; the image's `esphome` tag is independent (from `upstream-version.json`). *(Who
-  raises the floor and when is a human-process rule in `AGENTS.md`.)*
+  raises the floor and when is a human-process rule in `GOVERNANCE.md` "Release Model".)*
 
 ### D4 - Release / publish
 
