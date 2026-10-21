@@ -27,6 +27,7 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
 - Version 1.9:
   - Added the `libusb-1.0-0` runtime library that the ESP-IDF `openocd-esp32` tool check requires, fixing ESP-IDF firmware compile failures ([#161][issue-161-link]).
   - Added `ccache`, which ESPHome enables automatically for ESP-IDF builds to speed up repeat compiles.
+  - Added `patch`, which ESP-IDF components such as the Opus audio codec run at configure time, fixing compile failures for configurations that enable it ([#279][issue-279-link]).
   - Publishing now compiles real firmware inside the image first, so a missing runtime dependency blocks the release instead of reaching Docker Hub.
   - Added a daily check for dependency changes in the ESPHome base image the container tracks.
   - Disabled Device Builder's version history feature by default, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
@@ -275,6 +276,7 @@ Licensed under the [MIT License][license]\
 [docker-hub-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
 [github-link]: https://github.com/ptr727/ESPHome-NonRoot
 [issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
+[issue-279-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/279
 [issues-link]: https://github.com/ptr727/ESPHome-NonRoot/issues
 [releases-link]: https://github.com/ptr727/ESPHome-NonRoot/releases
 

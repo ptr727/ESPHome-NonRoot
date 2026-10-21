@@ -1,0 +1,16 @@
+# ESP32 on ESP-IDF with the Opus audio codec. The esphome/micro-opus IDF component patches its
+# sources with the patch binary during CMake component discovery, which no other configuration reaches.
+
+esphome:
+  name: compile-test-esp32-opus
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+audio:
+  codecs:
+    opus:
+
+logger:
