@@ -303,11 +303,11 @@ adds a dimension the others cannot reach:
 | `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF - a separate compiler binary, not just another board |
 | `esp32-ethernet.yaml` | wired Ethernet PHY drivers, which the wifi configurations never compile |
 | `esp8266-d1-mini.yaml` | PlatformIO + Arduino - a different build system, not a different target |
-| `esp32-audio-opus.yaml` | an IDF component that runs `patch` during CMake component discovery, a host tool no other fixture calls |
+| `esp32s3-audio-opus.yaml` | an IDF component that runs `patch` during CMake component discovery, a host tool no other fixture calls |
 
-They are hand-authored and checked in, each naming the upstream project it is modeled on, so a refresh has a
-reference point. Those are `esphome/bluetooth-proxies`, `esphome/ready-made-project-template`, and the reported
-configuration `esp32-audio-opus.yaml` reduces.
+They are hand-authored and checked in, each naming the upstream project it is modeled on
+(`esphome/bluetooth-proxies`, `esphome/ready-made-project-template`, `sonocotta/esp32-audio-dock`) so a refresh
+has a reference point.
 Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used: both
 couple a daily monitor to something outside this repo that can change under it, and a scheduled job whose
 common failure is its own breakage stops being believed. Checked-in fixtures rot too - an ESPHome schema
@@ -635,8 +635,9 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents a daily
   monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
 - **D11.3 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
-  wired Ethernet, PlatformIO/Arduino, and configure-time patching, and the container runs as uid 1000. *Prevents a break confined to one
-  toolchain, build system, or network stack - or a root-only regression - passing as green.*
+  wired Ethernet, PlatformIO/Arduino, and configure-time patching, and the container runs as uid 1000.
+  *Prevents a break confined to one toolchain, build system, network stack, or host tool, or a root-only
+  regression, passing as green.*
 
 ## 5. Test methodology
 
