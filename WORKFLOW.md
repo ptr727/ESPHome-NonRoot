@@ -303,9 +303,11 @@ adds a dimension the others cannot reach:
 | `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF - a separate compiler binary, not just another board |
 | `esp32-ethernet.yaml` | wired Ethernet PHY drivers, which the wifi configurations never compile |
 | `esp8266-d1-mini.yaml` | PlatformIO + Arduino - a different build system, not a different target |
+| `esp32-audio-opus.yaml` | an IDF component that runs `patch` during CMake component discovery, a host tool no other fixture calls |
 
-They are hand-authored and checked in, each naming the upstream ESPHome project it is modeled on
-(`esphome/bluetooth-proxies`, `esphome/ready-made-project-template`) so a refresh has a reference point.
+They are hand-authored and checked in, each naming the upstream project it is modeled on, so a refresh has a
+reference point. Those are `esphome/bluetooth-proxies`, `esphome/ready-made-project-template`, and the reported
+configuration `esp32-audio-opus.yaml` reduces.
 Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used: both
 couple a daily monitor to something outside this repo that can change under it, and a scheduled job whose
 common failure is its own breakage stops being believed. Checked-in fixtures rot too - an ESPHome schema
@@ -633,7 +635,7 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents a daily
   monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
 - **D11.3 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
-  wired Ethernet, and PlatformIO/Arduino, and the container runs as uid 1000. *Prevents a break confined to one
+  wired Ethernet, PlatformIO/Arduino, and configure-time patching, and the container runs as uid 1000. *Prevents a break confined to one
   toolchain, build system, or network stack - or a root-only regression - passing as green.*
 
 ## 5. Test methodology
@@ -677,11 +679,12 @@ applicable guarantee with a `file:line` citation:
   `develop` on a head ref the merge-bot does not match, and writes a file no build step reads; no codegen,
   date-badge, tool-versions, docker-readme task, executable task, `PUBLISH_ON_MERGE`, or `dorny/paths-filter`;
   actions SHA-pinned except `dotnet/nbgv@master`; names/shells/conditionals per section 2.
-- **D11:** `validate-task` declares the `compile-test` boolean input defaulting false; the publisher passes true
-  and `test-pull-request` passes its change-gate result; the job is gated on it, builds with `load: true` / `push: false` and no
-  `cache-to`, compiles the checked-in `.github/compile-test/` fixtures with `esphome config` run before
-  `esphome compile`, covers Xtensa ESP-IDF + RISC-V ESP-IDF + Ethernet + PlatformIO, fetches no configuration at
-  run time, and runs the container `--user 1000:1000`. Both callers pass `secrets: inherit`, without which the
+- **D11:** `validate-task` declares the `compile-test` boolean input defaulting false. The publisher passes true
+  and `test-pull-request` passes its change-gate result. The job is gated on it and builds with `load: true` /
+  `push: false` and no `cache-to`. It compiles the checked-in `.github/compile-test/` fixtures with
+  `esphome config` run before `esphome compile`. The fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF, Ethernet,
+  PlatformIO, and configure-time patching. The job fetches no configuration at run time and runs the container
+  `--user 1000:1000`. Both callers pass `secrets: inherit`, without which the
   job's Docker Hub login fails and the gate cannot run.
 
 ### 5B. End-to-end trace scenarios (deterministic from the YAML)

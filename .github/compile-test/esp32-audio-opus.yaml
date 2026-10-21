@@ -1,5 +1,7 @@
-# ESP32 on ESP-IDF with the Opus audio codec. The esphome/micro-opus IDF component patches its
-# sources with the patch binary during CMake component discovery, which no other configuration reaches.
+# ESP32 on ESP-IDF with the Opus audio codec, reduced to the component that triggers the failure.
+# The esphome/micro-opus IDF component runs patch during CMake component discovery.
+# No other configuration reaches that step.
+# Modeled on sonocotta/esp32-audio-dock firmware/esphome/3-louder-esp32/louder-esp32-s3-idf-sendspin.yaml, the configuration that first hit the failure.
 
 esphome:
   name: compile-test-esp32-opus
