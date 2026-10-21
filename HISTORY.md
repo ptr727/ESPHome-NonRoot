@@ -1,6 +1,6 @@
 # ESPHome-NonRoot
 
-[ESPHome][esphome-link] docker container that supports non-root operation.
+ESPHome docker container that supports non-root operation.
 
 ## Release History
 
@@ -40,7 +40,6 @@
 [devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
 [device-builder-link]: https://github.com/esphome/device-builder
 [device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
-[esphome-link]: https://esphome.io
 [esphome-pr-6987-link]: https://github.com/esphome/esphome/pull/6987
 [issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
 [issue-60-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/60

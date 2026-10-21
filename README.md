@@ -1,21 +1,28 @@
-# ESPHome-NonRoot
+# ESPHome-NonRoot <!-- omit from toc -->
 
-[ESPHome][esphome-link] docker container that supports non-root operation.
+ESPHome docker container that supports non-root operation.
 
-## Build
+## Build and Distribution <!-- omit from toc -->
 
-Code and pipeline are on [GitHub][github-link].\
-Docker image is published on [Docker Hub][docker-link].\
+- **Source Code**: Code and pipeline are on [GitHub][github-link].
+- **Versioned Releases**: Each version is published as a [GitHub release][releases-link].
+- **Docker Images**: Docker image is published on [Docker Hub][docker-hub-link].
+
 Image is rebuilt on the weekly schedule and on demand, picking up the latest tracked ESPHome release and upstream container updates.
 
-## Status
+### Build Status <!-- omit from toc -->
 
-[![Last Commit][last-commit-shield]][commit-link]\
-[![Workflow Status][workflow-status-shield]][actions-link]\
-[![Last Build][last-build-shield]][actions-link]\
-[![Docker Latest][docker-latest-version-shield]][docker-link]
+[![Last Commit][last-commit-shield]][commits-link]\
+[![Workflow Status][workflow-status-shield]][actions-link]
 
-## Release Notes
+### Releases <!-- omit from toc -->
+
+[![GitHub Release][release-version-shield]][releases-link]\
+[![GitHub Pre-Release][pre-release-version-shield]][releases-link]\
+[![Docker Latest][docker-latest-version-shield]][docker-hub-link]\
+[![Docker Develop][docker-develop-version-shield]][docker-hub-link]
+
+### Release Notes <!-- omit from toc -->
 
 - Version 1.9:
   - Added the `libusb-1.0-0` runtime library that the ESP-IDF `openocd-esp32` tool check requires, fixing ESP-IDF firmware compile failures ([#161][issue-161-link]).
@@ -24,7 +31,49 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
   - Added a daily check for dependency changes in the ESPHome base image the container tracks.
   - Disabled Device Builder's version history feature by default, stopping it from committing `/config` changes to git under a fabricated identity ([version history][device-builder-version-history-link]).
 
-See [Release History](./HISTORY.md) for complete release notes and older versions.
+See [Release History][history] for complete release notes and older versions.
+
+## Table of Contents <!-- omit from toc -->
+
+- [Overview](#overview)
+- [Usage](#usage)
+  - [Configuration](#configuration)
+  - [Docker Compose Dashboard](#docker-compose-dashboard)
+  - [Docker Run Command](#docker-run-command)
+  - [Docker Run Interactive Shell](#docker-run-interactive-shell)
+  - [Docker Compose with Static IP and Traefik](#docker-compose-with-static-ip-and-traefik)
+- [Project Design](#project-design)
+- [Questions or Issues](#questions-or-issues)
+- [Debugging](#debugging)
+- [3rd Party Tools](#3rd-party-tools)
+- [License](#license)
+
+## Overview
+
+- Running containers as non-privileged and as non-root is a docker best practice.
+- The official ESPHome [docker container][esphome-docker-link] does not support running as a non-root user.
+  - [Issue #3558 : Docker requires root][issue-3558-link].
+  - [Issue #2752 : Docker image does not allow running rootless][issue-2752-link].
+  - [Issue #3929 : Not possible to run docker esphome/esphome container (problem with platformio)][issue-3929-link].
+  - [HA Community : Is there a way to run ESPhome in docker with custom UID and GID][ha-community-link].
+  - Etc.
+- Issue analysis based on ESPHome `2024.5.5` (the upstream version analyzed when this project was created) [`Dockerfile`][esphome-dockerfile-link]:
+  - [`PLATFORMIO_GLOBALLIB_DIR=/piolibs`][esphome-globallib-link] sets the PlatformIO [`globallib_dir`][pio-globallib-env-link] option to `/piolibs`.
+    - `/piolibs` is not mapped to an external volume.
+    - `/piolibs` has default permissions and requires `root` write permissions at runtime.
+    - The [`globallib_dir`][pio-globallib-link] option has been deprecated.
+      - `This option is DEPRECATED. We do not recommend using global libraries for new projects. Please use a declarative approach for the safety-critical embedded development and declare project dependencies using the lib_deps option.`
+  - [`platformio_install_deps.py`][esphome-installdeps-link] installs global libraries using [`pio pkg install -g`][esphome-pkginstall-link], the [`-g`][pio-pkg-g-link] option has been deprecated.
+    - `We DO NOT recommend installing libraries in the global storage. Please use the lib_deps option and declare library dependencies per project.`
+  - The [presence][esphome-entrypoint-cache-link] of a `/cache` directory changes `pio_cache_base` to `/cache/platformio`, the default is `/config/.esphome/platformio`
+    - `PLATFORMIO_PLATFORMS_DIR="${pio_cache_base}/platforms"`, `PLATFORMIO_PACKAGES_DIR="${pio_cache_base}/packages"`, and `PLATFORMIO_CACHE_DIR="${pio_cache_base}/cache"` is explicitly set as child directories of `pio_cache_base`.
+    - It is simpler to set `PLATFORMIO_CORE_DIR` PlatformIO [`core_dir`][pio-coredir-env-link] option, and not setting `PLATFORMIO_PLATFORMS_DIR` [`platforms_dir`][pio-platformsdir-link], `PLATFORMIO_PACKAGES_DIR` [`packages_dir`][pio-packagesdir-link], and `PLATFORMIO_CACHE_DIR` [`cache_dir`][pio-cachedir-link] options, that are by default child directories of `core_dir`.
+  - The [presence][esphome-entrypoint-build-link] of a `/build` directory sets the `ESPHOME_BUILD_PATH` environment variable, that [sets][esphome-buildpath-sets-link] the `CONF_BUILD_PATH` ESPHome [`build_path`][esphome-buildpath-link] option, the default is `/config/.esphome/build`.
+    - The directory presence detection could override an explicitly set `ESPHOME_BUILD_PATH` option.
+  - `ESPHOME_DATA_DIR` can be used to set the ESPHome [`data_dir`][esphome-datadir-link] intermediate build output directory, the [default][esphome-datadir-default-link] is `/config/.esphome`, or hardcoded to `/data` for the HA addon image.
+  - [`PLATFORMIO_CORE_DIR`][pio-coredir-env-link] PlatformIO [`core_dir`][pio-coredir-link] option is not set and defaults to `~/.platformio`.
+  - [`PIP_CACHE_DIR`][pip-cache-link] is not set and defaults to `~/.cache/pip`.
+  - `HOME` (`~`) is not set and defaults to e.g. `/home/[username]` or `/` or `/nonexistent` that either does not exists or the executing user does not have write permissions.
 
 ## Usage
 
@@ -160,59 +209,98 @@ I have no name!@012d4b62d376:/config$
       - traefik.http.services.esphome.loadbalancer.server.port=6052
 ```
 
-## Use Case
-
-- Running containers as non-privileged and as non-root is a docker best practice.
-- The official ESPHome [docker container][esphome-docker-link] does not support running as a non-root user.
-  - [Issue #3558 : Docker requires root][issue-3558-link].
-  - [Issue #2752 : Docker image does not allow running rootless][issue-2752-link].
-  - [Issue #3929 : Not possible to run docker esphome/esphome container - problem with platformio][issue-3929-link].
-  - [HA Community : Is there a way to run ESPhome in docker with custom UID and GID][ha-community-link].
-  - Etc.
-- Issue analysis based on ESPHome `2024.5.5` (the upstream version analyzed when this project was created) [`Dockerfile`][esphome-dockerfile-link]:
-  - [`PLATFORMIO_GLOBALLIB_DIR=/piolibs`][esphome-globallib-link] sets the PlatformIO [`globallib_dir`][pio-globallib-env-link] option to `/piolibs`.
-    - `/piolibs` is not mapped to an external volume.
-    - `/piolibs` has default permissions and requires `root` write permissions at runtime.
-    - The [`globallib_dir`][pio-globallib-link] option has been deprecated.
-      - `This option is DEPRECATED. We do not recommend using global libraries for new projects. Please use a declarative approach for the safety-critical embedded development and declare project dependencies using the lib_deps option.`
-  - [`platformio_install_deps.py`][esphome-installdeps-link] installs global libraries using [`pio pkg install -g`][esphome-pkginstall-link], the [`-g`][pio-pkg-g-link] option has been deprecated.
-    - `We DO NOT recommend installing libraries in the global storage. Please use the lib_deps option and declare library dependencies per project.`
-  - The [presence][esphome-entrypoint-cache-link] of a `/cache` directory changes `pio_cache_base` to `/cache/platformio`, the default is `/config/.esphome/platformio`
-    - `PLATFORMIO_PLATFORMS_DIR="${pio_cache_base}/platforms"`, `PLATFORMIO_PACKAGES_DIR="${pio_cache_base}/packages"`, and `PLATFORMIO_CACHE_DIR="${pio_cache_base}/cache"` is explicitly set as child directories of `pio_cache_base`.
-    - It is simpler to set `PLATFORMIO_CORE_DIR` PlatformIO [`core_dir`][pio-coredir-env-link] option, and not setting `PLATFORMIO_PLATFORMS_DIR` [`platforms_dir`][pio-platformsdir-link], `PLATFORMIO_PACKAGES_DIR` [`packages_dir`][pio-packagesdir-link], and `PLATFORMIO_CACHE_DIR` [`cache_dir`][pio-cachedir-link] options, that are by default child directories of `core_dir`.
-  - The [presence][esphome-entrypoint-build-link] of a `/build` directory sets the `ESPHOME_BUILD_PATH` environment variable, that [sets][esphome-buildpath-sets-link] the `CONF_BUILD_PATH` ESPHome [`build_path`][esphome-buildpath-link] option, the default is `/config/.esphome/build`.
-    - The directory presence detection could override an explicitly set `ESPHOME_BUILD_PATH` option.
-  - `ESPHOME_DATA_DIR` can be used to set the ESPHome [`data_dir`][esphome-datadir-link] intermediate build output directory, the [default][esphome-datadir-default-link] is `/config/.esphome`, or hardcoded to `/data` for the HA addon image.
-  - [`PLATFORMIO_CORE_DIR`][pio-coredir-env-link] PlatformIO [`core_dir`][pio-coredir-link] option is not set and defaults to `~/.platformio`.
-  - [`PIP_CACHE_DIR`][pip-cache-link] is not set and defaults to `~/.cache/pip`.
-  - `HOME` (`~`) is not set and defaults to e.g. `/home/[username]` or `/` or `/nonexistent` that either does not exists or the executing user does not have write permissions.
-
 ## Project Design
 
 - Use [Python][python-link] docker base image simplifying use for Python in a container environment.
 - Use a multi-stage build minimizing size and layer complexity of the final stage.
 - Use [`uv`][uv-link] to build a virtual environment in the builder stage, and copy the self-contained environment into the slim final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
-- Refer to [`Dockerfile`](./Docker/Dockerfile) for container details.
-- Refer to [`publish-release.yml`](./.github/workflows/publish-release.yml) (the publisher) and [`build-docker-task.yml`](./.github/workflows/build-docker-task.yml) (the image build) for pipeline details.
+- Refer to [`Dockerfile`][dockerfile] for container details.
+- Refer to [`publish-release.yml`][publish-release] (the publisher) and [`build-docker-task.yml`][build-docker-task] (the image build) for pipeline details.
+
+## Questions or Issues
+
+File bug reports and feature requests in [GitHub Issues][issues-link], and ask questions in [GitHub Discussions][discussions-link].
 
 ## Debugging
 
-The [included](./.devcontainer/devcontainer.json) [Dev Container][devcontainer-link] can be used for [ESPHome Python][vscode-python-debug-link] or [PlatformIO C++][pio-debug-link] debugging in VSCode.
+The [included][devcontainer] [Dev Container][devcontainer-link] can be used for [ESPHome Python][vscode-python-debug-link] or [PlatformIO C++][pio-debug-link] debugging in VSCode.
 
 Detailed debug setup details are beyond the scope of this project, refer to my [ESPHome-Config][esphome-config-link] project for slightly more complete debugging setup instructions.
 
+## 3rd Party Tools
+
+The third-party tools, libraries, and actions this project depends on.
+
+- [actionlint][actionlint-link]: GitHub Actions workflow linter.
+- [Create Pull Request][create-pull-request-link]: GitHub action that opens a pull request from workspace changes.
+- [cspell][cspell-link]: Spell checker.
+- [Docker Build Push Action][docker-build-push-link]: GitHub action that builds and pushes Docker images with Buildx.
+- [Docker Hub Description][docker-hub-description-link]: GitHub action that publishes a Docker Hub repository overview.
+- [Docker Login][docker-login-link]: GitHub action that logs in to a container registry.
+- [Docker Setup Buildx][docker-setup-buildx-link]: GitHub action that sets up Docker Buildx.
+- [Docker Setup QEMU][docker-setup-qemu-link]: GitHub action that installs QEMU for multi-platform builds.
+- [editorconfig-checker][editorconfig-checker-link]: Line-ending and whitespace linter.
+- [ESPHome][esphome-link]: Firmware framework that builds device firmware from YAML configuration.
+- [ESPHome Device Builder][device-builder-link]: Web dashboard for creating, editing, and building ESPHome devices.
+- [GH Release][gh-release-link]: GitHub action that creates a release.
+- [GitHub Actions][github-actions-link]: CI and automation runner.
+- [GitHub Dependabot][github-dependabot-link]: Dependency update bot.
+- [markdownlint-cli2][markdownlint-cli2-link]: Markdown linter.
+- [Nerdbank.GitVersioning][nbgv-link]: Version computation from git height.
+- [PlatformIO][platformio-link]: Embedded development toolchain and build system.
+- [Python][python-link]: Official Python Docker base image.
+- [uv][uv-link]: Python package and project manager.
+
 ## License
 
-Licensed under the [MIT License][license-link]\
+Licensed under the [MIT License][license]\
 ![GitHub License][license-shield]
 
-[actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
-[commit-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
-[devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
-[device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
+<!-- Shields -->
+
+[docker-develop-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/develop?label=Docker%20Develop&logo=docker
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
-[docker-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
+[last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
+[license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
+[pre-release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?include_prereleases&label=GitHub%20Pre-Release&logo=github
+[release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?logo=github&label=GitHub%20Release
+[workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/publish-release.yml?event=schedule&logo=github&label=Workflow%20Status
+
+<!-- Distribution -->
+
+[actions-link]: https://github.com/ptr727/ESPHome-NonRoot/actions
+[commits-link]: https://github.com/ptr727/ESPHome-NonRoot/commits/main
+[discussions-link]: https://github.com/ptr727/ESPHome-NonRoot/discussions
+[docker-hub-link]: https://hub.docker.com/r/ptr727/esphome-nonroot
+[github-link]: https://github.com/ptr727/ESPHome-NonRoot
+[issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
+[issues-link]: https://github.com/ptr727/ESPHome-NonRoot/issues
+[releases-link]: https://github.com/ptr727/ESPHome-NonRoot/releases
+
+<!-- Repo -->
+
+[build-docker-task]: ./.github/workflows/build-docker-task.yml
+[devcontainer]: ./.devcontainer/devcontainer.json
+[dockerfile]: ./Docker/Dockerfile
+[history]: ./HISTORY.md
+[license]: ./LICENSE
+[publish-release]: ./.github/workflows/publish-release.yml
+
+<!-- External -->
+
+[actionlint-link]: https://github.com/rhysd/actionlint
+[create-pull-request-link]: https://github.com/marketplace/actions/create-pull-request
+[cspell-link]: https://cspell.org
+[devcontainer-link]: https://code.visualstudio.com/docs/devcontainers/containers
+[device-builder-link]: https://github.com/esphome/device-builder
+[device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
+[docker-build-push-link]: https://github.com/marketplace/actions/build-and-push-docker-images
+[docker-hub-description-link]: https://github.com/marketplace/actions/docker-hub-description
+[docker-login-link]: https://github.com/marketplace/actions/docker-login
+[docker-setup-buildx-link]: https://github.com/marketplace/actions/docker-setup-buildx
+[docker-setup-qemu-link]: https://github.com/marketplace/actions/docker-setup-qemu
+[editorconfig-checker-link]: https://github.com/editorconfig-checker/editorconfig-checker
 [esphome-buildpath-link]: https://esphome.io/components/esphome.html
 [esphome-buildpath-sets-link]: https://github.com/esphome/esphome/blob/2024.5.5/esphome/core/config.py#L204
 [esphome-config-link]: https://github.com/ptr727/ESPHome-Config
@@ -227,16 +315,15 @@ Licensed under the [MIT License][license-link]\
 [esphome-link]: https://esphome.io
 [esphome-pkginstall-link]: https://github.com/esphome/esphome/blob/2024.5.5/script/platformio_install_deps.py#L58
 [esphome-verbose-link]: https://esphome.io/guides/cli.html#cmdoption-v-verbose
-[github-link]: https://github.com/ptr727/ESPHome-NonRoot
+[gh-release-link]: https://github.com/marketplace/actions/gh-release
+[github-actions-link]: https://github.com/actions
+[github-dependabot-link]: https://github.com/dependabot
 [ha-community-link]: https://community.home-assistant.io/t/is-there-a-way-to-run-esphome-in-docker-with-custom-uid-and-gid/668256
 [issue-2752-link]: https://github.com/esphome/issues/issues/2752
 [issue-3558-link]: https://github.com/esphome/issues/issues/3558
 [issue-3929-link]: https://github.com/esphome/issues/issues/3929
-[issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
-[last-build-shield]: https://byob.yarr.is/ptr727/ESPHome-NonRoot/lastbuild
-[last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
-[license-link]: ./LICENSE
-[license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
+[markdownlint-cli2-link]: https://github.com/DavidAnson/markdownlint-cli2
+[nbgv-link]: https://github.com/dotnet/Nerdbank.GitVersioning
 [pio-cachedir-link]: https://docs.platformio.org/en/latest/projectconf/sections/platformio/options/directory/cache_dir.html#projectconf-pio-cache-dir
 [pio-coredir-env-link]: https://docs.platformio.org/en/latest/envvars.html#envvar-PLATFORMIO_CORE_DIR
 [pio-coredir-link]: https://docs.platformio.org/en/latest/projectconf/sections/platformio/options/directory/core_dir.html#projectconf-pio-core-dir
@@ -247,8 +334,8 @@ Licensed under the [MIT License][license-link]\
 [pio-pkg-g-link]: https://docs.platformio.org/en/stable/core/userguide/pkg/cmd_install.html#cmdoption-pio-pkg-install-g
 [pio-platformsdir-link]: https://docs.platformio.org/en/latest/projectconf/sections/platformio/options/directory/platforms_dir.html#projectconf-pio-platforms-dir
 [pip-cache-link]: https://pip.pypa.io/en/stable/topics/caching/#pip-cache-dir
+[platformio-link]: https://platformio.org
 [python-link]: https://hub.docker.com/_/python
 [tz-link]: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 [uv-link]: https://docs.astral.sh/uv/
 [vscode-python-debug-link]: https://code.visualstudio.com/docs/python/debugging
-[workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/publish-release.yml?event=schedule&logo=github&label=Workflow%20Status
