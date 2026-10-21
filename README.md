@@ -263,7 +263,7 @@ Licensed under the [MIT License][license]\
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
 [license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
-[pre-release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?include_prereleases&label=GitHub%20Pre-Release&logo=github
+[pre-release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?include_prereleases&filter=*-g*&label=GitHub%20Pre-Release&logo=github
 [release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?logo=github&label=GitHub%20Release
 [workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/publish-release.yml?event=schedule&logo=github&label=Workflow%20Status
 
