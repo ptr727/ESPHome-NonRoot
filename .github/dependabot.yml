@@ -32,6 +32,10 @@ updates:
     directory: "/Docker"
     schedule:
       interval: "daily"
+    # Hold Python at 3.14: ESP-IDF's Python deps lack 3.15 wheels, and the runtime image has no compiler.
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
     groups:
       docker-deps:
         patterns:
@@ -43,6 +47,10 @@ updates:
     directory: "/Docker"
     schedule:
       interval: "daily"
+    # Hold Python at 3.14: ESP-IDF's Python deps lack 3.15 wheels, and the runtime image has no compiler.
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
     groups:
       docker-deps:
         patterns:
