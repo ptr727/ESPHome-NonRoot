@@ -1,8 +1,8 @@
-# ESPHome-NonRoot
+# ESPHome-NonRoot <!-- omit from toc -->
 
 ESPHome docker container that supports non-root operation.
 
-## Build and Distribution
+## Build and Distribution <!-- omit from toc -->
 
 - **Source Code**: Code and pipeline are on [GitHub][github-link].
 - **Versioned Releases**: Each version is published as a [GitHub release][releases-link].
@@ -10,19 +10,19 @@ ESPHome docker container that supports non-root operation.
 
 Image is rebuilt on the weekly schedule and on demand, picking up the latest tracked ESPHome release and upstream container updates.
 
-### Build Status
+### Build Status <!-- omit from toc -->
 
 [![Last Commit][last-commit-shield]][commits-link]\
 [![Workflow Status][workflow-status-shield]][actions-link]
 
-### Releases
+### Releases <!-- omit from toc -->
 
 [![GitHub Release][release-version-shield]][releases-link]\
 [![GitHub Pre-Release][pre-release-version-shield]][releases-link]\
 [![Docker Latest][docker-latest-version-shield]][docker-hub-link]\
 [![Docker Develop][docker-develop-version-shield]][docker-hub-link]
 
-### Release Notes
+### Release Notes <!-- omit from toc -->
 
 - Version 1.9:
   - Added the `libusb-1.0-0` runtime library that the ESP-IDF `openocd-esp32` tool check requires, fixing ESP-IDF firmware compile failures ([#161][issue-161-link]).
@@ -33,10 +33,15 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
 
 See [Release History][history] for complete release notes and older versions.
 
-## Table of Contents
+## Table of Contents <!-- omit from toc -->
 
 - [Overview](#overview)
 - [Usage](#usage)
+  - [Configuration](#configuration)
+  - [Docker Compose Dashboard](#docker-compose-dashboard)
+  - [Docker Run Command](#docker-run-command)
+  - [Docker Run Interactive Shell](#docker-run-interactive-shell)
+  - [Docker Compose with Static IP and Traefik](#docker-compose-with-static-ip-and-traefik)
 - [Project Design](#project-design)
 - [Questions or Issues](#questions-or-issues)
 - [Debugging](#debugging)
@@ -236,7 +241,7 @@ The third-party tools, libraries, and actions this project depends on.
 - [Docker Setup Buildx][docker-setup-buildx-link]: GitHub action that sets up Docker Buildx.
 - [Docker Setup QEMU][docker-setup-qemu-link]: GitHub action that installs QEMU for multi-platform builds.
 - [editorconfig-checker][editorconfig-checker-link]: Line-ending and whitespace linter.
-- [ESPHome][esphome-link]: Firmware framework that builds microcontroller firmware from YAML configuration.
+- [ESPHome][esphome-link]: Firmware framework that builds device firmware from YAML configuration.
 - [ESPHome Device Builder][device-builder-link]: Web dashboard for creating, editing, and building ESPHome devices.
 - [GH Release][gh-release-link]: GitHub action that creates a release.
 - [GitHub Actions][github-actions-link]: CI and automation runner.
