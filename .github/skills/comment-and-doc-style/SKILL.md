@@ -14,7 +14,8 @@ description: >-
   carried instruction file (AGENTS.md, GOVERNANCE.md, CODESTYLE.md, WORKFLOW.md,
   .github/copilot-instructions.md) is being edited (no coordination references to the template or
   a sibling repo), and when writing a PR title or commit message (imperative subject, no vague
-  titles, no unsolicited Co-Authored-By, no release-bump magnitude).
+  titles, no unsolicited Co-Authored-By, no release-bump magnitude). Also triggers when text
+  states how many items a list or a table holds, since that count goes stale.
 ---
 
 # Comment and Doc Style
@@ -65,7 +66,7 @@ Use each tool's official casing in task labels, docs, and prose: `.NET` (not `.N
   file, so a new topical doc is not spell-gated in CI (the editor extension still flags it live).
   A repo may widen its own CI list, README plus HISTORY is the default. A repo shipping no
   `HISTORY.md` drops it from the CI workflow, the `Lint: Spelling` task, and the GOVERNANCE.md
-  cspell line together, all three or none.
+  cspell line together, all of them or none.
 - **`HISTORY.md` mirrors the README's opening**: the same `# <Title>`, the same tagline verbatim
   (the first line after the README's H1), then its own `## Release History`. It never repeats a
   paragraph below the README's tagline.
@@ -80,8 +81,10 @@ separate permissions. Repository exposure needs explicit maintainer approval eve
 is read-only. Use the hub's `scripts/docker_lint.py` wrapper for the standard lint shape. It
 discovers targets, pulls images in a separate phase, resolves each digest, and announces the
 boundary before repository mounts begin. Each Docker command has a timeout and visible result.
-Lint containers disable networking and mount the checkout read-only. Persist approval only when
-the executor constrains that whole shape. Never allow an unconstrained `docker run` prefix.
+Lint containers disable networking and mount a read-only snapshot rather than the live checkout.
+The snapshot holds only the tracked and unignored files, so a git-ignored file stays on the host.
+Persist approval only when the executor constrains that whole shape. Never allow an unconstrained
+`docker run` prefix.
 PSScriptAnalyzer downloads its pinned module in a separate container that has network access and
 no repository mount. `GOVERNANCE.md`'s hub-only "Running the Linters Locally (Known-Working
 Invocations)" section owns the exact invocation and full authorization model.
@@ -95,7 +98,7 @@ not read as a shared requirement:
 
 ## Markdown formatting
 
-- **Reference-style links everywhere**, except the four files read one section at a time rather
+- **Reference-style links everywhere**, except the files read one section at a time rather
   than end to end: `AGENTS.md`, `GOVERNANCE.md`, `OPERATIONS.md`, `.github/copilot-instructions.md`.
   Those keep inline links so a target resolves where it is read. Every other Markdown file defines
   every URI at the bottom, grouped by type under an HTML-comment header, each group alphabetized
@@ -126,10 +129,10 @@ restricted. Each structural rule a pattern can reach lands as a `prose_lint.py` 
 incrementally, and this section names each check as it ships.
 
 - **Short sentences: at most 25 words in one sentence**, ASD-STE100's descriptive cap, checked by
-  the `sentence-length` rule in `prose_lint.py`. The check is opt-in like `sentence-split`,
-  because the existing corpus predates the cap and a default gate would fail whole files nobody
-  is editing. Write new prose under the cap, and scope a run to a change with
-  `--check sentence-length --diff <base>`.
+  the `sentence-length` rule in `prose_lint.py`. The rule reads Markdown prose, code comments, and
+  docstrings. The check is opt-in like `sentence-split`, because the existing corpus predates the
+  cap and a default gate would fail whole files nobody is editing. Write new prose under the cap,
+  and scope a run to a change with `--check sentence-length --diff <base>`.
 - **One instruction per sentence.** A procedure step states one action, and a second action is a
   second step. No pattern reaches this, so it is authoring discipline with no check.
 - **Active voice, imperative mood for procedure steps.** Write "run the gate", never "the gate
@@ -143,8 +146,13 @@ Applies to code and workflow (`#`) comments alike.
 - Comment only when the code does not explain itself, or the logic is genuinely complex.
   Self-evident code needs no comment.
 - State only the non-obvious *why*, for the human reading *this* project's code now. No
-  cross-project references, no historic or design narrative, no rule citations. Governance lives
-  in the fleet's own instruction set, not echoed inline.
+  cross-project references, no historic or design narrative, and no rule restated inline.
+  Governance lives in the fleet's own instruction set. A comment may name the instruction-set
+  section holding its why, such as `D5.2`, and never echoes or paraphrases that section's text.
+  An id unique across that set, such as a `WORKFLOW.md` D-id, may stand alone, and any other
+  citation names its file.
+  A hub-only file may cite a hub `docs/` section by repository path.
+  A carried file cites only instruction-set sections a carrier holds.
 - **Keep it short**: one line is the default. A second line is earned only by a constraint the
   code cannot otherwise carry.
 - **Structured, not prose**: one sentence per line, never wrapped across lines, never a
@@ -192,9 +200,12 @@ pull request carries the `comments` label and the gate stands down for that chan
 and `--allow-comments` does it for one run by hand. The label and the variable are separate deliberately, so a variable
 left exported reaches the commit and never the merge gate.
 
-Three things about reaching those escapes read as a broken gate until they are known. The label is read off the event that started the run, so a label added after a run fails
-applies to the next push rather than to a re-run of that one, and labeling the pull request when it
-is opened is what avoids the round trip. The label reaches a repository only when the fleet label
+The facts below about reaching those escapes read as a broken gate until they are known. On a public
+repository the lint job reads the label when it runs, and its log says "Read the pull request's
+labels live". A label added before then applies, and a rerun picks up one added since. In a private
+repository, or where the log lacks that line, the event's snapshot decides. It misses a label
+applied after the event, `gh pr create --label` included, so
+there the label applies to the next push. The label reaches a repository only when the fleet label
 set is applied to it, so a repository that has not had that applied since the label was declared
 cannot carry it, and there the finding names a remedy that is not yet available. And the local
 escape reaches a commit before any of that, which is where a repository meets this rule first, since
@@ -210,7 +221,7 @@ and the fleet's own rule documents: `AGENTS.md`, `AUDIT.md`, `CLAUDE.md`, `CODES
 are the repository's own narrative and keep their references, as do a commit message and a pull
 request body, which are the surfaces a reference belongs on.
 
-Two carve-outs, each stated as a single case. Whatever neither of them affirmatively permits is
+The carve-outs below are each stated as a single case. Whatever none of them affirmatively permits is
 banned by the paragraph above, which is the whole of the test and is why no list of banned cases
 follows. The first: **in a code or workflow comment, a URL naming an issue or a pull request on a
 public repository other than this one is a source citation and is permitted.** It does the same job
@@ -226,11 +237,11 @@ citation beside a claim, which is the distinction this rule turns on.
 Separately, `AGENTS.md`, `GOVERNANCE.md`, `CODESTYLE.md`, and `WORKFLOW.md` carry no three-part
 version and no commit SHA, full or abbreviated, whether a pin's value, an example, a minimum
 version, or a fixed constant, since a pin's copy goes stale at the next Dependabot bump and every
-other kind reads exactly like one. Neither carve-out above lifts this ban. Item 3 of this skill's
+other kind reads exactly like one. No carve-out above lifts this ban. Item 3 of this skill's
 carried-doc-references reference says what to write instead of each and carries the audit that flags
 a literal.
 
-Three reasons, and the first decides it.
+The reasons follow, and the first decides it.
 
 - **A reference is a second lookup, and the reader is already holding the file.** A comment earns
   its place by explaining the line under it to whoever reads that line now. A number they have to
@@ -240,7 +251,7 @@ Three reasons, and the first decides it.
 - **It pollutes the content.** A rationale block that takes one more citation per round is how a
   file comes to teach a house style the rules forbid, which is what happened here.
 
-The first carve-out is where all three fail at once, which is what makes it one case rather than a
+The first carve-out is where all of the reasons fail at once, which is what makes it one case rather than a
 taxonomy. Another repository's status is not a fact this file can hold, it changes without anyone
 touching this file, and the constraint the citation stands in for is therefore unwritable. The
 lookup is not impossible, that repository being public. And a URL line is not pollution on a surface
@@ -284,9 +295,9 @@ would report a fixture rather than a claim about this repository.
 ## Character set
 
 Agent-authored text is ASCII by default: documentation, code, comments, commit messages, and PR
-descriptions. A non-ASCII character is read against three tiers, because whether one is
+descriptions. A non-ASCII character is read against the tiers below, because whether one is
 typography or meaning depends on where it sits. A character in no tier is a finding rather than a
-silent pass.
+silent pass, a letter of a recorded name excepted per the bullet below.
 
 - **Tier 1, never legitimate.** Typography carrying no meaning its ASCII form loses. Remove on
   sight:
@@ -309,11 +320,16 @@ silent pass.
 - **Unicode a developer deliberately typed** stays regardless of tier, such as emoji used for
   emphasis or as callout markers. Never strip a developer's own characters, this is developer
   authored text and not a license for the agent to add its own.
+- **A letter in a recorded name keeps its actual spelling.** A person's or a place's name that a
+  document records as data is written with its own letters and the marks they carry, since
+  folding one to ASCII records a different name. Anywhere else a letter the agent writes that no
+  tier covers takes its ASCII form.
 - **An unrecognized non-ASCII character is reported, not allowed.** Classify it into a tier above
-  before using it.
+  before using it. A letter of a recorded name is the one exception, per the bullet above.
 - **No semicolon in agent-authored prose.** Recast a mid-sentence semicolon as a comma or as two
   sentences. A semicolon separating items in a list that already contains commas, or a statement
-  terminator in code, is unaffected.
+  terminator in code, is unaffected. A single semicolon separates such a list only between two
+  labeled items, as in `Inputs: a, b; outputs: c`, and a list item's bold opening label is not one.
 - **No spaced hyphen joining or interrupting a sentence** (` - `, or the paired aside ` - x - `).
   Recast as a comma, two sentences, or parentheses. A hyphen inside a compound word, a leading
   list marker, a range, and the `- **Label** - explanation` bullet separator are unaffected.
@@ -369,6 +385,13 @@ Clarify Devcontainer Setup Steps in README
 
 ## Quantitative claims
 
-A quantitative claim in `README.md` (a count, a size, a version floor, a supported-platform list)
-is verified against current code before it is written. When a doc number is derived from a code
-constant, mark the dependency in a source-code comment so the next editor knows to update both.
+<!-- include: GOVERNANCE.md > Incidental Counts -->
+
+Text refers to an enumeration rather than stating its size, so it writes "the following checks", "each case", or "the rows below". This holds in every fleet repository, for docs, code and workflow comments, and docstrings alike. A stated count is a second copy of what the list or table already shows, and nothing keeps the two copies in sync. Every later edit to the enumeration then owes an edit to the sentence, and a missed one surfaces as a review finding. A word such as "both" or "all three" is a count too, where the list it counts can grow. A count is written only where the number is what the reader needs, such as a limit, a threshold, or a measured result. Such a count names its source, such as the constant or the measurement, so a reader can re-derive it. A wrong incidental count is fixed by removing it rather than by correcting it, since a corrected number goes stale the same way.
+
+<!-- /include -->
+
+A `README.md` quantitative claim (a count, a size, a version floor, a supported-platform list) is
+verified against current code before it is written. When a doc number
+is derived from a code constant, mark the dependency in a source-code comment so the next editor
+knows to update both.

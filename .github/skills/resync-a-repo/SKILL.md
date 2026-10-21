@@ -43,7 +43,10 @@ section 1, a file fetched with the hub rather than present in a carrier, since a
 answers confidently instead of failing. Never do the resync's own work in a checkout another task
 may be using, the maintainer's own primary checkout included, even one that looks current: for the
 hub and for the target repo alike, create a worktree of your own off that base clone and work
-there, per `repo-worktree`. On a machine carrying the hub's agent-safety install, Claude Code also
+there, per `repo-worktree`. Remove each one when the run ends, per that skill's "Listing and
+Cleanup". A merged pull request's worktree goes through
+`python3 scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`. A
+hub worktree that only read the hub is removed by hand once it is clean, its branch with it. On a machine carrying the hub's agent-safety install, Claude Code also
 refuses a mutating git command run directly in a primary checkout, though its rules classify git
 and gh commands only, so a plain file write is never denied and the re-vendoring this skill exists
 to govern goes uncaught. A compound command is judged whole, so a copy chained to a denied git
@@ -66,6 +69,11 @@ section 2 requires, and do not leave the finding only in chat, a review thread, 
 repo, or agent memory.
 
 ## Apply, in this order
+
+A repository still on the old CRLF default converts first. Where `docs/eol-lf-rollout.md`
+"Per-Repo Conversion" says the repository needs the conversion, land it as its own merged pull
+request before step 1, carrying `.editorconfig` and `.gitattributes` itself. Once it merges,
+re-measure against `develop` and base the branch for the steps below on `develop`.
 
 1. **The instruction set first.** `CLAUDE.md`, then `AGENTS.md` and `GOVERNANCE.md` verbatim sections, then `CODESTYLE.md` and `WORKFLOW.md`, including the `AGENTS.md` skill-dependency pointer paragraph (naming `scripts/skills_install.py` and where the fleet's Skills live) as one more verbatim unit carried in this same step, not a separate pass. `CLAUDE.md` is the single `@AGENTS.md`-import file that gets `AGENTS.md` into a Claude Code session's context at all, a separate baseline entry from `AGENTS.md` itself, so carrying one without the other still leaves that provider unconfigured. **Before touching `AGENTS.md`, `GOVERNANCE.md`, `CODESTYLE.md`, or `WORKFLOW.md` in this step, run the `carried-instruction-file-guard` skill's distinctive-phrase probe against the target file, every time, without exception, regardless of whether the update is a verbatim re-vendor or an intent-fidelity edit.** This is not advisory language to weigh against how routine the diff looks, a diff that looks routine is exactly the shape the AGENTS.md-overwrite incident took. Do not proceed to the re-vendor until the probe has run and any local addition it finds has a destination, per that skill's own procedure. `CLAUDE.md` is outside that guard's scope: it carries no mixed or repo-specific content by design, so its re-vendor is an ordinary verbatim-fidelity copy, no probe needed.
 2. **Deletions second, before any re-vendor.** Only a `retire` disposition in

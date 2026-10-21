@@ -9,7 +9,7 @@ key over a commit still committed by a bot (`dependabot[bot]`, `github-actions[b
 own web-flow does not match its committer and lands `unknown_key`/unverified, which a
 require-signed-commits rule then rejects.
 
-Two gates keep committer and signature aligned:
+These gates keep committer and signature aligned:
 
 1. **Scope the rewrite to only the commits that must be modified.** By default those are the
    rewriter's own, whose committer already matches, so a commit that needs no change stays out of

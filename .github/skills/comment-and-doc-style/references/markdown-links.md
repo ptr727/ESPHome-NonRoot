@@ -6,11 +6,11 @@ in-place prose edit.
 
 ## Where the rule applies
 
-Every Markdown file in the repo uses reference-style links only, except the four files that are
+Every Markdown file in the repo uses reference-style links only, except the files that are
 read one section at a time rather than end to end: `AGENTS.md`, `GOVERNANCE.md`, `OPERATIONS.md`,
 and `.github/copilot-instructions.md`. Those keep inline `[text](uri)` links, since a reader
 jumping straight to one section needs the target to resolve where it is, while a definition parked
-at the bottom of the file is never reached. The exception is that closed list of four files, never
+at the bottom of the file is never reached. The exception is that closed list of files, never
 a category to argue from case by case. Every other Markdown file follows the rule regardless of
 its audience.
 
@@ -54,7 +54,7 @@ and never an opaque one.
 
 ## Mechanics
 
-- No inline `[text](uri)` targets in prose, in any file outside the four-file exception above.
+- No inline `[text](uri)` targets in prose, in any file outside the exception above.
 - **A URL inside a fenced code block stays inline.** Reference links do not resolve inside a code
   block, so do not extract it there, and exclude fenced code from any link-integrity check
   (bracket literals like `["a", "b"]` otherwise read as undefined references).
