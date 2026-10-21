@@ -17,7 +17,10 @@ Image is rebuilt on the weekly schedule and on demand, picking up the latest tra
 
 ### Releases
 
-[![Docker Latest][docker-latest-version-shield]][docker-hub-link]
+[![GitHub Release][release-version-shield]][releases-link]\
+[![GitHub Pre-Release][pre-release-version-shield]][releases-link]\
+[![Docker Latest][docker-latest-version-shield]][docker-hub-link]\
+[![Docker Develop][docker-develop-version-shield]][docker-hub-link]
 
 ### Release Notes
 
@@ -232,6 +235,7 @@ The third-party tools, libraries, and actions this project depends on.
 - [Docker Login][docker-login-link]: GitHub action that logs in to a container registry.
 - [Docker Setup Buildx][docker-setup-buildx-link]: GitHub action that sets up Docker Buildx.
 - [Docker Setup QEMU][docker-setup-qemu-link]: GitHub action that installs QEMU for multi-platform builds.
+- [editorconfig-checker][editorconfig-checker-link]: Line-ending and whitespace linter.
 - [ESPHome][esphome-link]: Firmware framework that builds microcontroller firmware from YAML configuration.
 - [ESPHome Device Builder][device-builder-link]: Web dashboard for creating, editing, and building ESPHome devices.
 - [GH Release][gh-release-link]: GitHub action that creates a release.
@@ -250,9 +254,12 @@ Licensed under the [MIT License][license]\
 
 <!-- Shields -->
 
+[docker-develop-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/develop?label=Docker%20Develop&logo=docker
 [docker-latest-version-shield]: https://img.shields.io/docker/v/ptr727/esphome-nonroot/latest?label=Docker%20Latest&logo=docker
 [last-commit-shield]: https://img.shields.io/github/last-commit/ptr727/ESPHome-NonRoot?logo=github&label=Last%20Commit
 [license-shield]: https://img.shields.io/github/license/ptr727/ESPHome-NonRoot?label=License
+[pre-release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?include_prereleases&label=GitHub%20Pre-Release&logo=github
+[release-version-shield]: https://img.shields.io/github/v/release/ptr727/ESPHome-NonRoot?logo=github&label=GitHub%20Release
 [workflow-status-shield]: https://img.shields.io/github/actions/workflow/status/ptr727/ESPHome-NonRoot/publish-release.yml?event=schedule&logo=github&label=Workflow%20Status
 
 <!-- Distribution -->
@@ -288,6 +295,7 @@ Licensed under the [MIT License][license]\
 [docker-login-link]: https://github.com/marketplace/actions/docker-login
 [docker-setup-buildx-link]: https://github.com/marketplace/actions/docker-setup-buildx
 [docker-setup-qemu-link]: https://github.com/marketplace/actions/docker-setup-qemu
+[editorconfig-checker-link]: https://github.com/editorconfig-checker/editorconfig-checker
 [esphome-buildpath-link]: https://esphome.io/components/esphome.html
 [esphome-buildpath-sets-link]: https://github.com/esphome/esphome/blob/2024.5.5/esphome/core/config.py#L204
 [esphome-config-link]: https://github.com/ptr727/ESPHome-Config
