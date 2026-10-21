@@ -1,6 +1,6 @@
 # ESPHome-NonRoot
 
-[ESPHome](https://esphome.io) Docker container that supports non-root operation.
+ESPHome docker container that supports non-root operation.
 
 ## License
 

@@ -1,6 +1,7 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 # Each ecosystem appears once per branch (main + develop) so both stay current independently; rationale in
-# GOVERNANCE.md "Branching Model". This repo ships a Docker image only: github-actions, the Docker base image, and the devcontainer.
+# GOVERNANCE.md "Branching Model".
+# This repo ships a Docker image only: github-actions, the Docker base image, and the devcontainer.
 version: 2
 updates:
 
@@ -48,7 +49,7 @@ updates:
         patterns:
           - "*"
 
-  # devcontainers (.devcontainer/devcontainer.json), main
+  # Devcontainers ecosystem (.devcontainer/devcontainer.json), main
   - package-ecosystem: "devcontainers"
     target-branch: "main"
     directory: "/"
@@ -59,7 +60,7 @@ updates:
         patterns:
           - "*"
 
-  # devcontainers (.devcontainer/devcontainer.json), develop
+  # Devcontainers ecosystem (.devcontainer/devcontainer.json), develop
   - package-ecosystem: "devcontainers"
     target-branch: "develop"
     directory: "/"
