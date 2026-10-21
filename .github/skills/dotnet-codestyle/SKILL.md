@@ -2,7 +2,7 @@
 name: dotnet-codestyle
 description: >-
   Governs C#/.NET code style for ptr727/ProjectTemplate fleet repos: the zero-warnings build
-  policy and its three-task clean-compile chain, central Directory.Build.props/
+  policy and its clean-compile task chain, central Directory.Build.props/
   Directory.Packages.props configuration, C# language and naming conventions, XML documentation,
   analyzer suppression scope, the library-versus-application logging split, async and
   error-handling patterns, xUnit v3 + AwesomeAssertions testing conventions, and AOT-compatible
@@ -32,10 +32,10 @@ real, and the language, naming, logging, and testing conventions.
 
 ### Zero warnings policy
 
-All builds must complete without warnings, enforced three ways:
+All builds must complete without warnings, enforced as follows:
 
 - **The `.NET Format` clean-compile task.** It chains `CSharpier Format` -> `.NET Build` ->
-  `dotnet format style --verify-no-changes`. A repo carries those three task definitions in its
+  `dotnet format style --verify-no-changes`. A repo carries those task definitions in its
   own `.vscode/tasks.json`, matching the canonical `vscode-tasks.json` snippet at
   `github.com/ptr727/ProjectTemplate/blob/main/catalog/snippets/configs/vscode-tasks.json`. Run
   the `.NET Format` task after any code change, before commit. To run it natively instead,
@@ -56,7 +56,7 @@ All builds must complete without warnings, enforced three ways:
   `pre-commit` framework. Each shape carries whichever language checks its own repo keeps. A repo may also wire an equivalent hook of its own at `.husky/pre-commit`,
   enabled with `core.hooksPath` and sourcing nothing, since the husky snippet's own hook sources
   a file only `dotnet husky install` generates. That path and `.pre-commit-config.yaml` are the
-  two the audit reads.
+  ones the audit reads.
   GOVERNANCE.md's hub-only "Running the Linters Locally (Known-Working Invocations)" section
   carries the obligation itself, what the hook must cover, its audit treatment, and the
   per-clone enablement steps.
@@ -87,7 +87,7 @@ in place.
 ### Build tasks
 
 Run these from VS Code's task runner (Terminal -> Run Task) or an agent's task-running tool. The
-three clean-compile tasks are carried unchanged, and a repo adds its own convenience tasks (tool
+clean-compile tasks are carried unchanged, and a repo adds its own convenience tasks (tool
 updates, dependency upgrades, benchmarks) on top:
 
 - `.NET Build`: build with diagnostic verbosity *(clean-compile)*
@@ -214,7 +214,7 @@ parameterized tests. A test project on `xunit.v3` 4.0.0 or later is MTP-based, a
 
 ## Project configuration
 
-.NET 10.0 target, AOT-compatible (`IsAotCompatible=true`, `VerifyReferenceAotCompatibility=true`),
+.NET 10.0 target, AOT-compatible (`IsAotCompatible=true`, with `VerifyReferenceAotCompatibility=true` only under the `PublishAot` condition),
 SourceLink, embedded untracked sources, `InternalsVisibleTo` for test/benchmark access. See
 `references/project-config.md` for the full property list.
 

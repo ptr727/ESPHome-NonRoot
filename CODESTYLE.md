@@ -18,7 +18,7 @@ Each language defines a **clean-compile** verification: the combination of build
 
 - **Run it after every code change, and it is not the whole gate.** The relevant language's clean-compile must pass before you commit. CI runs those same language checks as a backstop **plus everything else its validation workflow runs**, and all of it reports into the one required status, so a green clean-compile does not predict a green CI. That remainder is at least the doc-lint set (markdownlint, cspell, actionlint, `editorconfig-checker`) and whatever spec, config, and script gates the repo carries, so read the workflow for the full list rather than assuming this sentence enumerates it. What has to pass before a push is the repo's **whole** lint gate, per [GOVERNANCE.md "Verification Discipline"][governance-verification-discipline]. Each linter's known-working invocation is in `GOVERNANCE.md` "Running the Linters Locally (Known-Working Invocations)", a hub-only section read in a hub checkout rather than carried into every fleet repo.
 - **The named task definition is the canonical spec** - its exact command sequence, arguments, and strictness. You may run it through the VS Code task **or** by invoking the equivalent native commands directly, and either is fine **only if the sequence, arguments, and strictness match exactly**. No shortcuts and no more-lenient options (for example, never drop `--verify-no-changes` or loosen a `--severity`).
-- **A working local commit/pre-commit gate is strongly suggested, not the repo's free choice to skip.** The *mechanism* is bounded by the toolchain the repo already keeps rather than by which languages its checks cover, and two canonical shapes carry it. Husky.Net runs from a .NET tool manifest declaring it, so a repo that keeps no such manifest uses the `pre-commit` framework instead. Any repo may also wire an equivalent hook of its own at `.husky/pre-commit`, enabled with `core.hooksPath` and sourcing nothing. Canonical shapes for both live in `catalog/snippets/` in the hub, not a repo-relative path since it is hub-local and not carried into every fleet repo. What that gate must cover, its per-clone enablement steps, and what its absence means for the audit, is `GOVERNANCE.md` "Running the Linters Locally (Known-Working Invocations)", the same hub-only section, not restated here. Keeping a working gate is not drift.
+- **A working local commit/pre-commit gate is strongly suggested, not the repo's free choice to skip.** The *mechanism* is bounded by the toolchain the repo already keeps rather than by which languages its checks cover, and canonical shapes carry it. Husky.Net runs from a .NET tool manifest declaring it, so a repo that keeps no such manifest uses the `pre-commit` framework instead. Any repo may also wire an equivalent hook of its own at `.husky/pre-commit`, enabled with `core.hooksPath` and sourcing nothing. Canonical shapes for Husky.Net and the `pre-commit` framework live in `catalog/snippets/` in the hub. That is not a repo-relative path, since it is hub-local and not carried into every fleet repo. What that gate must cover, its per-clone enablement steps, and what its absence means for the audit, is `GOVERNANCE.md` "Running the Linters Locally (Known-Working Invocations)", the same hub-only section, not restated here. Keeping a working gate is not drift.
 
 ### Analyzer Diagnostics and Suppressions
 
@@ -28,6 +28,39 @@ Each language defines a **clean-compile** verification: the combination of build
   2. The **owning project's local config** when the exception is project-wide for one project (e.g. a test project's own `.editorconfig` / `pyproject.toml`).
   3. The **root / shared config** only when the suppression is genuinely applicable to **every** project in the repo.
 - **Never blanket-relax a batch of rules project-wide** to get a port to build. The per-language mechanics (which attribute, which config key) are in each language section.
+
+### Operations and Failure Messages
+
+- **Let the real operation be the check, not a prediction of it.** Attempt the read, the write, or the call itself, and turn its failure into a clean refusal. Do not probe first with an existence, type, or permission test. Where the operation could block or succeed on the wrong kind of target, judge what it opened instead. A probe is a second model of the operation. It misjudges each case its author did not foresee, such as a dangling link, a link loop, or a platform's own permission model. The operation cannot disagree with itself.
+- **A failure message states the error, the path or other target, and the remedy, and claims nothing about the state the failure left.** The error the operation raised is the one fact the code holds at that point. A description of what the failure left behind is a prediction. It reads false once an unforeseen state reaches the message, such as a file written in full that then fails to close. A remedy such as "fix what it names, then re-run" needs no such claim.
+
+### Command-Line Arguments
+
+A command-line script is one a person or an agent runs by name. A hook its host runs, taking its input from that host rather than from a command line, is not one.
+
+- **Every command-line script answers `--help` and `-h`** with the same text on stdout, then exits 0, changing nothing. That text opens on a usage line naming the script. An agent learns a script's interface by asking it, so a script that reads `--help` as an input acts in a way nobody predicted.
+- **An argument the script does not recognize is refused**, with a non-zero exit before any read or write. The refusal names it as an unknown or unrecognized option, argument, flag, or parameter, and PowerShell's own refusal of a parameter it cannot bind counts. An unrecognized first argument is never taken as a default mode or as a target.
+
+### Script and Utility File Names
+
+| Type | Rule | Basis |
+| --- | --- | --- |
+| Python `.py` | lowercase snake_case | [PEP 8][pep8-names-link] module naming. A hyphenated module also cannot be named in an `import` statement |
+| Shell `.sh` and PowerShell `.ps1` | lowercase-hyphenated | The Linux command convention. A cross-platform pair keeps one name, `sync-tools.sh` beside `sync-tools.ps1` |
+| Windows batch `.cmd` and `.bat` | lowercase-hyphenated | The same convention as shell and PowerShell. A shim that puts a command on `PATH` takes the name of the command it provides, `sync-tools.cmd` launching `sync-tools.ps1` |
+| PowerShell functions inside a `.ps1` | Verb-Noun with an approved verb (`Get-Verb`) | PSScriptAnalyzer `PSUseApprovedVerbs`. This is a command rule, not a file rule |
+| Env and secret files | lowercase snake_case stem | `mail_relay.env`, `db_root_password` |
+| Env variable names and CI secret names | UPPER_SNAKE_CASE | The POSIX and GitHub convention |
+
+- **Installed commands.** An executable or launcher on `PATH` or in a system slot (systemd, cron, run-parts, motd) is named as a command, whatever its language. That name is lowercase-hyphenated. It carries no extension unless the platform needs one to run it, such as `.cmd` or `.ps1` on Windows.
+- **Wrapper exemption.** A thin launcher whose only job is to run a Python tool keeps that tool's stem, so `fetch_report.py`, `fetch_report.sh`, and `fetch_report.ps1` stay grouped together. It covers only a launcher run by its path. A launcher installed onto `PATH` or into a system slot is an installed command instead, such as `fetch-report` rather than `fetch_report`.
+- **Externally fixed names are exempt.** That covers Git hook names, `__init__.py`, `conftest.py`, and Pester's `.Tests.ps1` suffix, whose stem mirrors the script under test. It covers a PowerShell data file (`.psd1`) whose name a tool fixes, such as a module manifest named for its module. `PSScriptAnalyzerSettings.psd1` is another, since PSScriptAnalyzer finds it by that name. It also covers any name a platform defines.
+- **Directories are out of scope.**
+
+Departures, stated on purpose so a reader does not "fix" them back:
+
+- The [Google Shell Style Guide][google-shell-link] asks for underscores in shell file names. The fleet uses hyphens instead, matching installed Linux commands.
+- Microsoft's [approved verbs][ps-approved-verbs-link] govern command names. A `.ps1` run by path is a file rather than an exported command, so the file takes the shell convention and its functions take Verb-Noun.
 
 ### Markdown and Spelling
 
@@ -41,7 +74,7 @@ Leave human-authored comments and emoji exactly as written. Do not reword, trim,
 
 *This section applies only to the .NET side. A repo with no .NET projects still carries it (the file is carried whole) and ignores it.*
 
-The style guide for any .NET projects in this repo: the zero-warnings build policy and its three-task clean-compile chain, central `Directory.Build.props`/`Directory.Packages.props` configuration, C# language and naming conventions, XML documentation, analyzer suppression scope, the library-versus-application logging split, async and error-handling patterns, xUnit v3 + AwesomeAssertions testing conventions, the runner declaration, package references and version floor that an MTP-based test project needs under `WORKFLOW.md` D1.6, with the local diagnostic for a run that reports no tests, and AOT-compatible project configuration.
+The style guide for any .NET projects in this repo: the zero-warnings build policy and its clean-compile task chain, central `Directory.Build.props`/`Directory.Packages.props` configuration, C# language and naming conventions, XML documentation, analyzer suppression scope, the library-versus-application logging split, async and error-handling patterns, xUnit v3 + AwesomeAssertions testing conventions, the runner declaration, package references and version floor that an MTP-based test project needs under `WORKFLOW.md` D1.6, with the local diagnostic for a run that reports no tests, and AOT-compatible project configuration.
 
 This is packaged as the `dotnet-codestyle` Skill at `.agents/skills/dotnet-codestyle/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo. The summary above sketches the scope. Read the skill for the full rules, code examples, and mechanics.
 
@@ -49,13 +82,13 @@ This is packaged as the `dotnet-codestyle` Skill at `.agents/skills/dotnet-codes
 
 *This section applies only to the Python side. A repo with no Python projects still carries it (the file is carried whole) and ignores it.*
 
-The style guide for any Python project(s) in this repo: the build-versus-lint-only profile split, the uv/ruff/pyright/mypy/pytest toolchain, `src` layout, formatting and linting, comment and docstring conventions, type hints, naming, imports, patterns to avoid, test conventions including the `pytest-cov` dependency and coverage selector a build-profile repo with tests owes under `WORKFLOW.md` D1.6, and versioning.
+The style guide for any Python project(s) in this repo: the build-versus-lint-only profile split, the uv/ruff/pyright/mypy/pytest toolchain, `src` layout, formatting and linting, comment and docstring conventions, type hints, naming, imports, patterns to avoid, test conventions including the `pytest-cov` dependency and coverage selector a Python directory running pytest owes under `WORKFLOW.md` D1.6, and versioning.
 
 This is packaged as the `python-codestyle` Skill at `.agents/skills/python-codestyle/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo. The summary above sketches the scope. Read the skill for the full rules and the profile-adaptation guidance.
 
 ## Shell
 
-Bash, and only where a program cannot be Python: a bootstrap that installs the interpreter cannot be written in it, and a host tool that must run before a development toolchain exists cannot depend on Python either. Everything else is Python, with a test under its own scripts tree's `tests/` directory. The mandatory `set -Eeuo pipefail` header, the pipefail-versus-early-reader pitfall, self-locating scripts, the `shellcheck`-plus-`shfmt` clean-compile, and the why-not-what comment rule are packaged as the `shell-codestyle` Skill at `.agents/skills/shell-codestyle/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo. Read the skill for the full rules. Run the clean-compile check itself per `GOVERNANCE.md` "Running the Linters Locally (Known-Working Invocations)", a hub-only section read in a hub checkout rather than carried into every fleet repo, not by probing `command -v shellcheck`.
+Bash, and only where a program cannot be Python: a bootstrap that installs the interpreter cannot be written in it, and a host tool that must run before a development toolchain exists cannot depend on Python either. Everything else is Python, with a test under its own scripts tree's `tests/` directory. The mandatory `set -Eeuo pipefail` header, the pipefail-versus-early-reader pitfall, self-recursive command shims, self-locating scripts, the `shellcheck`-plus-`shfmt` clean-compile, and the why-not-what comment rule are packaged as the `shell-codestyle` Skill at `.agents/skills/shell-codestyle/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo. Read the skill for the full rules. A script's own arguments follow "Command-Line Arguments" under General, which the Skill carries whole. Run the clean-compile check itself per `GOVERNANCE.md` "Running the Linters Locally (Known-Working Invocations)", a hub-only section read in a hub checkout rather than carried into every fleet repo, not by probing `command -v shellcheck`.
 
 <!-- Repo -->
 
@@ -63,3 +96,9 @@ Bash, and only where a program cannot be Python: a bootstrap that installs the i
 [governance-verification-discipline]: ./GOVERNANCE.md#verification-discipline
 [readme]: ./README.md
 [root]: ./.editorconfig
+
+<!-- External -->
+
+[google-shell-link]: https://google.github.io/styleguide/shellguide.html
+[pep8-names-link]: https://peps.python.org/pep-0008/#package-and-module-names
+[ps-approved-verbs-link]: https://learn.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands

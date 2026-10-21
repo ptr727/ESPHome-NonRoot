@@ -39,8 +39,8 @@
 ## Type hints
 
 - **All public APIs are typed.** The repo's configured type checker runs on `src/` (pyright strict
-  via `[tool.pyright]` `strict = ["src"]`, or mypy where that is the CI checker), and tests run in
-  the checker's looser/standard mode.
+  via `[tool.pyright]` `strict = ["src"]`, or mypy's strict flags where mypy is the CI checker),
+  and tests run in the checker's looser/standard mode.
 - **Use modern syntax**: `list[int]` not `List[int]`, `dict[str, X]` not `Dict[str, X]`,
   `X | None` not `Optional[X]`, `from __future__ import annotations` only when needed for forward
   references.
@@ -49,7 +49,7 @@
   carries that as the host floor `scripts/host_gate.py` enforces, so 3.10+-only syntax (`X | None`,
   `match`, etc.) needs no quoting, no `typing.Union` fallback, and no `from __future__ import
   annotations` guard on that account alone. Add that import only when a real forward reference
-  needs it, per the bullet above. Three named exceptions carry a lower floor on purpose and say so
+  needs it, per the bullet above. Named exceptions carry a lower floor on purpose and say so
   themselves: `scripts/skills_install.sh` and the `install-skills.*` bootstrap scripts, which must
   run on whatever interpreter a host already has before this floor's toolchain exists to install
   one, and `spec/resolve_description.py`, which `repo-config/configure.sh`'s own bootstrap probe
@@ -64,7 +64,8 @@
 
 ## Naming
 
-- `snake_case` for functions, methods, variables, modules, package directories.
+- `snake_case` for functions, methods, variables, modules, package directories. A module's file
+  name follows CODESTYLE.md's "Script and Utility File Names".
 - `PascalCase` for classes, type aliases, type vars, enum members.
 - `UPPER_SNAKE_CASE` for module-level constants.
 - Single leading underscore for module-private, double leading underscore for name-mangled (rare,
@@ -87,6 +88,16 @@
 - **Don't use exceptions for expected control flow.** Exceptions are for unexpected states.
 - **Don't suppress errors silently** (`except Exception: pass`). Either handle the specific
   exception and document why it's safe, or let it propagate.
+- **Don't leave a text-mode `subprocess` call to the locale's encoding.** Every call that reads
+  or writes a pipe as text (`text=True`, `universal_newlines=True`, or an `errors` argument) names
+  the encoding its child uses on that pipe. Below Python 3.15, a call that names none encodes and
+  decodes with the locale encoding unless UTF-8 Mode is on. That encoding follows the host's
+  locale, usually UTF-8 on Linux and the ANSI code page on Windows. The omission therefore looks
+  correct on a UTF-8 host. On any other, a Windows host being the common case, it misreads or
+  rejects non-ASCII output from a child writing UTF-8. No static check in the ruff, pyright, or
+  mypy toolchain looks for the omission in a subprocess call. Naming the encoding settles how the
+  bytes are translated, not what a byte or character outside that encoding is worth. Each call
+  decides that with its own `errors` argument, and the strict default decides it by raising.
 
 <!-- External -->
 
