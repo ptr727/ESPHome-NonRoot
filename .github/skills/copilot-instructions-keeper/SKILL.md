@@ -13,8 +13,8 @@ description: >-
   section, so nothing else notices a stale section here except a live check like this one. An
   `audit-a-repo` run checks this file's presence, headings, and a date-based staleness hint
   without judging its content, so content drift in it stays this skill's, and a resync fires it
-  beside `resync-a-repo` and `carried-instruction-file-guard`, which guards the other four carried
-  files.
+  beside `resync-a-repo` and `carried-instruction-file-guard`, which guards the other carried
+  instruction files.
 ---
 
 # Copilot Instructions Keeper
@@ -26,7 +26,7 @@ description: >-
 intact in every repo that carries it. This skill maintains that carried copy, it does not replace
 the bootstrap.
 
-`spec/files.json` declares it `intent` fidelity, `whole: true`, covering four named sections
+`spec/files.json` declares it `intent` fidelity, `whole: true`, covering named sections
 (`Commit Messages and Pull Request Titles`, `Reviewing Carried Fleet Content`, `GitHub Copilot
 Review Runbook`, `When in Doubt`), with `<owner>`, `<repo>`, and `<N>` placeholders filled per
 repo. **The fleet audit checks an `intent` file for file presence and each named section's
@@ -54,7 +54,7 @@ repo's copy is wrong in both directions:
 
 1. Read the current "Disproved Claims" section in that repo's copy, if it has one, and preserve
    every entry that names a file or behavior that repo actually carries.
-2. Update everything else, the runbook mechanics, the four named sections, the rule text, to
+2. Update everything else, the runbook mechanics, the named sections, the rule text, to
    match the hub canonical.
 3. Never carry the hub's own repo-specific "Disproved Claims" entries downstream. They name
    `ProjectTemplate`'s own files and revisions, not the target repo's.

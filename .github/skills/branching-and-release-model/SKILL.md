@@ -2,7 +2,7 @@
 name: branching-and-release-model
 description: >-
   Governs how a ptr727/ProjectTemplate fleet repo branches, promotes, and publishes: the feature
-  -> develop -> main flow, squash-only vs. merge-commit-only branch protection, the two promotion
+  -> develop -> main flow, squash-only vs. merge-commit-only branch protection, the promotion
   traps (never delete develop, EOL-only conflicts), the two-phase publish model (PRs smoke-test
   only, a human merge never auto-publishes), NBGV versioning, and the operational-repo delta
   (direct-to-develop commits, advisory CI, dispatch-only release) that applies whenever the

@@ -18,7 +18,7 @@ explicitly for a repository outside the registry.
 
 ## Executing a `develop -> main` promotion safely
 
-Two traps, both learned the hard way:
+These traps were learned the hard way:
 
 - **Never delete `develop`.** A promotion PR's head *is* `develop`, so `gh pr merge --delete-branch`
   (and a repository's "Automatically delete head branches" toggle, which the fleet keeps off for

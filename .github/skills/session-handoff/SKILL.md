@@ -23,7 +23,7 @@ description: >-
 
 ## Why This Exists
 
-A handoff written to a scratch file fails three ways the chain closes. The file is not found where
+The chain closes each way a handoff written to a scratch file fails. The file is not found where
 the next session looks. More than one candidate file is found and nothing says which one is
 current. And there is no history at all, so a later round re-runs a path an earlier round already
 tried and already wrote down. The value of a handoff is precisely the record of what has already
@@ -61,7 +61,28 @@ without trusting the parts of it that have gone stale.
 
 - **One open handoff issue per track per repository.** A track is a short kebab-case slug naming a
   lane of work, and a session that names no track uses `default`. Parallel lanes each name their
-  own, so each closes its own predecessor and neither reads the other's state as current.
+  own, so each closes its own predecessor and none reads another's state as current.
+- **A platform lane is for work that needs its platform.** A platform track is one kept for a single
+  host platform, such as `wsl` or `windows`. It takes an issue only when its defect reproduces, or
+  its fix can be verified, on that platform alone. It also needs that no Linux host outside WSL can
+  both fix the issue and verify the fix. An issue meeting each condition goes to its platform's lane. Any
+  other issue goes to the ordinary backlog, since a lane costs a separate chain and a host-bound
+  session. A defect in WSL interop, the `WSLInterop` binfmt handler, `/mnt/<drive>` paths, or
+  `wslpath` reproduces only inside WSL. So does running a Windows `.exe` from Linux, although WSL
+  runs on Windows. Behavior that differs under Windows PowerShell 5.1 or `winget`, or in Windows
+  path and ACL semantics, reproduces only on Windows. Each of these defects still goes to the
+  backlog when a Linux host outside WSL can both fix it and verify the fix. A path-translation
+  fix made and unit-tested on a Linux host outside WSL is one such case. An issue in
+  systemd user scopes, apt, a bash script, or a `pwsh` script run in a Linux container gets no lane
+  by its topic. The conditions decide it like any other issue. Where only part of an issue needs
+  a platform, the session finding it files each such part as its own issue for its platform's lane.
+  The original is narrowed to the rest, or closed in favor of those issues where nothing is left. A
+  session that may not write issues names the unsplit issue in its report or handoff instead. An
+  issue for a platform whose lane was closed out reopens that lane with `new`, which chains onto the
+  closed link. A platform lane is closed out with no successor once none of its next steps needs its
+  platform. Before that, each remaining step with no issue of its own is filed as one. The lane's
+  last link carries the outcome as a comment, as `AGENTS.md` "Session Scope" closes a track whose
+  work is complete.
 - **The title is for humans**, shaped `Session Handoff [<track>]: <subject>`, which `new` composes
   from the track and the subject it is given, so what a session writes is the subject alone.
   Nothing parses the title, so a maintainer is free to rename one.
@@ -76,7 +97,7 @@ without trusting the parts of it that have gone stale.
   a given repository, read from each issue's metadata block rather than from the label, since an
   issue carrying the label and no block belongs to no readable track and blocks the count rather
   than joining it. Two or more on one track is a defect to report, never one to resolve by picking,
-  and a run interrupted between the three steps above is the one shape of it that `link` settles
+  and a run interrupted between the steps above is the one shape of it that `link` settles
   rather than a human.
 - **Zero open on a track is two different states.** The track has never had a handoff, or its lane
   was closed out and its newest link is closed. `new` chains onto the newest link either way, open
@@ -123,7 +144,7 @@ that the per-section rule broke several sections earlier. Neither is the rule.
    line and a link.
 9. **The metadata block**, which `scripts/handoff.py` writes and no author types.
 
-Sections 7 and 8 are what the chain exists for, and they are also the two most likely to be padded.
+Sections 7 and 8 are what the chain exists for, and they are also the most likely to be padded.
 
 A handoff issue outlives the session that wrote it and is readable by everyone who can read the
 repository, which on a public one is everyone, so it quotes no data observed in the maintainer's
@@ -143,13 +164,14 @@ section is the pointer to what to read rather than the answer, and `AGENTS.md` "
 already says stale context is worse than absent. A handoff is context by construction, so this is
 that rule applied to the one artifact built to outlive the session that wrote it.
 
-Read the current link's comments too, with `gh issue view "<n>" --comments`, since `resume` prints
-only the body, and a parking comment or a closing session's answers land in the comments.
+Read the current link's comments too, with `gh issue view "<n>" --repo OWNER/NAME --comments`, since
+`resume` prints only the body, and a parking comment or a closing session's answers land in the
+comments.
 
 Read the chain before re-attempting anything. `resume` prints the current body and indexes the
 closed links behind it, and `chain --grep` searches the bodies it walks for a regular expression,
 which is how a session answers whether a path has already been tried without reading every round.
-Three things bound that answer. The walk starts at one track's newest link and follows each
+The points below bound that answer. The walk starts at one track's newest link and follows each
 marker's `previous=` from there, which is normally that one lane and is in fact whatever the markers
 name, so every link prints its own track and a predecessor on another lane shows up rather than
 passing unseen. The walk stops at `--limit` and names the link it stopped short of, so a capped
@@ -161,7 +183,9 @@ rather than `resume`.
 
 Re-derive a count rather than copying one, and read it with an explicit page size. `gh issue list`
 returns 30 rows unless told otherwise, and a truncated count reads exactly like a repository with
-30 issues, which is worse than an absent count because it gets stated.
+30 issues, which is worse than an absent count because it gets stated. The same holds at any page
+size, so where a read returns as many rows as its limit, raise the limit and read again until it
+returns fewer.
 
 ## The Attended Session
 
@@ -169,15 +193,18 @@ A maintainer resuming work says little, often only "resume the handoff", and tha
 the whole procedure below. Run every step without being reminded of any of them.
 
 1. **Pick the link.** Where the maintainer names an issue, take it. Where none is named, read
-   `gh issue list --label handoff --state open --limit 100 --json number,title,labels,updatedAt`,
-   since `tracks` prints neither labels nor exact update times. Take a link carrying `blocked`
-   first, newest update first among them, since its blocker is a decision only the maintainer can
-   make and the maintainer is now present. Otherwise take the newest update among the rest. An
-   `auto-*` link not carrying `blocked` is skipped unless named, since an `unattended-handoff`
-   worker may hold it right now, and where one is named, confirm with the maintainer that no
-   unattended run is live before working it. Where every open link is skipped, say so and ask the
-   maintainer which to take. Say which link was picked in one line before anything else, so a wrong pick costs one reply
-   rather than a round.
+   `python3 "$handoff" tracks --repo OWNER/NAME --json`, which prints each open handoff's
+   number, title, track, labels, and updatedAt from the repository's issue connection rather than
+   the search index, so a link written moments ago is already read correctly. `$handoff` is the hub
+   checkout path "Running the Chain" sets. A nonzero exit, including the refusal over a read window that
+   filled, means the list is not whole, so say so and ask rather than picking from it. Take a link
+   carrying `blocked` first, newest update first among them, since its blocker is a decision only
+   the maintainer can make and the maintainer is now present. Otherwise take the newest update
+   among the rest. An `auto-*` link not carrying `blocked` is skipped unless named, since an
+   `unattended-handoff` worker may hold it right now, and where one is named, confirm with the
+   maintainer that no unattended run is live before working it. Where every open link is skipped,
+   say so and ask the maintainer which to take. Say which link was picked in one line before
+   anything else, so a wrong pick costs one reply rather than a round.
 2. **Resume it** per "Resuming" above, comments included, re-deriving live state rather than
    trusting the body.
 3. **Ask what it is blocked on first.** Where the link carries `blocked`, the parking comment names
@@ -229,9 +256,9 @@ it.
 ## The Parked Decision Queue
 
 The rules below are `GOVERNANCE.md` "Communicating with the User", carried whole so this skill works
-in isolation. Two of them state the obligation: the one opening "A question filed as an issue is
+in isolation. Some of them state the obligation: the one opening "A question filed as an issue is
 parked rather than asked" and the one opening "The session that writes a handoff presents the parked
-queue in the same act". Three more state the form the questions take, the one opening "Ask every
+queue in the same act". Others state the form the questions take, the one opening "Ask every
 question through the interface's prompt, never in prose", which also names the numbered list as the
 fallback where no prompt exists, the one opening "Raise work blocked on the user as a direct
 interactive prompt", which shapes the options, and the one opening "Lead every choice with a
@@ -247,6 +274,7 @@ falls to the next session that has one. The rules below settle which case applie
 <!-- include: GOVERNANCE.md > Communicating with the User -->
 
 - **Reference every pull request as a clickable link.** When you mention a PR on a surface that renders Markdown (chat, a summary, a report), render it as a Markdown link to the PR (`[#N](https://github.com/OWNER/REPO/pull/N)`), never a bare `#N`. The same applies to issues and commits. **The form follows the surface.** Some surfaces link neither a Markdown link nor a bare URL, an interactive prompt's question and option text among them, and pasting a full URL into one of those does not rescue it, since the reader gets a string to copy, which is the outcome this rule exists to prevent. There the reference is a bare `#N`, and the clickable link goes in the message that comes **before** the prompt rather than merely alongside it, because the prompt blocks on an answer and a message emitted after it is read once that answer is already given, which is the one moment the link is no longer any use. The test is whether the reader can click it where it is read, not whether it was written in the syntax that works elsewhere.
+- **Put a command the user must run in the question's own text.** Where a question asks the user to run something, the question carries the exact command, complete and ready to paste. One example is a command the agent cannot run itself because the command prompts for a password. A message before the prompt may repeat the command, but the question never points at that message. A question pointing at it can leave the reader to find the command among a long run of earlier output. In the clickable-link bullet above, only the rendered link moves out of the prompt. A command needs no rendering, since the prompt shows it as plain text the reader can copy.
 - **Ask every question through the interface's prompt, never in prose.** When you need the user to decide, answer, or approve anything, put it to them through the interface's own prompt mechanism, whether or not work is blocked on it, and an offer to do more work ("want me to file that?") is a question like any other. A question written into a message is lost in the report around it however short it is, and one closing a long report sits where the reader is least likely to reach it. Where no prompt mechanism is available, the questions go as a numbered list opening the message rather than closing it, so the user can reply per number. This bullet settles how a question is put once it is asked, and whether a question is asked now or recorded for later is the parking bullet's to settle, the one opening "A question filed as an issue is parked rather than asked".
 - **Raise work blocked on the user as a direct interactive prompt.** When progress needs a decision, an authorization, or an answer only the user can give, ask for it through the interface's own prompt mechanism, at the point the work stops. Never leave it as prose in a summary: a handoff buried in a paragraph is a handoff that did not happen, because a summary reads as a report of finished work and the one line still waiting on the user is the easiest in it to skim past. The blocked item is the message, not a closing remark on a message about something else. **The options offered are the actions themselves**, and the one that unblocks the work names the action it authorizes ("squash and merge it"), so selecting it is the go-ahead rather than a note to act on later. Offering only ways to wait is the same failure in interactive clothing, since a prompt whose every choice is inaction reports the block rather than clearing it, and where the agent may not perform the authorized action itself, the option says who does it. Where no interactive prompt is available, the numbered list the bullet above names is the fallback.
 - **Lead every choice with a recommendation and its reason.** Wherever the user is asked to choose, in a prompt or in a numbered list, the option the agent recommends comes first and is marked as the recommendation, and every option states the reason for it. A user who takes the recommendation then reads one line, and one who does not sees what the other options trade away. A question with no defensible recommendation says so rather than inventing one. Where an open question has no options and the agent does have an answer, that answer and its reason go in the question's text, never as an invented option.
@@ -264,8 +292,8 @@ The mechanics are the hub's `scripts/handoff.py`, run from a hub checkout, per `
 resolves in every repository and a chain read out of the wrong one is well formed. `current`,
 `resume`, `chain`, and `new` each take an optional `--track` defaulting to `default`, and `link`
 and `tracks` take none, since a pair of issue numbers and a whole-repository survey each name
-their own scope. A session working a named lane passes `--track` on each of the four that accept
-it. Omitting it does more than read the wrong chain, since `new` then files onto `default` and
+their own scope. A session working a named lane passes `--track` on each subcommand that
+accepts it. Omitting it does more than read the wrong chain, since `new` then files onto `default` and
 comments on whatever link that lane has, closing it too where it was open.
 
 - **`current` and `resume`** answer where a track stands, `resume` adding the body itself and an
@@ -277,38 +305,53 @@ comments on whatever link that lane has, closing it too where it was open.
 - **`tracks`** surveys every open handoff, one carrying no metadata block included, and it is the
   one command that reports that state rather than refusing over it. That state is settled by a
   hand edit, adding the block to the issue's body or taking the label off it, since no read can
-  place an issue on a track until its own block says which track that is.
-- **`new`** performs as many of the chain's three steps as the track has links for. On a track
+  place an issue on a track until its own block says which track that is. With `--json` it prints
+  the same rows as an array of number, title, track, labels, and updatedAt, the track null for
+  an issue whose block is absent or unreadable, which is what a picker ranks by.
+- **`new`** performs as many of the chain's steps as the track has links for. On a track
   with no link at all it creates and stops, since there is nothing to comment on or close. On one
   whose newest link is closed it creates and comments, since the close already happened. Only a
-  track with an open head takes all three. **`link`** finishes a run that stopped between them,
+  track with an open head takes every step. **`link`** finishes a run that stopped between those steps,
   and separately repairs a successor whose block names no predecessor, so its own writes are the
   comment, the close, and that body edit. The edit reaches only the repair case, since `new`
   embeds the predecessor in the block at create time, so a run interrupted after the create
   already names it.
 
 ```sh
-python3 scripts/handoff.py current --repo OWNER/NAME --track "<slug>"
-python3 scripts/handoff.py resume  --repo OWNER/NAME --track "<slug>" --history 5
-python3 scripts/handoff.py chain   --repo OWNER/NAME --track "<slug>" --grep "an escaped regex"
-python3 scripts/handoff.py new     --repo OWNER/NAME --track "<slug>" --title "<subject>" \
+handoff="<hub-checkout>/scripts/handoff.py"   # in the hub itself, scripts/handoff.py
+python3 "$handoff" current --repo OWNER/NAME --track "<slug>"
+python3 "$handoff" resume  --repo OWNER/NAME --track "<slug>" --history 5
+python3 "$handoff" chain   --repo OWNER/NAME --track "<slug>" --grep "an escaped regex"
+python3 "$handoff" new     --repo OWNER/NAME --track "<slug>" --title "<subject>" \
   --body-file "<path>" --dry-run
-python3 scripts/handoff.py link    --repo OWNER/NAME --new "<successor>" --previous "<predecessor>"
-python3 scripts/handoff.py tracks  --repo OWNER/NAME
+python3 "$handoff" link    --repo OWNER/NAME --new "<successor>" --previous "<predecessor>"
+python3 "$handoff" tracks  --repo OWNER/NAME [--json]
 ```
 
 Read `--dry-run` output before the first real `new` of a session, since the run can close an issue.
-It is accepted by `new` and `link`, the two subcommands that write, and by no other.
+It is accepted by `new` and `link`, the subcommands that write, and by no other.
 
 Exit `0` is success, `1` a refusal the caller can act on, a usage error included, and `2` the
 command not having run to an answer, so a refusal and a failure to reach one never share a code. A
-repository missing the `handoff` label is a refusal rather than a degraded empty answer, and it
-names the command that applies the fleet label set except where the label read filled its window,
-which is the one case where the label's absence is unproven rather than established.
+fleet repository missing the `handoff` label, one the hub's `registry/repos.json` lists, is a
+refusal rather than a degraded empty answer, and it names the command that applies the fleet label
+set except where the label read filled its window, which is the one case where the label's absence
+is unproven rather than established.
+
+A fork under the registry's owner that the registry does not list, such as one kept for an
+upstream contribution per `upstream-contribution-workflow`, can host a chain to keep a session's
+state without taking on any fleet configuration. Missing the label there, a read prints a warning
+and answers as an empty chain does, and `new` refuses until it is given `--create-label`, which
+creates the one `handoff` label, confirms it, and then files the first link. Issues turned off stop
+it before any write, naming the command that turns them on. Never apply the fleet label set to such
+a fork. A repository under another owner, or an unregistered one of the owner's that is not a fork,
+refuses before any write. `new` and `link` refuse both whatever the label state, since a label on
+such a repository opens no write there, and that refusal bounds no read.
 
 Creating an issue, commenting on one, closing one, and editing a body are each outward-facing
 writes. `new` creates, comments, and closes, the label riding inside the one create call rather than
-being a write of its own. `link` edits a body, comments, and closes. Each of them is bound by
+being a write of its own, and `new --create-label` adds one write ahead of those, the label itself.
+`link` edits a body, comments, and closes. Each of them is bound by
 `GOVERNANCE.md` "Repository Boundaries and Write Safety" exactly as any other write is. Point them
 at the repository `AGENTS.md` "Session Scope" sends the link to, the one holding the work the next
 session resumes, and at no other. `link` also reaches an issue this chain never created, since the

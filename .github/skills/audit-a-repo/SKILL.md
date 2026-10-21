@@ -8,20 +8,20 @@ description: >-
 
 ## Why This Exists
 
-The audit is the fleet's measurement procedure, and the two failure shapes it guards against are both silent: a repo judged conformant with no committed evidence, and an audit that quietly edits what it was supposed to measure. `AUDIT.md` in the hub is the procedure and keeps authority. This skill carries the rules that get skipped in practice and says which section owns each step.
+The audit is the fleet's measurement procedure, and the failure shapes it guards against are all silent: a repo judged conformant with no committed evidence, and an audit that quietly edits what it was supposed to measure. `AUDIT.md` in the hub is the procedure and keeps authority. This skill carries the rules that get skipped in practice and says which section owns each step.
 
 ## Before Measuring Anything
 
 - **Route first.** A repo with no carried instruction set, or a partial one, has a baseline that never arrived rather than drift to report, so it goes to `STANDUP.md` sections 1A and 2 first (`AUDIT.md` section 0). Auditing it anyway produces a report that is all absences and reads as catastrophe.
 - **Verify the host.** Run `python3 scripts/host_gate.py --repo <target-checkout>` from the hub checkout before any hub tool, and pass `--repo`, since a bare run skips the target's own `host-tools.json` overlay. A stale tool answers `--version`, looks healthy, and produces a wrong answer.
-- **Read `main` as ground truth**, for both workflow models, and read `develop` only to detect divergence (`AUDIT.md` section 1). An `operational` repo's `develop` is mid-flight by design, so conformance work sitting there is un-promoted work, not a defect, and it counts when it reaches `main`. Use `spec/audit.py --branch <ref>` to preview in-flight work, which stamps the override so the finding cannot be mistaken for one against ground truth.
+- **Read `main` as ground truth**, for every workflow model, and read `develop` only to detect divergence (`AUDIT.md` section 1). An `operational` repo's `develop` is mid-flight by design, so conformance work sitting there is un-promoted work, not a defect, and it counts when it reaches `main`. Use `spec/audit.py --branch <ref>` to preview in-flight work, which stamps the override so the finding cannot be mistaken for one against ground truth.
 
 ## Measuring
 
 - **Resolve the repo's types from `registry/repos.json`** and classify a `classificationPending` entry from the tree (`AUDIT.md` section 2). The applicability gate is `WORKFLOW.md` section 1, extended to `AUDIT.md`'s own checks: an item or check governing an absent construct is N/A, excluded from the verdict, and never a defect (`AUDIT.md` section 3).
 - **Know what the runner does and does not prove.** `spec/audit.py` mechanizes the deterministic subset only: settings, rulesets, secret names, file and section presence, verbatim hashing, interface wiring, Dependabot coverage, branch facts. It evaluates no check under a type in `spec/project-types.json`, so every per-type check is judged by hand, and a clean run is no evidence for them (`AUDIT.md` section 4). Silence from a tool that was never looking reads exactly like a pass.
 - **Judge letter and intent per check** and keep the vocabulary: letter miss with intent satisfied is a drift finding, both missing is a defect, and operational is binary over the applicable set (`AUDIT.md` sections 4 and 7). Do not invent a parallel scheme.
-- **Assert the Actions implement `WORKFLOW.md`** by outcome, not by matching catalog snippets byte for byte: the 5A static audit, each applicable guarantee cited in the form 5A sets out, then the 5B trace scenarios (`AUDIT.md` section 5). Read a workflow the repo only calls at the SHA it pins, for both. The `workflow-ci-contract` skill summarizes that contract.
+- **Assert the Actions implement `WORKFLOW.md`** by outcome, not by matching catalog snippets byte for byte: the 5A static audit, each applicable guarantee cited in the form 5A sets out, then the 5B trace scenarios (`AUDIT.md` section 5). Read a workflow the repo only calls at the SHA it pins, throughout. The `workflow-ci-contract` skill summarizes that contract.
 - **Check live settings, rulesets, and secrets from a hub checkout at `main`** with `AUDIT.md` section 6. Run `repo-config/configure.sh check` with the target repository and model for settings and rulesets, and `spec/audit.py [RepoName]` for secrets, rather than constructing a local comparison. The hub payloads are the only repository-configuration source.
 
 ## Reporting
@@ -30,8 +30,10 @@ The audit is the fleet's measurement procedure, and the two failure shapes it gu
 - **The hub authors the report.** A downstream repo never opens a hub pull request to write its own, which would be self-certification. Downstream context goes into issues filed against the hub instead.
 - **Generate a convergence issue, never compose one**: `spec/audit.py --issue <repo>` emits it from live findings. An agent picking such an issue up re-runs the audit first and acts on the live result, not the pasted findings.
 - **Reconcile registry `driftNotes` in the same pass**: a resolved deviation's note is deleted, not left describing finished work, and a note naming a check id is retired by a person, not by a run (`AUDIT.md` section 8).
-- **Stale-versus-modified classification needs a full hub clone with git history.** Without one, compare against the current hub canonical on `main`, which decides current-match only.
+- **Stale-versus-modified classification and the intent staleness advisory need a full hub clone with git history.** In a shallow clone the audit reports one ERROR per repo and exits non-zero, so run `git fetch --unshallow origin` in the hub checkout first. To verify one finding without history, compare against the current hub canonical on `main`, which decides current-match only.
 
 ## After the Report
 
 Measuring and fixing are separate phases. Converging is `AUDIT.md` section 10: fixes ship as pull requests on the target repo, one focused pull request per drift class, the Copilot loop driven to green per the `pr-review-conduct` skill, and the maintainer merges. For a repo already stood up, `RESYNC.md` sequences the findings, since order matters (a deletion lands before the re-vendor that would refresh it). Systemic drift shared by many repos is fixed in the hub spec, not hand-patched per repo, and spec questions are escalated rather than resolved silently (`AUDIT.md` section 9).
+
+An audit leaves no checkout behind it, since one left standing is what a later sweep has to tell apart from live work. Each is removed when the run ends, per `repo-worktree` "Listing and Cleanup". The report's pull request is cleaned up once it merges, with `python3 scripts/pr_review.py cleanup <number> --repo ptr727/ProjectTemplate --checkout <hub-base-clone>`. A detached checkout at `main` that only read the hub is removed by hand once it is clean.

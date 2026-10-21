@@ -22,7 +22,7 @@ publisher passes `branch: ${{ github.ref_name }}`, which the tasks forward and r
 target by setting its `enable_<target>: false` at the caller stub rather than deleting a job: the
 hub task carries the full job graph for every repo, and the caller stub's `with:` block is where
 the target list is expressed. A repo still curates, in `test-pull-request.yml`, its
-path-filter entry, that filter's output, and the `smoke-build` enable-forward, all three together
+path-filter entry, that filter's output, and the `smoke-build` enable-forward, together
 per D6.4, since an entry nothing consumes never smoke-builds the target. And, for a package
 target, the `publish-nuget` or `publish-pypi` job in its own `publish-release.yml`, since
 `id-token: write` belongs at that one entry point. CodeGen, versioning, merge-bot, and Dependabot
@@ -46,10 +46,10 @@ Pick by where each artifact *goes*, not by language:
   hook or a build-nuget hook per output, each uploading `release-asset-<branch>-<target>`. This is where the
   .NET `dotnet publish` or `dotnet build` lives, though a package push does not. The hub default takes an explicit
   project path, and a project needing different build behavior replaces the hook. A data-only
-  repo's own output (e.g. a symbol library) is not yet
-  expressible as a hub hook or an `enable_*` input, so it stays a carried leaf until the hub task
-  grows one.
-- **Package-registry pushes** (NuGet.org, PyPI): both are split, and the push never sits in the
+  repo's own output (e.g. a symbol library) is a file target, which the `build-release-asset` hook
+  builds when the caller sets `enable_release_asset: true`. The hook has no hub default, so the caller provides
+  `.github/actions/build-release-asset/action.yml` and the task fails without it.
+- **Package-registry pushes** (NuGet.org, PyPI): each is split, and the push never sits in the
   hook. OIDC trusted publishing validates the token's `job_workflow_ref` claim, which names the
   workflow the job actually ran from, so a push from a hub-hosted task is rejected at the token
   exchange, NuGet.org answering `HTTP 401` and PyPI under its own code. And because D7.2 has a callee
@@ -98,7 +98,7 @@ version/tag, which is heavyweight but expected even for a non-.NET repo, and acc
 A scheduled or push publish where NBGV `SemVer2` is **unchanged** (no new commit since the last
 publish) re-pushes **nothing** to GitHub Releases (the `github-release` job's `release-exists`
 check skips the create step, and a dispatch refreshes the release instead of skipping), NuGet (`dotnet nuget push --skip-duplicate`), or PyPI
-(`gh-action-pypi-publish` `skip-existing: true`), since all three key on the version string.
+(`gh-action-pypi-publish` `skip-existing: true`), since each keys on the version string.
 **Docker always re-pushes** by design: it picks up upstream base-image refreshes (e.g.
 `ubuntu:rolling`) that aren't visible in the repo. Boundary: `version.json` has **no
 `pathFilters`**, so *any* commit, including a CI/workflow-only or docs-only change, advances the
@@ -108,7 +108,7 @@ are intentionally not added.
 
 ## Recovering a failed registry push
 
-A package publish job is gated like everything else, `needs:` the release-task call, so a failed build skips it. The **push inside it** is what no gate can reach, because it runs after the whole release task and therefore after `github-release`. `WORKFLOW.md` D4.5 names the two recovery routes and leaves their mechanics here. A rejected token exchange, a registry outage, or a trusted-publishing policy naming the wrong workflow file leaves a published release and tag for a version that never reached the registry. The recovery is a re-dispatch or a full re-run rather than a cleanup. **A full re-run is always available inside its window, and a re-dispatch only while the branch tip has not moved**, so the tip decides whether there is a choice at all rather than which route to take. What re-dispatch buys, where it is available, is that it outlives the re-run window.
+A package publish job is gated like everything else, `needs:` the release-task call, so a failed build skips it. The **push inside it** is what no gate can reach, because it runs after the whole release task and therefore after `github-release`. `WORKFLOW.md` D4.5 names the recovery routes and leaves their mechanics here. A rejected token exchange, a registry outage, or a trusted-publishing policy naming the wrong workflow file leaves a published release and tag for a version that never reached the registry. The recovery is a re-dispatch or a full re-run rather than a cleanup. **A full re-run is always available inside its window, and a re-dispatch only while the branch tip has not moved**, so the tip decides whether there is a choice at all rather than which route to take. What re-dispatch buys, where it is available, is that it outlives the re-run window.
 
 **Re-dispatch, available only while the tip has not moved.** A `workflow_dispatch` takes a ref rather than a commit, and D2.3 admits only `main` or `develop`, so what it builds is that branch's tip at dispatch time. While the tip is still the commit whose push failed, a re-dispatch rebuilds the same version and runs its push again, refreshing the release the way any dispatch does.
 
@@ -116,7 +116,7 @@ This is a time-of-check-to-time-of-use race rather than a guarded operation: not
 
 **Re-run all jobs, available inside the window whatever the tip has done.** `gh run rerun <id>` replays the run under the original event's `GITHUB_SHA` and `GITHUB_REF` and re-executes every job rather than only the failed ones. The publisher pins the release task to that commit with `ref: ${{ github.sha }}`, so `get-version` recomputes the same version from the same commit and history, each build leaf checks out the `GitCommitId` that job emits, the package artifact D5.2 deleted is rebuilt and re-uploaded rather than missing when `publish-<target>` downloads it, and that job retries the push it failed. The release itself needs nothing from the re-run, the failed run having already cut it, though on a dispatch-triggered run the re-run re-enters `github-release`, which refreshes the release per D4.4's dispatch leg and runs the `release-asset-*` delete with it per D5.2. A re-dispatch here would build the new tip instead, and NBGV derives the version from git height, so that is a further version and the one whose push failed never reaches the registry.
 
-Three qualifications come with the re-run route.
+The qualifications below come with the re-run route.
 
 - D4.4 and `WORKFLOW.md` 5B's S9 describe a re-run whose predecessor push **succeeded**, where the registry dedupes the second one. This is the case they do not cover, and its retried push is the first the registry ever receives for that version.
 - GitHub offers a re-run only within **30 days** of the initial run, and a repository's own **log** retention setting can be shorter, so the usable window is the shorter of the two. This is the run's own retention and is unrelated to D5.4's `retention-days: 1`, which bounds an uploaded artifact rather than the run.
