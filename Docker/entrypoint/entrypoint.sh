@@ -1,5 +1,5 @@
 #!/bin/bash
-# The image ENTRYPOINT: the default `entrypoint` command starts the dashboard, and any other command runs in its place, such as `esphome version`.
+# Routes the container's command, so the default starts the dashboard and a command such as `esphome version` still runs without starting it.
 set -Eeuo pipefail
 
 usage() {

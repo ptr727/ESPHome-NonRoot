@@ -1,5 +1,5 @@
 #!/bin/bash
-# Starts the device-builder dashboard on /config, seeding the version history preference first because the dashboard reads it only at start.
+# Launches the device-builder dashboard as the container's main process, which is why it ends in exec rather than running it as a child.
 set -Eeuo pipefail
 
 usage() {

@@ -1,5 +1,6 @@
 #!/bin/bash
-# Prepares the /cache tree the image environment points at, since a new or reused /cache volume may hold none of its subdirectories.
+# Resets the container's scratch state before a start: it creates the /cache subdirectories, empties /tmp, and prunes the PlatformIO cache.
+# It runs on every start because a reused /cache volume can predate a subdirectory a later image added.
 set -Eeuo pipefail
 
 usage() {
