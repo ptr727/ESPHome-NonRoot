@@ -337,7 +337,7 @@ The final stage omits the upstream names below on purpose, each for the reason i
 
 | Package | Why the final stage omits it |
 | --- | --- |
-| `build-essential` | The builder stage installs it to build the virtual environment. The `host:` platform compiles with the machine's own `gcc`, so it does not compile in this image. A host binary built in a container runs only in that container. |
+| `build-essential` | The builder stage installs it to build the virtual environment. The `host:` platform compiles with the machine's own C and C++ compiler, so it does not compile in this image. |
 | `libcairo2` | ESPHome renders an SVG `image:` source with `resvg_py`, a self-contained wheel that links no cairo library. |
 | `libmagic1t64` | ESPHome detects an audio file's type with `puremagic`, which is pure Python. |
 | `iputils-ping` | The dashboard pings devices through `icmplib` sockets, and no code path runs a `ping` binary. |
