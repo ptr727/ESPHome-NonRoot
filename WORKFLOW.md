@@ -635,9 +635,9 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents a daily
   monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
 - **D11.3 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
-  wired Ethernet, PlatformIO/Arduino, and configure-time patching, and the container runs as uid 1000.
-  *Prevents a break confined to one toolchain, build system, network stack, or host tool, or a root-only
-  regression, passing as green.*
+  wired Ethernet, PlatformIO/Arduino, and the `patch` step an IDF component runs at configure time. The
+  container runs as uid 1000. *Prevents a root-only regression passing as green, and a break confined to one
+  toolchain, build system, network stack, or that `patch` step.*
 
 ## 5. Test methodology
 
