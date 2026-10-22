@@ -4,7 +4,7 @@ name: Check upstream dependency action
 # It snapshots the sorted package names into upstream-dependency.json and opens a PR against develop when they move.
 # The head ref deliberately does not match the merge-bot's upstream-version-* pattern, so the PR waits for a human.
 # Whether a package upstream adds applies to this image is a judgment call, since part of upstream's list does not.
-# The builder stage here is separate, and no cairo or magic bindings are installed.
+# WORKFLOW.md section 7 records why the final stage omits each name it does.
 
 on:
   schedule:
