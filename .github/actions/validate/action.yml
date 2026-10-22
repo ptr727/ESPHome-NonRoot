@@ -1,5 +1,6 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
-# It builds the image under test, checks its entrypoint scripts' arguments, and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
+# It builds the image under test, checks its entrypoint scripts' arguments, and compiles firmware in it.
+# The compile matters because the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
 # The publisher always compiles, and pull request CI compiles when the image, what is compiled in it, or its hub pin changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
@@ -164,7 +165,7 @@ runs:
 
         cat > "$workdir/config/compile.sh" <<'SH'
         set -Eeuo pipefail
-        # A passed command runs in place of the dashboard and skips cache.sh, so initialize the cache the way a real run does rather than leaning on each tool to create its own tree.
+        # A passed command skips cache.sh, so run it the way a real start does rather than leave each tool to create its own tree.
         /entrypoint/cache.sh
         for config in /config/*.yaml; do
           echo "::group::Compile $(basename "$config")"
