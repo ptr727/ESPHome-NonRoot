@@ -129,10 +129,13 @@ runs:
               fail "$script.sh -h and --help print different text"
             fi
           done
-          code="$(run "${entry[@]}" "$image" --no-such-option)"
-          if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
-            fail "$script.sh --no-such-option exited $code without refusing it"
-          fi
+          for args in --no-such-option "--help --no-such-option"; do
+            read -ra argv <<<"$args"
+            code="$(run "${entry[@]}" "$image" "${argv[@]}")"
+            if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
+              fail "$script.sh $args exited $code without refusing it"
+            fi
+          done
         done
 
         code="$(run "$image" entrypoint --no-such-option)"

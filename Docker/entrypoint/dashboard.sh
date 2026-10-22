@@ -16,6 +16,10 @@ EOF
 if (($# > 0)); then
     case "$1" in
     -h | --help)
+        if (($# > 1)); then
+            echo "dashboard.sh: unknown argument '$2' after $1, see dashboard.sh --help" >&2
+            exit 2
+        fi
         usage
         exit 0
         ;;

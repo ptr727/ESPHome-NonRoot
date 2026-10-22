@@ -23,6 +23,10 @@ script_dir="$(dirname -- "${BASH_SOURCE[0]}")"
 # No command starts with a dash, so only an option-shaped first word is the entrypoint's own, and a passed command keeps its own --help.
 case "${1-}" in
 -h | --help)
+    if (($# > 1)); then
+        echo "entrypoint.sh: unknown argument '$2' after $1, see entrypoint.sh --help" >&2
+        exit 2
+    fi
     usage
     exit 0
     ;;
