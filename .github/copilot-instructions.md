@@ -48,8 +48,8 @@ Review effort is user-controlled. The automation observes `Lite`, `Balanced`, or
   - **Delete when** - that step stops passing the tags through `--args`, or a `jq` release reads `--args` only before the filter.
 - **A `develop -> main` promotion pull request changes `upstream-version.json` although both branches already carry the same pins.** Raised by Copilot as a P1 on a promotion. The upstream tracker opens a bump pull request per branch, so the claim recurs after each bump once both have merged.
   - **Disproved by** - comparing GitHub's file list, the three-dot diff from the merge base, against the merge result. For `main` at `91792cdd` and `develop` at `a2bffb0b`, `git diff --stat 91792cdd...a2bffb0b` lists `upstream-version.json`. `git diff --stat 91792cdd "$(git merge-tree --write-tree 91792cdd a2bffb0b)"` does not, and the merged commit matches the merge-tree result. Re-run the same pair of commands on the promotion's own tips. While only one branch's bump has merged, the promotion really does change the pins, and the claim is true.
-  - **Proved against** - the per-branch bump in `.github/workflows/check-upstream-version.yml` at `54cde69`, with the tips above as the worked example, on git 2.47.3.
-  - **Delete when** - the upstream tracker stops opening a bump pull request per branch.
+  - **Proved against** - `.github/workflows/check-upstream-version.yml` at `54cde69`, which passes the pinned tracker task no `branches` input, so its default bumps `main` and `develop` each. The tips above are the worked example, on git 2.47.3.
+  - **Delete when** - that caller narrows `branches` to one branch, or a tracker pin bump changes the default to one branch.
 
 ## When in Doubt
 
