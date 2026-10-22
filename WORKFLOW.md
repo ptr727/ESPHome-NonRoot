@@ -634,10 +634,10 @@ Each is a **MUST**, stated as input -> output plus the failure it prevents.
   `.github/compile-test/`, is hand-authored rather than fetched or generated at run time, names the upstream
   project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents a daily
   monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
-- **D11.3 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
+- **D11.3 Every execution environment and the configure-time `patch` step, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF,
   wired Ethernet, PlatformIO/Arduino, and the `patch` step an IDF component runs at configure time. The
-  container runs as uid 1000. *Prevents a root-only regression passing as green, and a break confined to one
-  toolchain, build system, network stack, or that `patch` step.*
+  container runs as uid 1000. *Prevents a break confined to one toolchain, build system, network stack, or that
+  `patch` step passing as green, and likewise a root-only regression.*
 
 ## 5. Test methodology
 
