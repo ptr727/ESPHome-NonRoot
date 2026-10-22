@@ -1,0 +1,65 @@
+# The docker-prepare hook the hub's build-docker-task.yml runs in place of its single-image default.
+# It reads the upstream pins from upstream-version.json and turns them into the one matrix entry this repo builds.
+# The hub core adds LABEL_VERSION from semver2 itself, so the entry carries only the upstream version build-args and tags.
+# The validate hook runs it too, so the compile test builds from the same pins and build-args as the publisher.
+name: ESPHome-NonRoot docker-prepare hook
+description: Emit the build-docker-task.yml matrix entry carrying the upstream ESPHome and Device Builder pins.
+
+inputs:
+  image:
+    description: Docker Hub repository, for example ptr727/esphome-nonroot.
+    required: true
+  branch:
+    description: Logical branch. main gives the latest moving tag and the pinned ESPHome version tag, anything else develop.
+    required: true
+  semver2:
+    description: NBGV SemVer2 string, used as the immutable image tag beside the moving one.
+    required: true
+
+outputs:
+  matrix:
+    description: Compact JSON array of one {name, tags, build-args, context, dockerfile, cache-repo} entry.
+    value: ${{ steps.emit.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - name: Emit upstream-pinned matrix step
+      id: emit
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        BRANCH: ${{ inputs.branch }}
+        SEMVER2: ${{ inputs.semver2 }}
+      run: |
+        set -Eeuo pipefail
+        esphome="$(jq -r '.esphome // empty' upstream-version.json)"
+        device_builder="$(jq -r '.device_builder // empty' upstream-version.json)"
+        if [[ -z "$esphome" || -z "$device_builder" ]]; then
+          echo "::error::upstream-version.json must carry non-empty esphome and device_builder pins."
+          exit 1
+        fi
+        # A main build also carries the pinned ESPHome version, so a consumer can pull the image by upstream release.
+        tags=("docker.io/$IMAGE:$SEMVER2")
+        if [[ "$BRANCH" == "main" ]]; then
+          tags+=("docker.io/$IMAGE:latest" "docker.io/$IMAGE:$esphome")
+        else
+          tags+=("docker.io/$IMAGE:develop")
+        fi
+        # shellcheck disable=SC2016 # $tags, $esphome, and the rest are jq variables, not shell expansions
+        matrix="$(jq -cn \
+          --arg name "$IMAGE" \
+          --arg esphome "$esphome" \
+          --arg device_builder "$device_builder" \
+          --arg cache "docker.io/$IMAGE" \
+          '$ARGS.positional as $tags
+          | [{
+              name: $name,
+              tags: $tags,
+              "build-args": ["ESPHOME_VERSION=\($esphome)", "DEVICE_BUILDER_VERSION=\($device_builder)"],
+              context: "./Docker",
+              dockerfile: "./Docker/Dockerfile",
+              "cache-repo": $cache
+            }]' \
+          --args "${tags[@]}")"
+        echo "matrix=$matrix" >> "$GITHUB_OUTPUT"

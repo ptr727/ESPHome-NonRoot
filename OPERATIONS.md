@@ -6,12 +6,12 @@ How this repo is run: what verifying a change requires before it is pushed, how 
 
 Verifying a change here means running the gates, then running by hand the parts of the contract the pull request pipeline never reaches.
 
-The gates are the document linters, `markdownlint-cli2`, `cspell` (scoped to `README.md` and `HISTORY.md`), `actionlint`, and `editorconfig-checker`. CI runs all four, so run all four before every push rather than the ones that look relevant. The hub-hosted `scripts/docker_lint.py`, run from a hub checkout with `--root` set to this repo, runs them through Docker with no local toolchain. It also runs shellcheck and shfmt over `Docker/entrypoint/*.sh`, which CI does not gate, so pass `--linter` once per gate to reproduce exactly the four CI runs. A change to `Docker/` is also smoke-built locally with the `docker buildx build` command in the runbook below before it is pushed, the same amd64 build CI runs.
+The gates are the hub's `validate-task.yml` lint block, `markdownlint-cli2`, `cspell` (scoped to `README.md` and `HISTORY.md`), `actionlint`, `editorconfig-checker`, and shellcheck and shfmt over `Docker/entrypoint/*.sh`, plus its repo gate, which checks action pins, line-ending coverage, and the composite-action hooks under `.github/actions/`. CI runs all of them, so run all of them before every push rather than the ones that look relevant. From a hub checkout, `python3 scripts/docker_lint.py --root <this repo>` runs the linters through Docker with no local toolchain, and `python3 scripts/repo_gate.py --root <this repo>` runs the repo gate. The hub task's prose gate runs only on a `pull_request` event, which this repo's push-triggered CI never raises, so run `python3 <hub checkout>/scripts/prose_lint.py --diff <base>` by hand from this repo's root, since it diffs the repository it runs in. A change to `Docker/` is also smoke-built locally with the `docker buildx build` command in the runbook below before it is pushed, the same amd64 build CI runs.
 
 **What pull request CI structurally cannot exercise:**
 
 - **The arm64 image.** The pull request smoke build and every `develop` publish build `linux/amd64` only. Only a full `main` publish builds `linux/amd64,linux/arm64`, so an arm64-only break first surfaces on `main`.
-- **The firmware compile test, unless the change touches the image.** `test-pull-request.yml` gates the compile test on a change to the image or to what is compiled in it. A change outside those paths merges without anything compiling firmware in the image.
+- **The firmware compile test, unless the change touches the image.** On a push run of `test-pull-request.yml`, the `validate` hook compiles only on a change to the image, to what is compiled in it, or to the hub pin. A change outside those paths merges without anything compiling firmware in the image.
 - **A running dashboard.** No workflow starts the container and talks to the dashboard. A change that can affect the entrypoint, the dashboard, or file permissions is verified by building and running the image locally, per the runbook below.
 
 Two traps make a headless test of the running container pass while proving nothing:
@@ -34,7 +34,7 @@ The dashboard is then at `http://localhost:6052`. `docker exec -it --user 1001:1
 
 ### Compile a Test Configuration in the Image
 
-The `compile-test` job in `validate-task.yml`, which push CI and the publisher share, runs `/entrypoint/cache.sh`, then `esphome config` and `esphome compile` for each fixture in [`.github/compile-test/`](./.github/compile-test/), inside the built image as a non-root user. Reproduce it against a locally built image by bind-mounting the fixtures and running the same two commands for the fixture in question. [`WORKFLOW.md`](./WORKFLOW.md) "The image compile test" states what each fixture covers.
+The [`validate`](./.github/actions/validate/action.yml) hook, which the hub's `validate-task.yml` runs for push CI and the publisher alike, runs `/entrypoint/cache.sh`, then `esphome config` and `esphome compile` for each fixture in [`.github/compile-test/`](./.github/compile-test/), inside the built image as a non-root user. Reproduce it against a locally built image by bind-mounting the fixtures and running the same two commands for the fixture in question. [`WORKFLOW.md`](./WORKFLOW.md) "The Image Compile Test" states what each fixture covers.
 
 ### Check Whether `develop` Is Missing a `main`-Only Fix
 
@@ -52,7 +52,7 @@ A failure that appears only in the running image needs a container. Bring the st
 
 ## Tool Usage
 
-- **Nerdbank.GitVersioning** computes the build version from `version.json` and git height. The workflows run it through `dotnet/nbgv@master`, the fleet's one documented unpinned action.
+- **Nerdbank.GitVersioning** computes the build version from `version.json` and git height. The hub's `get-version-task.yml`, which the release task calls, runs it through `dotnet/nbgv@master`, the fleet's one documented unpinned action.
 - **The upstream-version tracker** resolves the latest `esphome` and `esphome-device-builder` versions from PyPI and opens rolling bump PRs on `upstream-version-main` and `upstream-version-develop`. It is the only writer of `upstream-version.json`, so that file is never hand-edited.
 - **The upstream-dependency watcher** snapshots the apt package list ESPHome's own base image installs into `upstream-dependency.json` and opens a PR when it moves. Whether a package upstream adds belongs in this image is a human decision, so that PR is deliberately not auto-merged.
 
@@ -62,6 +62,8 @@ A failure that appears only in the running image needs a container. Bring the st
 - [`cspell.json`](./cspell.json) is the single source of truth for the spell-check dictionary and ignore paths, shared by the editor and CI. A new project word belongs in its `words` list, not in a parallel word list in a `.code-workspace` file.
 - [`.markdownlint-cli2.jsonc`](./.markdownlint-cli2.jsonc) configures markdownlint, and [`.editorconfig-checker.json`](./.editorconfig-checker.json) scopes the line-ending and whitespace check.
 - [`.vscode/tasks.json`](./.vscode/tasks.json) and [`.vscode/launch.json`](./.vscode/launch.json) hold the editor tasks.
+- [`.github/actions/`](./.github/actions/) holds this repo's hooks into the hub's reusable workflow tasks: `docker-prepare` for the upstream pins and image tags, `validate` for the compile test, and `resolve-upstream` for the tracker's PyPI lookup. [`WORKFLOW.md`](./WORKFLOW.md) section 7 states what each does.
+- Repository settings, branch rulesets, and the secret inventory are hub-hosted. The hub's `repo-config/configure.sh` applies and checks them against this repo, and the hub's `spec/secrets.json` names the secrets each mechanism needs, here the Docker Hub pair and the codegen App pair, each in the Actions and Dependabot stores.
 - [`version.json`](./version.json) is the Nerdbank.GitVersioning input, and [`upstream-version.json`](./upstream-version.json) the shipped upstream pins.
 - [`host-tools.json`](./host-tools.json) declares the host tooling this repo needs beyond the fleet declaration, which is nothing today.
 - Release notes keep a short summary in [`README.md`](./README.md) and the full history in [`HISTORY.md`](./HISTORY.md), and both are updated when a release is cut.
