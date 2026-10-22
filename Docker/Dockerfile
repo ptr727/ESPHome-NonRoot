@@ -7,20 +7,6 @@
 
 # ESPHome Dockerfile: https://github.com/esphome/esphome/blob/dev/docker/Dockerfile
 
-# Test image in shell:
-# docker run -it --rm --pull always --name Testing python:slim /bin/bash
-# docker run -it --rm --pull always --name Testing ptr727/esphome-nonroot:latest /bin/bash
-
-# Build Dockerfile
-# docker buildx create --name "esphome" --use
-# docker buildx build --platform linux/amd64,linux/arm64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
-
-# Test linux/amd64 target
-# docker buildx build --load --platform linux/amd64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
-# docker run -it --rm --name Testing esphome:testing /bin/bash
-# docker run -it --rm --name Testing --publish 6052:6052 esphome:testing
-# docker exec -it Testing /bin/bash
-
 # Builder
 FROM python:3.14-slim AS builder
 
@@ -50,14 +36,12 @@ RUN \
 # Builder
 WORKDIR /builder
 
-# Optional version pins via build-args; each pins its package independently
-# (empty = latest). The pipeline always passes both.
+# Optional version pins via build-args, each pinning its package independently (empty = latest).
+# The pipeline always passes both.
 ARG ESPHOME_VERSION=""
 ARG DEVICE_BUILDER_VERSION=""
 
-# Build a self-contained virtual environment with uv. The slim final stage
-# copies it whole, so build tools never reach the final image. Installs the
-# ESPHome compiler (with display components) plus the device-builder dashboard.
+# The slim final stage copies this virtual environment whole, so build tools never reach the final image.
 RUN pip install --no-cache-dir uv \
     && uv venv /opt/venv \
     && uv pip install --python /opt/venv/bin/python --no-cache \
