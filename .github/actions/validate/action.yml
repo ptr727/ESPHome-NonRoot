@@ -1,7 +1,7 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
 # It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
-# The publisher always compiles, and pull request CI compiles only when the image, what is compiled in it, or the hub pin that runs it changed.
+# The publisher always compiles, and pull request CI only when the image, what is compiled in it, or the hub pin that runs it changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
 name: ESPHome-NonRoot validate hook
 description: Compile every .github/compile-test configuration in the built image as a non-root user.
@@ -11,7 +11,8 @@ runs:
   steps:
 
     # Only a pull request run of the pull request workflow is gated, and the publisher and a dispatch always compile.
-    # The diff runs from the test merge commit's first parent, the base tip, so it is the whole pull request and a later docs-only push cannot retire a compile test.
+    # The diff runs from the test merge commit's first parent, the base tip, so it covers the whole pull request.
+    # A later docs-only push therefore cannot retire a compile test.
     - name: Decide compile test step
       id: decide
       shell: bash
@@ -33,9 +34,6 @@ runs:
         # The hub task checks out the merge commit alone, so fetch it again with its parents before reasoning about a diff.
         if ! git fetch --quiet --no-tags --depth=2 origin "$AFTER"; then
           compile true "history fetch failed"
-        fi
-        if ! git rev-parse --verify --quiet "$AFTER^2^{commit}" > /dev/null; then
-          compile true "not a test merge commit"
         fi
         if ! diff="$(git diff --name-only "$AFTER^1" "$AFTER")"; then
           compile true "diff base not in history"
