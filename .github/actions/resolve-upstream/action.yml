@@ -1,7 +1,7 @@
 # The resolve-upstream hook the hub's check-upstream-version-task.yml requires, run once per tracked branch.
 # It resolves the latest ESPHome and Device Builder releases from PyPI and reports them as one name -> version object.
 # The build reads .esphome for the image tag and ESPHOME_VERSION, and .device_builder for DEVICE_BUILDER_VERSION.
-# Every branch leg resolves the same PyPI versions, so the main and develop bumps stay byte-identical and never conflict on promotion.
+# Each branch leg queries PyPI on its own, so a release landing between the legs leaves the branches one run apart until the next daily run converges them.
 name: ESPHome-NonRoot resolve-upstream hook
 description: Resolve the latest ESPHome and esphome-device-builder versions from PyPI.
 

@@ -2,8 +2,8 @@ name: Test pull request action
 
 # CI for every branch, a thin caller onto the hub's reusable validate and build-release tasks.
 # Runs on push so the aggregator, the ruleset required status check, is produced on the head SHA by the sole producing run.
-# The validate and smoke-build jobs run on every push with no paths filter, so a hub pin bump always exercises both hooks.
-# Only the compile test inside the validate hook is change-gated, since it costs about five minutes and nothing it covers can move without the image or its test inputs changing.
+# The validate and smoke-build jobs run on every push with no paths filter, so a hub pin bump always exercises the docker-prepare hook.
+# Only the compile test inside the validate hook is change-gated, on the image, its test inputs, and the hub pin in this file and the publisher.
 # CI never publishes, since the publisher runs on schedule, dispatch, or a bot pin push.
 #
 # There is deliberately no pull_request trigger: a fork PR cannot push to this repo, so it produces no run and cannot satisfy the required check.

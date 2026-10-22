@@ -1,7 +1,7 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
 # It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
-# The publisher always compiles, and the push CI compiles only when the image or what is compiled in it changed, the same paths as the decide step below.
+# The publisher always compiles, and the push CI compiles only when the image, what is compiled in it, or the hub pin that runs it changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
 name: ESPHome-NonRoot validate hook
 description: Compile every .github/compile-test configuration in the built image as a non-root user.
@@ -11,7 +11,7 @@ runs:
   steps:
 
     # Only a push run of the pull request workflow is gated.
-    # The publisher, a dispatch, and a new branch carry no diff to reason about, so they compile rather than guess.
+    # The publisher and a dispatch always compile, and so does a new main or develop, which carries no before-commit to diff against.
     # A feature branch diffs against its merge-base with develop, so a later docs-only push cannot retire a compile test the branch earned.
     - name: Decide compile test step
       id: decide
@@ -55,25 +55,39 @@ runs:
         if ! diff="$(git diff --name-only "$from" "$AFTER")"; then
           compile true "diff base not in history"
         fi
-        if grep -qE '^(Docker/|\.github/compile-test/|\.github/actions/validate/|upstream-version\.json$)' <<<"$diff"; then
+        # The two stubs carry the hub pin, so a hub release bump compile-tests the hooks under the new tasks before it auto-merges.
+        if grep -qE '^(Docker/|\.github/compile-test/|\.github/actions/(validate|docker-prepare)/|\.github/workflows/(test-pull-request|publish-release)\.yml$|upstream-version\.json$)' <<<"$diff"; then
           compile true "image or compile inputs changed"
         fi
         compile false "image and compile inputs unchanged"
 
-    - name: Get pinned versions step
-      id: pins
+    # The docker-prepare hook is the one reader of the upstream pins, so the image compiled here is built from the same inputs the publisher builds.
+    # The image and semver2 values only name tags, which this local build replaces with its own.
+    - name: Resolve build inputs step
+      id: prepare
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      uses: ./.github/actions/docker-prepare
+      with:
+        image: ptr727/esphome-nonroot
+        branch: develop
+        semver2: compile-test
+
+    - name: Read build inputs step
+      id: entry
       if: ${{ steps.decide.outputs.compile == 'true' }}
       shell: bash
+      env:
+        MATRIX: ${{ steps.prepare.outputs.matrix }}
       run: |
         set -Eeuo pipefail
-        esphome="$(jq -r '.esphome // empty' upstream-version.json)"
-        device_builder="$(jq -r '.device_builder // empty' upstream-version.json)"
-        if [[ -z "$esphome" || -z "$device_builder" ]]; then
-          echo "::error::upstream-version.json must carry non-empty esphome and device_builder pins."
-          exit 1
-        fi
-        echo "esphome=$esphome" >> "$GITHUB_OUTPUT"
-        echo "device_builder=$device_builder" >> "$GITHUB_OUTPUT"
+        {
+          echo "context=$(jq -r '.[0].context' <<<"$MATRIX")"
+          echo "dockerfile=$(jq -r '.[0].dockerfile' <<<"$MATRIX")"
+          echo "cache-repo=$(jq -r '.[0]."cache-repo"' <<<"$MATRIX")"
+          echo "build-args<<ARGEOF"
+          jq -r '.[0]."build-args"[]' <<<"$MATRIX"
+          echo "ARGEOF"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Setup Buildx step
       if: ${{ steps.decide.outputs.compile == 'true' }}
@@ -86,18 +100,16 @@ runs:
       if: ${{ steps.decide.outputs.compile == 'true' }}
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
-        context: ./Docker
-        file: ./Docker/Dockerfile
+        context: ${{ steps.entry.outputs.context }}
+        file: ${{ steps.entry.outputs.dockerfile }}
         load: true
         push: false
         tags: esphome-nonroot:compile-test
         platforms: linux/amd64
         cache-from: |
-          type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-main
-          type=registry,ref=docker.io/ptr727/esphome-nonroot:buildcache-develop
-        build-args: |
-          ESPHOME_VERSION=${{ steps.pins.outputs.esphome }}
-          DEVICE_BUILDER_VERSION=${{ steps.pins.outputs.device_builder }}
+          type=registry,ref=${{ steps.entry.outputs.cache-repo }}:buildcache-main
+          type=registry,ref=${{ steps.entry.outputs.cache-repo }}:buildcache-develop
+        build-args: ${{ steps.entry.outputs.build-args }}
 
     - name: Compile test configurations step
       if: ${{ steps.decide.outputs.compile == 'true' }}

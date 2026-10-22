@@ -1,6 +1,7 @@
 # The docker-prepare hook the hub's build-docker-task.yml runs in place of its single-image default.
 # It reads the upstream pins from upstream-version.json and turns them into the one matrix entry this repo builds.
 # The hub core adds LABEL_VERSION from semver2 itself, so the entry carries only the upstream version build-args and tags.
+# The validate hook runs it too, so the compile test builds from the same pins and build-args as the publisher.
 name: ESPHome-NonRoot docker-prepare hook
 description: Emit the build-docker-task.yml matrix entry carrying the upstream ESPHome and Device Builder pins.
 
@@ -32,10 +33,6 @@ runs:
         SEMVER2: ${{ inputs.semver2 }}
       run: |
         set -Eeuo pipefail
-        if [[ -z "$IMAGE" || -z "$SEMVER2" ]]; then
-          echo "::error::The image and semver2 inputs must both be non-empty."
-          exit 1
-        fi
         esphome="$(jq -r '.esphome // empty' upstream-version.json)"
         device_builder="$(jq -r '.device_builder // empty' upstream-version.json)"
         if [[ -z "$esphome" || -z "$device_builder" ]]; then
