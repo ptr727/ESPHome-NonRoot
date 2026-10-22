@@ -1,17 +1,10 @@
 name: Test pull request action
 
-# CI for every branch, a thin caller onto the hub's reusable validate and build-release tasks.
-# Runs on push so the aggregator, the ruleset required status check, is produced on the head SHA by the sole producing run.
-# The validate and smoke-build jobs run on every push with no paths filter, so a hub pin bump always exercises the docker-prepare hook.
-# Only the compile test inside the validate hook is change-gated, on the image, its test inputs, and the hub pin in this file and the publisher.
+# CI for every pull request into main or develop, a thin caller onto the hub's reusable validate and build-release tasks.
 # CI never publishes, since the publisher runs on schedule, dispatch, or a bot pin push.
-#
-# There is deliberately no pull_request trigger: a fork PR cannot push to this repo, so it produces no run and cannot satisfy the required check.
-# A maintainer lands such a contribution on an in-repo branch, which pushes and so validates, before merging.
 on:
-  # All branches, but not tags, since a release tag must not re-run CI.
-  push:
-    branches: ['**']
+  pull_request:
+    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
@@ -23,11 +16,32 @@ permissions: {}
 
 jobs:
 
-  # The same reusable gate the publisher runs, so the push gate and the publish gate are identical.
-  # A branch-deletion push is skipped, since github.sha is all zeros and the checkout would fail.
+  # The one image target lists its own paths, and its build hook under .github/actions/** builds it, so a workflow-only or docs-only pull request marks nothing.
+  changes:
+    name: Detect changed targets job
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      release: ${{ steps.filter.outputs.release }}
+    steps:
+      - name: Checkout code step
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Filter changed paths step
+        id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            release:
+              - 'Docker/**'
+              - 'version.json'
+              - 'upstream-version.json'
+              - '.github/actions/**'
+
+  # The same reusable gate the publisher runs, so the pull request gate and the publish gate are identical.
   validate:
     name: Validate job
-    if: ${{ !github.event.deleted }}
     uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
     permissions:
       contents: read
@@ -36,7 +50,8 @@ jobs:
   # The Docker Hub secrets are mapped even on smoke, since the hub task logs in on every build for the higher rate limit.
   smoke-build:
     name: Smoke build job
-    if: ${{ !github.event.deleted }}
+    needs: [changes]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.release == 'true'
     uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
     permissions:
       contents: read
@@ -53,22 +68,22 @@ jobs:
       enable_pypi: false
       expect_release_assets: false
       docker_image: ptr727/esphome-nonroot
-      branch: ${{ github.ref_name }}
+      # On a pull_request event github.ref_name is the PR ref (for example 123/merge), so the logical branch reads base_ref first.
+      branch: ${{ github.base_ref || github.ref_name }}
 
   # Single required status check, whose name is the ruleset-bound context in the live branch rulesets.
   # Do not rename it without updating the rulesets in lockstep, and it must succeed, not merely not fail.
-  # Skips on a branch deletion, when the jobs it needs also skip, so the deletion push does not fail it.
   check-workflow-status:
     name: Check pull request workflow status job
     runs-on: ubuntu-latest
     permissions: {}
-    needs: [validate, smoke-build]
-    if: ${{ always() && !github.event.deleted }}
+    needs: [changes, validate, smoke-build]
+    if: always()
     steps:
       - name: Check workflow results step
         run: |
           set -Eeuo pipefail
-          for result in "validate:${{ needs.validate.result }}" "smoke-build:${{ needs.smoke-build.result }}"; do
+          for result in "changes:${{ needs.changes.result }}" "validate:${{ needs.validate.result }}"; do
             name="${result%%:*}"
             value="${result#*:}"
             if [[ "$value" != "success" ]]; then
@@ -76,3 +91,7 @@ jobs:
               exit 1
             fi
           done
+          if [[ "${{ needs.smoke-build.result }}" != "success" && "${{ needs.smoke-build.result }}" != "skipped" ]]; then
+            echo "::error::Job 'smoke-build' did not succeed (${{ needs.smoke-build.result }})."
+            exit 1
+          fi

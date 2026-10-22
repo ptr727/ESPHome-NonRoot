@@ -39,7 +39,7 @@ jobs:
       actor: ${{ github.actor }}
       ref_name: ${{ github.ref_name }}
 
-  # The same reusable gate the push CI runs, on the triggering commit, running only when a publish will happen.
+  # The same reusable gate pull request CI runs, on the triggering commit, running only when a publish will happen.
   # The validate hook always compiles firmware here, since a publisher run is never change-gated.
   validate:
     name: Validate job

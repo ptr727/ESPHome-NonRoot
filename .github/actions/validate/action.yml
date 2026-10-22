@@ -1,7 +1,7 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
 # It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
-# The publisher always compiles, and the push CI compiles only when the image, what is compiled in it, or the hub pin that runs it changed.
+# The publisher always compiles, and pull request CI compiles only when the image, what is compiled in it, or the hub pin that runs it changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
 name: ESPHome-NonRoot validate hook
 description: Compile every .github/compile-test configuration in the built image as a non-root user.
@@ -10,9 +10,8 @@ runs:
   using: composite
   steps:
 
-    # Only a push run of the pull request workflow is gated.
-    # The publisher and a dispatch always compile, and so does a new main or develop, which carries no before-commit to diff against.
-    # A feature branch diffs against its merge-base with develop, so a later docs-only push cannot retire a compile test the branch earned.
+    # Only a pull request run of the pull request workflow is gated, and the publisher and a dispatch always compile.
+    # The diff runs from the test merge commit's first parent, the base tip, so it is the whole pull request and a later docs-only push cannot retire a compile test.
     - name: Decide compile test step
       id: decide
       shell: bash
@@ -20,8 +19,6 @@ runs:
         EVENT: ${{ github.event_name }}
         WORKFLOW_REF: ${{ github.workflow_ref }}
         REPOSITORY: ${{ github.repository }}
-        REF_NAME: ${{ github.ref_name }}
-        BEFORE: ${{ github.event.before }}
         AFTER: ${{ github.sha }}
       run: |
         set -Eeuo pipefail
@@ -30,29 +27,17 @@ runs:
           echo "Compile test: $1 ($2)"
           exit 0
         }
-        if [[ "$EVENT" != "push" || "$WORKFLOW_REF" != "$REPOSITORY/.github/workflows/test-pull-request.yml@"* ]]; then
-          compile true "not a pull request workflow push"
+        if [[ "$EVENT" != "pull_request" || "$WORKFLOW_REF" != "$REPOSITORY/.github/workflows/test-pull-request.yml@"* ]]; then
+          compile true "not a pull request workflow run"
         fi
-        if [[ "$REF_NAME" == "main" || "$REF_NAME" == "develop" ]]; then
-          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
-            compile true "new branch"
-          fi
-          from="$BEFORE"
-        else
-          from=""
-        fi
-        # The hub task checks out one commit, so deepen it and fetch develop before reasoning about a diff.
-        deepen=()
-        if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
-          deepen=(--unshallow)
-        fi
-        if ! git fetch --quiet --no-tags "${deepen[@]}" origin "+refs/heads/develop:refs/remotes/origin/develop"; then
+        # The hub task checks out the merge commit alone, so fetch it again with its parents before reasoning about a diff.
+        if ! git fetch --quiet --no-tags --depth=2 origin "$AFTER"; then
           compile true "history fetch failed"
         fi
-        if [[ -z "$from" ]] && ! from="$(git merge-base origin/develop "$AFTER")"; then
-          compile true "no merge-base with develop"
+        if ! git rev-parse --verify --quiet "$AFTER^2^{commit}" > /dev/null; then
+          compile true "not a test merge commit"
         fi
-        if ! diff="$(git diff --name-only "$from" "$AFTER")"; then
+        if ! diff="$(git diff --name-only "$AFTER^1" "$AFTER")"; then
           compile true "diff base not in history"
         fi
         # The two stubs carry the hub pin, so a hub release bump compile-tests the hooks under the new tasks before it auto-merges.
