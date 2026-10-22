@@ -1,5 +1,5 @@
 {
-    // The Lint group is the local full doc-lint surface, run on demand and mirroring the CI lint set.
+    // The Lint group runs part of the CI lint set on demand, and OPERATIONS.md "Local Verification" names the full set.
     // The Docker tasks run at :latest, so versions can drift from CI's pinned actions.
     // Lint: Prose and Lint: EOL run the commit hook's gates natively, Lint: Prose over the whole tree rather than the diff.
     // Every repo carries these.
