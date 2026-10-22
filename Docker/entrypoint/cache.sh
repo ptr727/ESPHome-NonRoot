@@ -21,4 +21,3 @@ find /tmp -mindepth 1 -delete
 # Prune PIO cache files only, preserve downloaded packages
 echo "Pruning PIO cache..."
 pio system prune --cache --force
-
