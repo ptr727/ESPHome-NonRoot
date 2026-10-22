@@ -1,7 +1,7 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
 # It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
-# The publisher always compiles, and pull request CI only when the image, what is compiled in it, or the hub pin that runs it changed.
+# The publisher always compiles, and pull request CI compiles when the image, what is compiled in it, or its hub pin changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
 name: ESPHome-NonRoot validate hook
 description: Compile every .github/compile-test configuration in the built image as a non-root user.
@@ -35,7 +35,7 @@ runs:
         if ! git fetch --quiet --no-tags --depth=2 origin "$AFTER"; then
           compile true "history fetch failed"
         fi
-        diff="$(git diff --name-only "$AFTER^1" "$AFTER")"
+        diff="$(git diff --no-renames --name-only "$AFTER^1" "$AFTER")"
         # The two stubs carry the hub pin, so a hub release bump compile-tests the hooks under the new validate task before it auto-merges.
         if grep -qE '^(Docker/|\.github/compile-test/|\.github/actions/(validate|docker-prepare)/|\.github/workflows/(test-pull-request|publish-release)\.yml$|upstream-version\.json$)' <<<"$diff"; then
           compile true "image or compile inputs changed"
