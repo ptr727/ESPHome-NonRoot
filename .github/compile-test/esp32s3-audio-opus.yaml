@@ -1,0 +1,18 @@
+# ESP32-S3 on ESP-IDF with the Opus audio codec, reduced to the component that runs patch.
+# The esphome/micro-opus IDF component runs patch during CMake component discovery.
+# No other fixture reaches that step.
+# Modeled on sonocotta/esp32-audio-dock firmware/esphome/3-louder-esp32/louder-esp32-s3-idf-sendspin.yaml.
+
+esphome:
+  name: compile-test-esp32s3-opus
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+audio:
+  codecs:
+    opus:
+
+logger:

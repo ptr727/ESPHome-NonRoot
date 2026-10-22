@@ -97,12 +97,14 @@ RUN \
     # Update repos and upgrade
     apt update && apt upgrade -y \
     # Install dependencies: libusb-1.0-0 for the ESP-IDF openocd-esp32 tool check, ccache for faster repeat compiles
+    # Also patch, which IDF components such as micro-opus run at configure time
     && apt install -y --no-install-recommends \
         ccache \
         curl \
         git \
         libusb-1.0-0 \
         locales \
+        patch \
         tzdata \
     # Generate locale
     && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \

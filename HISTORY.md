@@ -7,7 +7,8 @@ ESPHome docker container that supports non-root operation.
 - Version 1.9:
   - Added the `libusb-1.0-0` runtime library: ESPHome's ESP-IDF toolchain installer validates the `openocd-esp32` tool by executing it, and that binary dynamically links `libusb-1.0.so.0`, so ESP-IDF builds failed with an ESP-IDF framework installation failure ([#161][issue-161-link]).
   - Added `ccache`: ESPHome enables it automatically for ESP-IDF builds whenever the binary is present, and its cache lives under the `/cache` volume, so it persists across container restarts.
-  - Added a firmware compile test that gates publishing: the image is built, loaded, and used to compile checked-in configurations as a non-root user, covering the Xtensa ESP-IDF, RISC-V ESP-IDF, wired Ethernet, and PlatformIO/Arduino build paths. It also runs on a pull request that changes the image or the tracked upstream version, so an upstream bump is verified before it merges.
+  - Added `patch`: ESPHome adds the `esphome/micro-opus` ESP-IDF component when the `audio` component enables the Opus codec ([#279][issue-279-link]). That component runs `patch` from CMake during component discovery, and the build fails when no `patch` binary is on `PATH`.
+  - Added a firmware compile test that gates publishing. The image is built, loaded, and used to compile checked-in configurations as a non-root user. The configurations cover the Xtensa ESP-IDF, RISC-V ESP-IDF, wired Ethernet, PlatformIO/Arduino, and configure-time patching build paths. The test also runs on a pull request that changes the image or the tracked upstream version, so an upstream bump is verified before merging.
   - Disabled Device Builder's version history feature by default: it auto-commits every YAML change under `/config` to git, unsigned, authored `ESPHome Device Builder <device-builder@esphome.io>`, and skipping hooks, which lands commits in the user's own repository where `/config` is a bind mount into one ([version history][device-builder-version-history-link]). Upstream documents the behavior as intended and will not change the default, so the entrypoint writes the preference before the dashboard starts. It warns and continues if `/config` cannot be written or holds a malformed preferences file, leaving the upstream default in place. Set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
   - Added a daily upstream-dependency watcher that snapshots the package list ESPHome's own base image installs and opens a pull request for review when that list changes.
 - Version 1.8:
@@ -42,6 +43,7 @@ ESPHome docker container that supports non-root operation.
 [device-builder-version-history-link]: https://github.com/esphome/device-builder/blob/main/README.md#version-history
 [esphome-pr-6987-link]: https://github.com/esphome/esphome/pull/6987
 [issue-161-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/161
+[issue-279-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/279
 [issue-60-link]: https://github.com/ptr727/ESPHome-NonRoot/issues/60
 [pio-debug-link]: https://docs.platformio.org/en/latest/plus/debugging.html
 [vscode-python-debug-link]: https://code.visualstudio.com/docs/python/debugging

@@ -350,7 +350,7 @@ A composite action cannot read secrets, so the compile test pulls the public bas
 
 It exists because a build-only smoke cannot see this class of break: ESPHome downloads its toolchains on first compile, and those binaries link against system libraries, so a missing runtime package surfaces only when a compile actually runs. Each fixture in `.github/compile-test/` is validated with `esphome config` and only then compiled, so a configuration break and a toolchain break give distinct signals, and the non-root uid asserts the property this image exists to provide. Passing a command bypasses the image entrypoint, so the run invokes `/entrypoint/cache.sh` first: the cache is initialized the way a real container start does, and that script, otherwise exercised by nothing, is covered too.
 
-The fixtures are chosen to span the *execution environments* a consumer hits, not to enumerate boards, and each adds a dimension the others cannot reach:
+The fixtures are chosen to span the *execution environments* a consumer hits, plus the configure-time `patch` step, not to enumerate boards. Each adds a dimension the others cannot reach:
 
 | Fixture | Dimension it covers |
 | --- | --- |
@@ -358,8 +358,9 @@ The fixtures are chosen to span the *execution environments* a consumer hits, no
 | `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF - a separate compiler binary, not just another board |
 | `esp32-ethernet.yaml` | wired Ethernet PHY drivers, which the wifi configurations never compile |
 | `esp8266-d1-mini.yaml` | PlatformIO + Arduino - a different build system, not a different target |
+| `esp32s3-audio-opus.yaml` | an IDF component that runs `patch` during CMake component discovery, a host tool no other fixture calls |
 
-They are hand-authored and checked in, each naming the upstream ESPHome project it is modeled on (`esphome/bluetooth-proxies`, `esphome/ready-made-project-template`) so a refresh has a reference point. Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used: both couple a daily monitor to something outside this repo that can change under it, and a scheduled job whose common failure is its own breakage stops being believed. Checked-in fixtures rot too - an ESPHome schema change fails `esphome config` - but that rot is loud, obvious, and a one-line fix. Detecting upstream drift is the dependency watcher's job, not this one's.
+They are hand-authored and checked in, each naming the upstream project it is modeled on, so a refresh has a reference point. Those projects are `esphome/bluetooth-proxies`, `esphome/ready-made-project-template`, and `sonocotta/esp32-audio-dock`. Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used. Both couple a daily monitor to something outside this repo that can change under it. A scheduled job whose common failure is its own breakage also stops being believed. Checked-in fixtures rot too, since an ESPHome schema change fails `esphome config`, but that rot is loud, obvious, and a one-line fix. Detecting upstream drift is the dependency watcher's job, not this one's.
 
 ### D10 - Project-Specific Guarantees
 
@@ -367,7 +368,7 @@ They are hand-authored and checked in, each naming the upstream ESPHome project 
 - **D10.2 The upstream pins drive the image.** Output: the `docker-prepare` hook reads `.esphome` and `.device_builder` from `upstream-version.json`, failing with `::error::` when either is missing, passes them as `ESPHOME_VERSION` and `DEVICE_BUILDER_VERSION`, and adds the `:<esphome version>` tag on a `main` build only. *Prevents: an image built from a pin other than the committed one, or a version tag on a develop image.*
 - **D10.3 The image compiles firmware before it ships.** Output: the `validate` hook compiles on every publisher run, and on a push CI run when its change-gate fires. It builds the validated commit (amd64, `load: true`, `push: false`, cache read-only) and runs `esphome compile` inside it, and the publisher's `publish` job needs `validate`. *Prevents: a runtime dependency missing from the final stage reaching Docker Hub, which a build-only smoke cannot see, because the toolchains that link against it are downloaded on first compile.*
 - **D10.4 Configurations are checked in and validated before compiling.** Output: each fixture lives in `.github/compile-test/`, is hand-authored rather than fetched or generated at run time, names the upstream project it is modeled on, and passes `esphome config` before `esphome compile` runs. *Prevents: a daily monitor failing on someone else's change, and separates a configuration break from a toolchain break.*
-- **D10.5 Every execution environment, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF, wired Ethernet, and PlatformIO/Arduino, and the container runs as uid 1000. *Prevents: a break confined to one toolchain, build system, or network stack - or a root-only regression - passing as green.*
+- **D10.5 Every execution environment and the configure-time `patch` step, non-root.** Output: the fixtures cover Xtensa ESP-IDF, RISC-V ESP-IDF, wired Ethernet, PlatformIO/Arduino, and the `patch` step an IDF component runs at configure time. The container runs as uid 1000. *Prevents: a break confined to one toolchain, build system, network stack, or that `patch` step passing as green, and likewise a root-only regression.*
 - **D10.6 Upstream-dependency watcher.** Output: the watcher runs daily, snapshots the `base`-stage apt package names from `esphome/docker-base` into `upstream-dependency.json` (sorted, LF, names only), and opens an App-signed PR on `upstream-dependency-develop` when the set moves. Its head ref matches no merge-bot rule, so it does **not** auto-merge, and the file is not a shipped input, so committing it does not fire the publisher. *Prevents: an upstream runtime dependency being noticed only through a user bug report.*
 
 ### Audit and Trace Additions
@@ -387,9 +388,10 @@ They are hand-authored and checked in, each naming the upstream ESPHome project 
 | S18 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package, which does **not** auto-merge and does **not** publish | D10.6 |
 | S19 | a runtime library the toolchain links against is dropped from the Dockerfile | the compile test fails on the ESP-IDF fixtures, the aggregator blocks the merge, and a publish of such a tree pushes nothing | D10.3, D10.5 |
 | S20 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D10.4 |
-| S21 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D10.5 |
+| S21 | a runtime dependency is missing for RISC-V but not Xtensa | `esp32-bluetooth-proxy.yaml`, which sorts first, passes and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D10.5 |
 | S22 | the tracker opens an upstream pin bump PR that breaks compiles | the decide step sees `upstream-version.json`, the compile test runs and fails, and the required check blocks auto-merge before the pin reaches `main` | D8.3, D10.3 |
 | S23 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity and publishes, and the `main` image carries the new `:<esphome version>` tag | D4.1, D10.2 |
+| S24 | `patch` is dropped from the Dockerfile | the ESP-IDF fixtures that sort before it pass and `esp32s3-audio-opus.yaml` fails at CMake component discovery, isolating it to the `patch` step, and the aggregator blocks the merge | D10.3, D10.5 |
 
 The 5C live probe adds one read after a `main` publish: `docker buildx imagetools inspect` shows amd64 and arm64 for `latest`, `:SemVer2`, and `:<esphome version>`, the Docker Hub overview matches `Docker/README.md`, and the image runs as the non-root user (`docker run --user 1001:100 ... esphome version`).
 
