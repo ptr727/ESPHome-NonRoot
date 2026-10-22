@@ -81,7 +81,7 @@ runs:
       with:
         platforms: linux/amd64
 
-    # amd64 only, loaded into the local daemon so the next step can run it, reading the shared cache and never writing it.
+    # The build is amd64 only, loaded into the local daemon so the next step can run it, reading the shared cache and never writing it.
     - name: Docker build step
       if: ${{ steps.decide.outputs.compile == 'true' }}
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -113,8 +113,7 @@ runs:
 
         cat > "$workdir/config/compile.sh" <<'SH'
         set -Eeuo pipefail
-        # Passing a command bypasses the image entrypoint, so initialize the cache the way a real run does
-        # rather than leaning on each tool to create its own tree under the world-writable mount.
+        # Passing a command bypasses the image entrypoint, so initialize the cache the way a real run does rather than leaning on each tool to create its own tree.
         /entrypoint/cache.sh
         for config in /config/*.yaml; do
           echo "::group::Compile $(basename "$config")"

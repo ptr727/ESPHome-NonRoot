@@ -2,7 +2,7 @@ name: Test pull request action
 
 # CI for every branch, a thin caller onto the hub's reusable validate and build-release tasks.
 # Runs on push so the aggregator, the ruleset required status check, is produced on the head SHA by the sole producing run.
-# validate and smoke-build run on every push with no paths filter, so a hub pin bump always exercises both hooks.
+# The validate and smoke-build jobs run on every push with no paths filter, so a hub pin bump always exercises both hooks.
 # Only the compile test inside the validate hook is change-gated, since it costs about five minutes and nothing it covers can move without the image or its test inputs changing.
 # CI never publishes, since the publisher runs on schedule, dispatch, or a bot pin push.
 #
@@ -55,8 +55,8 @@ jobs:
       docker_image: ptr727/esphome-nonroot
       branch: ${{ github.ref_name }}
 
-  # Single required status check. Its name is the ruleset-bound context in the live branch rulesets.
-  # Do not rename it without updating the rulesets in lockstep. It must succeed, not merely not fail.
+  # Single required status check, whose name is the ruleset-bound context in the live branch rulesets.
+  # Do not rename it without updating the rulesets in lockstep, and it must succeed, not merely not fail.
   # Skips on a branch deletion, when the jobs it needs also skip, so the deletion push does not fail it.
   check-workflow-status:
     name: Check pull request workflow status job
