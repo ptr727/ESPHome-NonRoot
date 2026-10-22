@@ -1,4 +1,5 @@
 #!/bin/bash
+# Starts the device-builder dashboard on /config, seeding the version history preference first because the dashboard reads it only at start.
 set -Eeuo pipefail
 
 usage() {

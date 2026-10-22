@@ -1,4 +1,5 @@
 #!/bin/bash
+# The image ENTRYPOINT: the default `entrypoint` command starts the dashboard, and any other command runs in its place, such as `esphome version`.
 set -Eeuo pipefail
 
 usage() {

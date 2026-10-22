@@ -1,4 +1,5 @@
 #!/bin/bash
+# Prepares the /cache tree the image environment points at, since a new or reused /cache volume may hold none of its subdirectories.
 set -Eeuo pipefail
 
 usage() {
