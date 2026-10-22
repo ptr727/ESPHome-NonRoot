@@ -1,6 +1,6 @@
 #!/bin/bash
-# Resets the container's scratch state before a start: it creates the /cache subdirectories, empties /tmp, and prunes the PlatformIO cache.
-# It runs on every start because a reused /cache volume can predate a subdirectory a later image added.
+# Readies /cache and /tmp for a dashboard start, and for a passed command that calls it first.
+# The subdirectories must exist before the tools that use them run, a restarted container keeps its old /tmp, and PlatformIO otherwise keeps every cached download.
 set -Eeuo pipefail
 
 usage() {

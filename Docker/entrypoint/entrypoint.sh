@@ -10,7 +10,7 @@ Usage: entrypoint.sh entrypoint
 
 The image ENTRYPOINT.
 
-  entrypoint        Create the /cache tree, then launch the device-builder dashboard.
+  entrypoint        Run /entrypoint/cache.sh, which also empties /tmp, then launch the device-builder dashboard.
                     This is the image's default command.
   COMMAND [ARG...]  Run COMMAND in place of the dashboard, such as `esphome version`.
                     The /cache tree is not created, so run /entrypoint/cache.sh first.
