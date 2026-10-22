@@ -4,7 +4,7 @@
 version: 2
 updates:
 
-  # GitHub Actions ecosystem, main
+  # GitHub Actions, main
   - package-ecosystem: "github-actions"
     target-branch: "main"
     # The composite-action hooks under .github/actions/ carry action pins of their own.
@@ -18,7 +18,7 @@ updates:
         patterns:
           - "*"
 
-  # GitHub Actions ecosystem, develop
+  # GitHub Actions, develop
   - package-ecosystem: "github-actions"
     target-branch: "develop"
     # The composite-action hooks under .github/actions/ carry action pins of their own.
@@ -32,7 +32,7 @@ updates:
         patterns:
           - "*"
 
-  # Docker ecosystem (Docker/Dockerfile base image), main
+  # Docker (Docker/Dockerfile base image), main
   - package-ecosystem: "docker"
     target-branch: "main"
     directory: "/Docker"
@@ -47,7 +47,7 @@ updates:
         patterns:
           - "*"
 
-  # Docker ecosystem (Docker/Dockerfile base image), develop
+  # Docker (Docker/Dockerfile base image), develop
   - package-ecosystem: "docker"
     target-branch: "develop"
     directory: "/Docker"

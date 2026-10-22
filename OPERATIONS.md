@@ -35,6 +35,13 @@ docker compose --file ./Docker/Compose.yml up --detach
 
 The dashboard is then at `http://localhost:6052`. `docker exec -it --user 1001:100 esphome-test /bin/bash` attaches a shell as the non-root user, and `docker compose --file ./Docker/Compose.yml down --volumes` destroys the stack and its test volumes.
 
+Only a `main` publish builds arm64, so exercise an arm64 change locally with a multi-platform build:
+
+```sh
+docker buildx create --name esphome --use
+docker buildx build --platform linux/amd64,linux/arm64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
+```
+
 ### Compile a Test Configuration in the Image
 
 The [`validate`](./.github/actions/validate/action.yml) hook, which the hub's `validate-task.yml` runs for pull request CI and the publisher alike, works inside the built image as a non-root user. It first checks that each entrypoint script answers `--help` and refuses an unknown argument. It then runs `/entrypoint/cache.sh`, then `esphome config` and `esphome compile` for each fixture in [`.github/compile-test/`](./.github/compile-test/). Reproduce the compile against a locally built image by bind-mounting the fixtures and running `esphome config` and `esphome compile` for the fixture in question. [`WORKFLOW.md`](./WORKFLOW.md) "The Image Compile Test" states what each fixture covers.
