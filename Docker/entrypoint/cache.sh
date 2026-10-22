@@ -1,6 +1,7 @@
 #!/bin/bash
 # Readies /cache and /tmp for a dashboard start, and for a passed command that calls it first.
-# The subdirectories must exist before the tools that use them run, a restarted container keeps its old /tmp, and PlatformIO otherwise keeps every cached download.
+# The subdirectories must exist before the tools that use them run, and a restarted container keeps its old /tmp.
+# Pruning drops PlatformIO's download cache and keeps its installed packages, so the /cache volume does not accumulate every archive it fetched.
 set -Eeuo pipefail
 
 usage() {
