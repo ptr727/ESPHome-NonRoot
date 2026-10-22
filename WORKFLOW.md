@@ -350,7 +350,7 @@ A composite action cannot read secrets, so the compile test pulls the public bas
 
 It exists because a build-only smoke cannot see this class of break: ESPHome downloads its toolchains on first compile, and those binaries link against system libraries, so a missing runtime package surfaces only when a compile actually runs. Each fixture in `.github/compile-test/` is validated with `esphome config` and only then compiled, so a configuration break and a toolchain break give distinct signals, and the non-root uid asserts the property this image exists to provide. Passing a command bypasses the image entrypoint, so the run invokes `/entrypoint/cache.sh` first: the cache is initialized the way a real container start does, and that script, otherwise exercised by nothing, is covered too.
 
-The fixtures are chosen to span the *execution environments* a consumer hits, not to enumerate boards, and each adds a dimension the others cannot reach:
+The fixtures are chosen to span the *execution environments* a consumer hits, plus the configure-time `patch` step, not to enumerate boards. Each adds a dimension the others cannot reach:
 
 | Fixture | Dimension it covers |
 | --- | --- |
@@ -391,6 +391,7 @@ They are hand-authored and checked in, each naming the upstream project it is mo
 | S21 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D10.5 |
 | S22 | the tracker opens an upstream pin bump PR that breaks compiles | the decide step sees `upstream-version.json`, the compile test runs and fails, and the required check blocks auto-merge before the pin reaches `main` | D8.3, D10.3 |
 | S23 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity and publishes, and the `main` image carries the new `:<esphome version>` tag | D4.1, D10.2 |
+| S24 | `patch` is dropped from the Dockerfile | the generic fixtures pass and `esp32s3-audio-opus.yaml` fails at CMake component discovery, isolating it to the `patch` step, and the aggregator blocks the merge | D10.5 |
 
 The 5C live probe adds one read after a `main` publish: `docker buildx imagetools inspect` shows amd64 and arm64 for `latest`, `:SemVer2`, and `:<esphome version>`, the Docker Hub overview matches `Docker/README.md`, and the image runs as the non-root user (`docker run --user 1001:100 ... esphome version`).
 
