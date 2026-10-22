@@ -381,7 +381,7 @@ They are hand-authored and checked in, each naming the upstream project it is mo
 | --- | --- | --- | --- |
 | S15 | pull request touching `Docker/Dockerfile` | `validate` compiles every fixture, `smoke-build` builds the image, nothing is pushed or released, aggregator success | D10.3 |
 | S16 | docs-only push to a pull request whose branch earlier changed `Docker/**` | the test merge commit's diff still sees the image change, so the compile test runs and the branch cannot pass ungated | D10.3 |
-| S17 | docs-only pull request | the decide step reports the compile inputs unchanged, `validate` runs the lint and prose gates only, `smoke-build` skips, aggregator success | D1.1, D10.3 |
+| S17 | docs-only pull request | the decide step reports the compile inputs unchanged, `validate` runs its lint, repo, and prose gates without compiling, `smoke-build` skips, aggregator success | D1.1, D10.3 |
 | S18 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package, which does **not** auto-merge and does **not** publish | D10.6 |
 | S19 | a runtime library the toolchain links against is dropped from the Dockerfile | the compile test fails on the ESP-IDF fixtures, the aggregator blocks the merge, and a publish of such a tree pushes nothing | D10.3, D10.5 |
 | S20 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D10.4 |

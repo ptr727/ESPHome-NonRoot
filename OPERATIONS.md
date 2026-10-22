@@ -12,7 +12,7 @@ The gates are the hub's `validate-task.yml` lint block, `markdownlint-cli2`, `cs
 
 - **The arm64 image.** The pull request smoke build and every `develop` publish build `linux/amd64` only. Only a full `main` publish builds `linux/amd64,linux/arm64`, so an arm64-only break first surfaces on `main`.
 - **The firmware compile test, unless the change touches the image.** On a pull request run of `test-pull-request.yml`, the `validate` hook compiles only on a change to the image, to what is compiled in it, or to the hub pin. A change outside those paths merges without anything compiling firmware in the image.
-- **The bumped release task, on a hub pin bump.** A workflow-only pull request skips the smoke build, so a bump touching only workflow files never runs the bumped `build-release-task.yml` on its own pull request. A dispatch of `test-pull-request.yml` on the branch the bump merged into always smoke-builds under it.
+- **The bumped release task, on a hub pin bump.** A workflow-only pull request skips the smoke build, so a bump touching only workflow files never runs the bumped `build-release-task.yml` on its own pull request. A dispatch of `test-pull-request.yml` on the branch the bump merged into always smoke-builds under it. Its check also lands on any open pull request headed by that branch, without the prose gate, per ptr727/ProjectTemplate#3334.
 - **A running dashboard.** No workflow starts the container and talks to the dashboard. A change that can affect the entrypoint, the dashboard, or file permissions is verified by building and running the image locally, per the runbook below.
 
 Two traps make a headless test of the running container pass while proving nothing:
