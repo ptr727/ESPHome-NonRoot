@@ -154,6 +154,8 @@ docker compose --file ./Docker/Compose.yml down --volumes
 
 ### Docker Run Command
 
+A command passed to the image runs in place of the dashboard, so `esphome --help` reaches `esphome` itself. `docker run --rm ptr727/esphome-nonroot:latest --help` prints the entrypoint's own usage instead.
+
 ```shell
 # esphome version
 docker run --rm --pull always --name esphome-test -v /data/esphome/config:/config -v /data/esphome/cache:/cache ptr727/esphome-nonroot:latest esphome version
