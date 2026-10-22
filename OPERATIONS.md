@@ -35,7 +35,7 @@ The dashboard is then at `http://localhost:6052`. `docker exec -it --user 1001:1
 
 ### Compile a Test Configuration in the Image
 
-The [`validate`](./.github/actions/validate/action.yml) hook, which the hub's `validate-task.yml` runs for pull request CI and the publisher alike, checks that each entrypoint script answers `--help` and refuses an unknown argument, then runs `/entrypoint/cache.sh`, then `esphome config` and `esphome compile` for each fixture in [`.github/compile-test/`](./.github/compile-test/), inside the built image as a non-root user. Reproduce it against a locally built image by bind-mounting the fixtures and running the same two commands for the fixture in question. [`WORKFLOW.md`](./WORKFLOW.md) "The Image Compile Test" states what each fixture covers.
+The [`validate`](./.github/actions/validate/action.yml) hook, which the hub's `validate-task.yml` runs for pull request CI and the publisher alike, works inside the built image as a non-root user. It first checks that each entrypoint script answers `--help` and refuses an unknown argument. It then runs `/entrypoint/cache.sh`, then `esphome config` and `esphome compile` for each fixture in [`.github/compile-test/`](./.github/compile-test/). Reproduce the compile against a locally built image by bind-mounting the fixtures and running `esphome config` and `esphome compile` for the fixture in question. [`WORKFLOW.md`](./WORKFLOW.md) "The Image Compile Test" states what each fixture covers.
 
 ### Check Whether `develop` Is Missing a `main`-Only Fix
 

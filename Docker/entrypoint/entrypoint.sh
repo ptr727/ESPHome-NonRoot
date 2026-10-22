@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: entrypoint.sh [entrypoint | COMMAND [ARG...] | -h | --help]
+Usage: entrypoint.sh entrypoint
+       entrypoint.sh COMMAND [ARG...]
+       entrypoint.sh -h | --help
 
 The image ENTRYPOINT.
 

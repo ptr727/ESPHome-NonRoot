@@ -1,10 +1,10 @@
 # The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
-# It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
+# It builds the image under test, checks its entrypoint scripts' arguments, and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
 # A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
 # The publisher always compiles, and pull request CI compiles when the image, what is compiled in it, or its hub pin changed.
 # A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
 name: ESPHome-NonRoot validate hook
-description: Compile every .github/compile-test configuration in the built image as a non-root user.
+description: Check the entrypoint scripts' arguments, then compile every .github/compile-test configuration in the built image as a non-root user.
 
 runs:
   using: composite
@@ -104,6 +104,7 @@ runs:
         failed=0
         fail() {
           echo "::error::$1"
+          sed 's/^/    /' "$out" "$err" | tail -n 5
           failed=1
         }
 
@@ -113,9 +114,6 @@ runs:
           timeout 120 docker run --rm --user 1000:1000 "$@" > "$out" 2> "$err" || code=$?
           echo "$code"
         }
-        tail_of() {
-          cat "$out" "$err" | tail -n 5
-        }
 
         for script in entrypoint cache dashboard; do
           entry=(--entrypoint "/entrypoint/$script.sh")
@@ -123,7 +121,7 @@ runs:
           for flag in --help -h; do
             code="$(run "${entry[@]}" "$image" "$flag")"
             if [[ "$code" != 0 ]] || ! grep -q "^Usage: $script.sh" "$out"; then
-              fail "$script.sh $flag exited $code without its usage line: $(tail_of)"
+              fail "$script.sh $flag exited $code without its usage line"
             elif [[ -z "$help" ]]; then
               help="$(cat "$out")"
             elif [[ "$(cat "$out")" != "$help" ]]; then
@@ -132,22 +130,22 @@ runs:
           done
           code="$(run "${entry[@]}" "$image" --no-such-option)"
           if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
-            fail "$script.sh --no-such-option exited $code without refusing it: $(tail_of)"
+            fail "$script.sh --no-such-option exited $code without refusing it"
           fi
         done
 
         code="$(run "$image" entrypoint --no-such-option)"
         if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
-          fail "entrypoint.sh entrypoint --no-such-option exited $code without refusing it: $(tail_of)"
+          fail "entrypoint.sh entrypoint --no-such-option exited $code without refusing it"
         fi
 
         code="$(run "$image" esphome --help)"
         if [[ "$code" != 0 ]] || ! grep -qi "^usage: esphome" "$out"; then
-          fail "esphome --help exited $code without esphome's own usage line: $(tail_of)"
+          fail "esphome --help exited $code without esphome's own usage line"
         fi
         code="$(run "$image" esphome version)"
         if [[ "$code" != 0 ]] || ! grep -q "Version" "$out"; then
-          fail "esphome version exited $code without a version: $(tail_of)"
+          fail "esphome version exited $code without a version"
         fi
 
         exit "$failed"
@@ -166,7 +164,7 @@ runs:
 
         cat > "$workdir/config/compile.sh" <<'SH'
         set -Eeuo pipefail
-        # Passing a command bypasses the image entrypoint, so initialize the cache the way a real run does rather than leaning on each tool to create its own tree.
+        # A passed command runs in place of the dashboard and skips cache.sh, so initialize the cache the way a real run does rather than leaning on each tool to create its own tree.
         /entrypoint/cache.sh
         for config in /config/*.yaml; do
           echo "::group::Compile $(basename "$config")"
