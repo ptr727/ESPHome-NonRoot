@@ -8,7 +8,7 @@
             "label": "Lint: EditorConfig",
             "type": "process",
             "command": "docker",
-            "args": [ "run", "--rm", "--pull=always", "-v", "${workspaceFolder}:/check", "-w", "/check", "mstruebing/editorconfig-checker:latest" ],
+            "args": [ "run", "--rm", "--pull=always", "-v", "${workspaceFolder}:/check", "-w", "/check", "ghcr.io/editorconfig-checker/editorconfig-checker:latest" ],
             "problemMatcher": [],
             "presentation": { "showReuseMessage": false, "clear": false }
         },
@@ -37,13 +37,39 @@
             "presentation": { "showReuseMessage": false, "clear": false }
         },
         {
+            "label": "Lint: Prose",
+            "type": "process",
+            "command": "python3",
+            "args": [ "${workspaceFolder}/hub_fetch_run.py", ".github/actions/prose-gate/prose_lint.py", "." ],
+            "windows": {
+                "command": "py",
+                "args": [ "-3", "${workspaceFolder}/hub_fetch_run.py", ".github/actions/prose-gate/prose_lint.py", "." ]
+            },
+            "problemMatcher": [],
+            "presentation": { "showReuseMessage": false, "clear": false }
+        },
+        {
+            "label": "Lint: EOL",
+            "type": "process",
+            "command": "python3",
+            "args": [ "${workspaceFolder}/hub_fetch_run.py", ".github/actions/repo-gate/repo_gate.py", "--check", "eol" ],
+            "windows": {
+                "command": "py",
+                "args": [ "-3", "${workspaceFolder}/hub_fetch_run.py", ".github/actions/repo-gate/repo_gate.py", "--check", "eol" ]
+            },
+            "problemMatcher": [],
+            "presentation": { "showReuseMessage": false, "clear": false }
+        },
+        {
             "label": "Lint: All",
             "dependsOrder": "sequence",
             "dependsOn": [
                 "Lint: EditorConfig",
                 "Lint: Workflows",
                 "Lint: Markdown",
-                "Lint: Spelling"
+                "Lint: Spelling",
+                "Lint: Prose",
+                "Lint: EOL"
             ],
             "problemMatcher": []
         }

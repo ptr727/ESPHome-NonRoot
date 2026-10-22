@@ -315,5 +315,6 @@ Every repo's GitHub repository details (the About panel) follow a fixed conventi
 - [`host-tools.json`](./host-tools.json): this repo's host-tool declaration, layered over the fleet one. It adds nothing today.
 - [`README.md`](./README.md), [`HISTORY.md`](./HISTORY.md): the GitHub-side overview and the full release history.
 - [`.editorconfig`](./.editorconfig), [`.gitattributes`](./.gitattributes), [`.markdownlint-cli2.jsonc`](./.markdownlint-cli2.jsonc), [`cspell.json`](./cspell.json), and [`ESPHome-NonRoot.code-workspace`](./ESPHome-NonRoot.code-workspace): the formatting, lint, and editor configuration.
+- [`.pre-commit-config.yaml`](./.pre-commit-config.yaml) and [`hub_fetch_run.py`](./hub_fetch_run.py): the local commit hook, running the diff-scoped prose gate and the line-ending check, each fetched fresh from the hub's `main` by the helper.
 
 After editing a doc, run the linters (see "Running the Linters Locally (Known-Working Invocations)", a hub-only section read in a hub checkout rather than carried into every fleet repo) before commit. The Comments, Character Set, and Line Endings rules above are the frequent regressions, so hold them exactly.
