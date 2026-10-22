@@ -216,7 +216,7 @@ I have no name!@012d4b62d376:/config$
 - Use [`uv`][uv-link] to build a virtual environment in the builder stage, and copy the self-contained environment into the slim final stage.
 - Set appropriate PlatformIO and ESPHome environment variables to store projects in `/config` and dynamic and temporary content in `/cache` volumes.
 - Refer to [`Dockerfile`][dockerfile] for container details.
-- Refer to [`publish-release.yml`][publish-release] (the publisher) and [`build-docker-task.yml`][build-docker-task] (the image build) for pipeline details.
+- Refer to [`publish-release.yml`][publish-release] (the publisher) and the [`docker-prepare`][docker-prepare-hook] hook (the upstream pins and image tags) for pipeline details.
 
 ## Questions or Issues
 
@@ -280,8 +280,8 @@ Licensed under the [MIT License][license]\
 
 <!-- Repo -->
 
-[build-docker-task]: ./.github/workflows/build-docker-task.yml
 [devcontainer]: ./.devcontainer/devcontainer.json
+[docker-prepare-hook]: ./.github/actions/docker-prepare/action.yml
 [dockerfile]: ./Docker/Dockerfile
 [history]: ./HISTORY.md
 [license]: ./LICENSE

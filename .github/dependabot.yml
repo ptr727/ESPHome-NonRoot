@@ -8,7 +8,10 @@ updates:
   # github-actions, main
   - package-ecosystem: "github-actions"
     target-branch: "main"
-    directory: "/"
+    # The composite-action hooks under .github/actions/ carry action pins of their own.
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "daily"
     groups:
@@ -19,7 +22,10 @@ updates:
   # github-actions, develop
   - package-ecosystem: "github-actions"
     target-branch: "develop"
-    directory: "/"
+    # The composite-action hooks under .github/actions/ carry action pins of their own.
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "daily"
     groups:

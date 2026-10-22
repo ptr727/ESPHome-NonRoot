@@ -1,0 +1,30 @@
+# The resolve-upstream hook the hub's check-upstream-version-task.yml requires, run once per tracked branch.
+# It resolves the latest ESPHome and Device Builder releases from PyPI and reports them as one name -> version object.
+# The build reads .esphome for the image tag and ESPHOME_VERSION, and .device_builder for DEVICE_BUILDER_VERSION.
+# Every branch leg resolves the same PyPI versions, so the main and develop bumps stay byte-identical and never conflict on promotion.
+name: ESPHome-NonRoot resolve-upstream hook
+description: Resolve the latest ESPHome and esphome-device-builder versions from PyPI.
+
+outputs:
+  versions:
+    description: Compact JSON object with esphome and device_builder version strings.
+    value: ${{ steps.resolve.outputs.versions }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve PyPI versions step
+      id: resolve
+      shell: bash
+      run: |
+        set -Eeuo pipefail
+        latest() {
+          curl --silent --show-error --location --fail "https://pypi.org/pypi/$1/json" | jq -r '.info.version // empty'
+        }
+        esphome="$(latest esphome)"
+        device_builder="$(latest esphome-device-builder)"
+        if [[ -z "$esphome" || -z "$device_builder" ]]; then
+          echo "::error::Could not resolve the latest esphome and esphome-device-builder versions from PyPI."
+          exit 1
+        fi
+        echo "versions=$(jq -cn --arg e "$esphome" --arg d "$device_builder" '{esphome: $e, device_builder: $d}')" >> "$GITHUB_OUTPUT"
