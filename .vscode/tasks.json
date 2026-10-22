@@ -1,7 +1,7 @@
 {
     // The Lint group is the local full doc-lint surface, run on demand and mirroring the CI lint set.
     // The Docker tasks run at :latest, so versions can drift from CI's pinned actions.
-    // Lint: Prose and Lint: EOL run the commit hook's two gates natively, in whole-repo mode rather than diff-scoped.
+    // Lint: Prose and Lint: EOL run the commit hook's two gates natively, Lint: Prose over the whole tree rather than the diff.
     // Every repo carries these.
     // This repo has no compiled language, so there is no build or clean group.
     "version": "2.0.0",
