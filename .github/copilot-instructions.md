@@ -43,13 +43,13 @@ Review effort is user-controlled. The automation observes `Lite`, `Balanced`, or
 **The entries are this repository's own.** Each names a file and a revision. A repository holding a copy of this file therefore carries the shape and the rules above rather than these findings. That repository deletes an entry whose subject it does not carry and records what it has proved itself. An entry is never about hub-hosted machinery, the tooling a repository reaches rather than carries per [GOVERNANCE.md "Hub-Hosted Tooling"](../GOVERNANCE.md#hub-hosted-tooling). A repository without that tooling has nothing to re-check such a claim against, so a constraint on that tooling is recorded in that tooling's code.
 
 - **`--args` after the filter in `.github/actions/docker-prepare/action.yml` leaves `$ARGS.positional` empty, so the build matrix carries no tags.** Raised by Copilot as a P1 on a promotion pull request.
-  - **Disproved by** - running `jq -cn --arg a x '$ARGS.positional' --args t1 t2`, which prints `["t1","t2"]` on jq 1.8.2 and on jq 1.7.1, the runner's version. `jq` reads `--args` wherever it appears in argv, and every later argument that is not an option is a positional value. Every publish since resolves a tagged matrix through this step.
+  - **Disproved by** - running `jq -cn --arg a x '$ARGS.positional' --args t1 t2`, which prints `["t1","t2"]` on jq 1.8.2 and on jq 1.7.1, the runner's version. `jq` reads `--args` wherever it appears in argv, and every later argument that is not an option is a positional value.
   - **Proved against** - the matrix step of `.github/actions/docker-prepare/action.yml` on `develop` at `7168cdca`.
   - **Delete when** - that step stops passing the tags through `--args`, or a `jq` release reads `--args` only before the filter.
-- **A `develop -> main` promotion pull request changes `upstream-version.json`.** Raised by Copilot as a P1 on a promotion after the upstream tracker bumped the pins on `develop` and on `main` separately. It recurs after each such bump.
-  - **Disproved by** - comparing GitHub's file list, the three-dot diff from the merge base, against the merge result. `git diff --stat 91792cdd...a2bffb0b` lists `upstream-version.json`, while `git diff --stat 91792cdd "$(git merge-tree --write-tree 91792cdd a2bffb0b)"` does not, since both branches carry the same pins. The merged commit agrees with the merge-tree result.
-  - **Proved against** - `main` at `91792cdd` and `develop` at `a2bffb0b`, on git 2.47.3.
-  - **Delete when** - the upstream tracker lands a pin bump on one branch only, so the branches stop carrying separate copies of the same bump.
+- **A `develop -> main` promotion pull request changes `upstream-version.json` although both branches already carry the same pins.** Raised by Copilot as a P1 on a promotion. The upstream tracker opens a bump pull request per branch, so the claim recurs after each bump once both have merged.
+  - **Disproved by** - comparing GitHub's file list, the three-dot diff from the merge base, against the merge result. For `main` at `91792cdd` and `develop` at `a2bffb0b`, `git diff --stat 91792cdd...a2bffb0b` lists `upstream-version.json`. `git diff --stat 91792cdd "$(git merge-tree --write-tree 91792cdd a2bffb0b)"` does not, and the merged commit matches the merge-tree result. Re-run the same pair of commands on the promotion's own tips. While only one branch's bump has merged, the promotion really does change the pins, and the claim is true.
+  - **Proved against** - the per-branch bump in `.github/workflows/check-upstream-version.yml` at `54cde69`, with the tips above as the worked example, on git 2.47.3.
+  - **Delete when** - the upstream tracker stops opening a bump pull request per branch.
 
 ## When in Doubt
 
