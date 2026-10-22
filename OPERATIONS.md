@@ -35,7 +35,7 @@ docker compose --file ./Docker/Compose.yml up --detach
 
 The dashboard is then at `http://localhost:6052`. `docker exec -it --user 1001:100 esphome-test /bin/bash` attaches a shell as the non-root user, and `docker compose --file ./Docker/Compose.yml down --volumes` destroys the stack and its test volumes.
 
-Only a `main` publish builds arm64, so exercise an arm64 change locally with a multi-platform build. The arm64 half runs under QEMU emulation, which Docker Desktop ships and a Linux Docker Engine host lacks until the `binfmt` step installs it. Run the first two commands once per machine. The build leaves its result in the build cache rather than loading an image to run:
+Only a `main` publish builds arm64, so exercise an arm64 change locally with a multi-platform build. The arm64 half runs under QEMU emulation, which Docker Desktop ships and a Linux Docker Engine host lacks until the `binfmt` step installs it. Run the `binfmt` step once per boot, unless the host registers QEMU at boot, and `docker buildx create` once per machine. The build leaves its result in the build cache rather than loading an image to run:
 
 ```sh
 docker run --privileged --rm tonistiigi/binfmt --install arm64
