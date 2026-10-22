@@ -1,0 +1,142 @@
+# The validate hook the hub's validate-task.yml runs in place of its no-op default, this repo's own domain check.
+# It builds the image under test and compiles firmware in it, since the toolchains ESPHome downloads on first compile link against system libraries.
+# A missing runtime package fails here and nowhere else, so lint and a build-only smoke cannot see it.
+# The publisher always compiles, and the push CI compiles only when the image, what is compiled in it, or the hub pin that runs it changed.
+# A composite action cannot read secrets, so the build reads the public base image and the shared cache without a Docker Hub login.
+name: ESPHome-NonRoot validate hook
+description: Compile every .github/compile-test configuration in the built image as a non-root user.
+
+runs:
+  using: composite
+  steps:
+
+    # Only a push run of the pull request workflow is gated.
+    # The publisher and a dispatch always compile, and so does a new main or develop, which carries no before-commit to diff against.
+    # A feature branch diffs against its merge-base with develop, so a later docs-only push cannot retire a compile test the branch earned.
+    - name: Decide compile test step
+      id: decide
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        WORKFLOW_REF: ${{ github.workflow_ref }}
+        REPOSITORY: ${{ github.repository }}
+        REF_NAME: ${{ github.ref_name }}
+        BEFORE: ${{ github.event.before }}
+        AFTER: ${{ github.sha }}
+      run: |
+        set -Eeuo pipefail
+        compile() {
+          echo "compile=$1" >> "$GITHUB_OUTPUT"
+          echo "Compile test: $1 ($2)"
+          exit 0
+        }
+        if [[ "$EVENT" != "push" || "$WORKFLOW_REF" != "$REPOSITORY/.github/workflows/test-pull-request.yml@"* ]]; then
+          compile true "not a pull request workflow push"
+        fi
+        if [[ "$REF_NAME" == "main" || "$REF_NAME" == "develop" ]]; then
+          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
+            compile true "new branch"
+          fi
+          from="$BEFORE"
+        else
+          from=""
+        fi
+        # The hub task checks out one commit, so deepen it and fetch develop before reasoning about a diff.
+        deepen=()
+        if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+          deepen=(--unshallow)
+        fi
+        if ! git fetch --quiet --no-tags "${deepen[@]}" origin "+refs/heads/develop:refs/remotes/origin/develop"; then
+          compile true "history fetch failed"
+        fi
+        if [[ -z "$from" ]] && ! from="$(git merge-base origin/develop "$AFTER")"; then
+          compile true "no merge-base with develop"
+        fi
+        if ! diff="$(git diff --name-only "$from" "$AFTER")"; then
+          compile true "diff base not in history"
+        fi
+        # The two stubs carry the hub pin, so a hub release bump compile-tests the hooks under the new tasks before it auto-merges.
+        if grep -qE '^(Docker/|\.github/compile-test/|\.github/actions/(validate|docker-prepare)/|\.github/workflows/(test-pull-request|publish-release)\.yml$|upstream-version\.json$)' <<<"$diff"; then
+          compile true "image or compile inputs changed"
+        fi
+        compile false "image and compile inputs unchanged"
+
+    # The docker-prepare hook is the one reader of the upstream pins, so the image compiled here is built from the same inputs the publisher builds.
+    # The image and semver2 values only name tags, which this local build replaces with its own.
+    - name: Resolve build inputs step
+      id: prepare
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      uses: ./.github/actions/docker-prepare
+      with:
+        image: ptr727/esphome-nonroot
+        branch: develop
+        semver2: compile-test
+
+    - name: Read build inputs step
+      id: entry
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      shell: bash
+      env:
+        MATRIX: ${{ steps.prepare.outputs.matrix }}
+      run: |
+        set -Eeuo pipefail
+        {
+          echo "context=$(jq -r '.[0].context' <<<"$MATRIX")"
+          echo "dockerfile=$(jq -r '.[0].dockerfile' <<<"$MATRIX")"
+          echo "cache-repo=$(jq -r '.[0]."cache-repo"' <<<"$MATRIX")"
+          echo "build-args<<ARGEOF"
+          jq -r '.[0]."build-args"[]' <<<"$MATRIX"
+          echo "ARGEOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Setup Buildx step
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+      with:
+        platforms: linux/amd64
+
+    # The build is amd64 only, loaded into the local daemon so the next step can run it, reading the shared cache and never writing it.
+    - name: Docker build step
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: ${{ steps.entry.outputs.context }}
+        file: ${{ steps.entry.outputs.dockerfile }}
+        load: true
+        push: false
+        tags: esphome-nonroot:compile-test
+        platforms: linux/amd64
+        cache-from: |
+          type=registry,ref=${{ steps.entry.outputs.cache-repo }}:buildcache-main
+          type=registry,ref=${{ steps.entry.outputs.cache-repo }}:buildcache-develop
+        build-args: ${{ steps.entry.outputs.build-args }}
+
+    - name: Compile test configurations step
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      shell: bash
+      run: |
+        set -Eeuo pipefail
+
+        # The container runs as a non-root uid that owns nothing on the runner, so both mounts must be world-writable.
+        workdir="$(mktemp -d)"
+        mkdir -p "$workdir/config" "$workdir/cache"
+        cp .github/compile-test/*.yaml "$workdir/config/"
+        chmod -R 0777 "$workdir/config" "$workdir/cache"
+
+        cat > "$workdir/config/compile.sh" <<'SH'
+        set -Eeuo pipefail
+        # Passing a command bypasses the image entrypoint, so initialize the cache the way a real run does rather than leaning on each tool to create its own tree.
+        /entrypoint/cache.sh
+        for config in /config/*.yaml; do
+          echo "::group::Compile $(basename "$config")"
+          esphome config "$config" > /dev/null
+          esphome compile "$config"
+          echo "::endgroup::"
+        done
+        SH
+
+        docker run --rm --user 1000:1000 \
+          --volume "$workdir/config":/config \
+          --volume "$workdir/cache":/cache \
+          esphome-nonroot:compile-test \
+          bash /config/compile.sh

@@ -5,10 +5,12 @@ set -e
 if [ "$1" = 'entrypoint' ]; then
 
     # Create cache subdirectories
-    source ${BASH_SOURCE%/*}/cache.sh
+    # shellcheck disable=SC1091 # Sourced from beside this script at run time, which a static check cannot follow.
+    source "${BASH_SOURCE%/*}/cache.sh"
 
     # Launch dashboard
-    source ${BASH_SOURCE%/*}/dashboard.sh
+    # shellcheck disable=SC1091 # Sourced from beside this script at run time, which a static check cannot follow.
+    source "${BASH_SOURCE%/*}/dashboard.sh"
 
 else
     # Run passed command

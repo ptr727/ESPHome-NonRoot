@@ -1,58 +1,95 @@
 name: Publish project release action
 
-# Triggered-Docker publisher, one run = one branch (the trigger ref). The weekly schedule rebuilds `main` only
-# (multi-arch image + GitHub release; refreshes the `latest`/version tags and the python:3.14-slim base for CVEs).
-# A path-scoped push to main publishes when the upstream-check App commits a new `upstream-version.json` pin; the
-# plan job (publish-plan-task.yml) gates it to the App identity, so a human pin edit does not publish. A manual dispatch publishes the branch it is started from (main => latest, develop => prerelease/`develop`).
-# Building only the trigger branch keeps github.ref aligned with the branch being versioned, so NBGV classifies it
-# with no matrix and no cross-branch ref leak.
+# Thin caller onto the hub's reusable plan, validate, build-release, and Docker Hub readme tasks.
+# One run publishes one branch, the trigger ref, so github.ref stays aligned with the branch NBGV versions.
+# The weekly schedule rebuilds main, refreshing the python:3.14-slim base for CVEs and cutting a versioned GitHub release.
+# A path-scoped push publishes main as soon as the upstream-version tracker's App merge lands a new upstream-version.json pin.
+# A manual dispatch publishes the branch it is started from, main as latest and develop as the develop prerelease.
 #
-# Ordinary code merges do NOT publish: only a bot pin change (push to main, gated to the App identity), a schedule, or a dispatch does.
-# Each branch self-releases: main builds multi-arch, develop builds amd64 only. CI/validation runs separately on
-# push (test-pull-request).
+# Ordinary code merges do not publish: the plan task publishes a push only when a bot made it, so a hand-edited pin does not.
+# The validate hook compiles firmware in the image on every publish, so a toolchain break blocks the push.
+# The docker-prepare hook adds the upstream pins as build-args and, on main, the pinned ESPHome version tag.
+
 on:
   workflow_dispatch:
   schedule:
-    # Weekly rebuild/publish of main (Mon 02:00 UTC) to pick up base-image updates.
+    # Weekly rebuild and publish of main, Monday 02:00 UTC, to pick up base-image updates.
     - cron: '0 2 * * MON'
-  # Publish main when the upstream-check App commits a new pin here (the plan job gates it to the App identity); a develop prerelease comes via dispatch.
   push:
     branches: [main]
     paths: [upstream-version.json]
 
-# Global, ref-independent group so two publishes never overlap (a schedule + a dispatch + a pin push, or back-to-back
-# dispatches). cancel-in-progress: false so a publish is never cancelled mid-release.
+# GOVERNANCE.md "Workflow YAML Conventions" Concurrency exception (2).
+# The expression must track publish-plan-task.yml's push rule and actor allowlist.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event_name == 'push' && (github.ref != 'refs/heads/main' || (github.actor != 'ptr727-codegen[bot]' && github.actor != 'dependabot[bot]')) && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: false
+
+# GITHUB_TOKEN gets no scope by default, and each job below grants only what its hub task writes with.
+permissions: {}
 
 jobs:
 
-  # Single source of the release-gate decision (publish? stable?); the publish job gates on its output instead of
-  # re-testing event/actor/branch. See publish-plan-task.yml for the policy.
+  # Single source of the release-gate decision (publish or not, stable or not), reused by every job below.
   plan:
     name: Plan release job
-    uses: ./.github/workflows/publish-plan-task.yml
+    uses: ptr727/ProjectTemplate/.github/workflows/publish-plan-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
     with:
       event_name: ${{ github.event_name }}
       actor: ${{ github.actor }}
       ref_name: ${{ github.ref_name }}
 
-  # Publish the trigger branch in full (Docker image + GitHub release). The schedule and a bot pin push both run on
-  # main; a dispatch runs on whatever branch it is started from. build-release-task validates, versions, and tags
-  # that one branch; the no-op guard skips release creation when the version is unchanged while the Docker push
-  # still refreshes the base image.
-  publish:
-    name: Publish project release job
+  # The same reusable gate the push CI runs, on the triggering commit, running only when a publish will happen.
+  # The validate hook always compiles firmware here, since a publisher run is never change-gated.
+  validate:
+    name: Validate job
     needs: [plan]
     if: ${{ needs.plan.outputs.publish == 'true' }}
-    uses: ./.github/workflows/build-release-task.yml
-    secrets: inherit
+    uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
+    permissions:
+      contents: read
+
+  # Version, build, and push the image for the trigger branch, then cut the GitHub release.
+  publish:
+    name: Publish project release job
+    needs: [plan, validate]
+    if: ${{ needs.plan.outputs.publish == 'true' && needs.validate.result == 'success' }}
+    uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
     permissions:
       contents: write
+      # Lets the hub github-release job delete its transfer artifacts and dispatch a superseded release, though a Docker-only release uploads none.
+      actions: write
+    secrets:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
     with:
-      ref: ${{ github.ref_name }}
+      # Pin to the triggering commit rather than the moving branch tip, so the version, the image, and the release tag share one commit.
+      ref: ${{ github.sha }}
       branch: ${{ github.ref_name }}
       smoke: false
       github: true
       dockerhub: true
+      enable_docker: true
+      enable_dotnet_publish: false
+      enable_nuget: false
+      enable_pypi: false
+      # The image is the published artifact, so the release carries only the tag, the source zip, README, and LICENSE.
+      expect_release_assets: false
+      docker_image: ptr727/esphome-nonroot
+
+  # Docker Hub does not read the GitHub README, so the overview is pushed from Docker/README.md, the hub default.
+  # The task pushes only for main, so a develop publish leaves the one overview untouched.
+  publish-docker-readme:
+    name: Publish Docker Hub readme job
+    needs: [plan, publish]
+    if: ${{ needs.plan.outputs.publish == 'true' && needs.publish.result == 'success' }}
+    uses: ptr727/ProjectTemplate/.github/workflows/publish-docker-readme-task.yml@fb7f02b24d6282f943ecb2ded1b206326d3f4610 # 2.0.1122
+    permissions:
+      contents: read
+    secrets:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    with:
+      ref: ${{ github.sha }}
+      branch: ${{ github.ref_name }}
+      repositories: '["ptr727/esphome-nonroot"]'
