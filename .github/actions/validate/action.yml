@@ -36,7 +36,7 @@ runs:
           compile true "history fetch failed"
         fi
         diff="$(git diff --no-renames --name-only "$AFTER^1" "$AFTER")"
-        # The two stubs carry the hub pin, so a hub release bump compile-tests the hooks under the new validate task before it auto-merges.
+        # The stubs pinning the validate and release tasks are gated, so a hub bump compile-tests the hooks under the new validate task.
         if grep -qE '^(Docker/|\.github/compile-test/|\.github/actions/(validate|docker-prepare)/|\.github/workflows/(test-pull-request|publish-release)\.yml$|upstream-version\.json$)' <<<"$diff"; then
           compile true "image or compile inputs changed"
         fi
