@@ -50,10 +50,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Only the `base` stage feeds the ESPHome runtime image; drop the ha-addon stage below it. Upstream pins
-          # every package as name=version; the snapshot keeps names only, so a Debian point release is not a diff.
-          # The line-continuation backslash is optional: a final entry written without one would otherwise be
-          # dropped silently, quietly weakening the signal rather than failing.
+          # Only the `base` stage feeds the ESPHome runtime image, so drop the ha-addon stage below it.
+          # Upstream pins every package as name=version, and the snapshot keeps names only, so a Debian point release is not a diff.
+          # The line-continuation backslash is optional, since a final entry written without one would otherwise be dropped silently.
           packages="$(curl --silent --show-error --location --fail "$DOCKER_BASE_URL" \
             | sed '/^FROM base AS/,$d' \
             | sed -n 's/^[[:space:]]*\([a-z0-9][a-z0-9.+-]*\)=[^[:space:]]*[[:space:]]*\\\{0,1\}$/\1/p' \
@@ -64,8 +63,7 @@ jobs:
           fi
           new="$(printf '%s\n' "$packages" | jq -R . | jq -S -s '{docker_base_packages: .}')"
 
-          # Missing, non-JSON, or non-object state => empty object, so the first run and any unusable prior file
-          # both diff cleanly against the resolved object instead of failing.
+          # Missing, non-JSON, or non-object state => empty object, so the first run and any unusable prior file diff cleanly.
           if [ -f "$STATE_FILE" ] && old="$(jq -S 'if type == "object" then . else empty end' "$STATE_FILE" 2>/dev/null)" && [ -n "$old" ]; then :; else old='{}'; fi
 
           # Unchanged content => no diff => no PR.

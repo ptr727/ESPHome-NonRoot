@@ -1,11 +1,10 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-# Each ecosystem appears once per branch (main + develop) so both stay current independently; rationale in
-# GOVERNANCE.md "Branching Model".
+# Each ecosystem appears once per branch (main and develop) so both stay current independently, per GOVERNANCE.md "Branching Model".
 # This repo ships a Docker image only: github-actions, the Docker base image, and the devcontainer.
 version: 2
 updates:
 
-  # github-actions, main
+  # GitHub Actions ecosystem, main
   - package-ecosystem: "github-actions"
     target-branch: "main"
     # The composite-action hooks under .github/actions/ carry action pins of their own.
@@ -19,7 +18,7 @@ updates:
         patterns:
           - "*"
 
-  # github-actions, develop
+  # GitHub Actions ecosystem, develop
   - package-ecosystem: "github-actions"
     target-branch: "develop"
     # The composite-action hooks under .github/actions/ carry action pins of their own.
@@ -33,7 +32,7 @@ updates:
         patterns:
           - "*"
 
-  # docker (Docker/Dockerfile base image), main
+  # Docker ecosystem (Docker/Dockerfile base image), main
   - package-ecosystem: "docker"
     target-branch: "main"
     directory: "/Docker"
@@ -48,7 +47,7 @@ updates:
         patterns:
           - "*"
 
-  # docker (Docker/Dockerfile base image), develop
+  # Docker ecosystem (Docker/Dockerfile base image), develop
   - package-ecosystem: "docker"
     target-branch: "develop"
     directory: "/Docker"
