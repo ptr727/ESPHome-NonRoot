@@ -100,9 +100,11 @@ See [Release History][history] for complete release notes and older versions.
   - `ESPHOME_VERBOSE` (Optional) : Enables [verbose][esphome-verbose-link] log output, e.g. `ESPHOME_VERBOSE=true`.
   - `ESPHOME_VERSION_HISTORY` (Optional) : Enables Device Builder's git version history auto-commit, e.g. `ESPHOME_VERSION_HISTORY=true`, default is `false`.
   - `TZ` (Optional) : Sets the [timezone][tz-link], e.g. `TZ=America/Los_Angeles`, default is `Etc/UTC`.
-- `external_components` and `packages` git sources :
-  - Use an `https://` URL, with an access token in the URL for a private repository.
-  - `ssh://` URLs are not supported. The image ships no `ssh` client, which also refuses to run under a `uid` with no account in the container.
+- Git sources, such as `external_components`, `packages`, and `libraries` :
+  - Use an `https://` URL.
+  - For a private `external_components` or `packages` repository, set the source's `username` and `password` options rather than putting a token in the URL.
+  - `ssh://` URLs are not supported. The image ships no `ssh` client. A stock `ssh` also exits under a `uid` that has no account in the container.
+- The `host` platform is not supported, since the image ships no C compiler.
 
 ### Docker Compose Dashboard
 
