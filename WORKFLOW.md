@@ -388,10 +388,10 @@ They are hand-authored and checked in, each naming the upstream project it is mo
 | S18 | upstream adds an apt package to its base image | the watcher opens a PR against `develop` naming the added package, which does **not** auto-merge and does **not** publish | D10.6 |
 | S19 | a runtime library the toolchain links against is dropped from the Dockerfile | the compile test fails on the ESP-IDF fixtures, the aggregator blocks the merge, and a publish of such a tree pushes nothing | D10.3, D10.5 |
 | S20 | an ESPHome release changes a schema a fixture uses | `esphome config` fails before `esphome compile`, naming the fixture to update | D10.4 |
-| S21 | a runtime dependency is missing for RISC-V but not Xtensa | the Xtensa fixtures pass and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D10.5 |
+| S21 | a runtime dependency is missing for RISC-V but not Xtensa | `esp32-bluetooth-proxy.yaml`, which sorts first, passes and `esp32c6-bluetooth-proxy.yaml` fails, isolating it to that toolchain | D10.5 |
 | S22 | the tracker opens an upstream pin bump PR that breaks compiles | the decide step sees `upstream-version.json`, the compile test runs and fails, and the required check blocks auto-merge before the pin reaches `main` | D8.3, D10.3 |
 | S23 | the tracker's pin bump auto-merges to `main` | the plan job sees a push to `main` by the App identity and publishes, and the `main` image carries the new `:<esphome version>` tag | D4.1, D10.2 |
-| S24 | `patch` is dropped from the Dockerfile | the generic fixtures pass and `esp32s3-audio-opus.yaml` fails at CMake component discovery, isolating it to the `patch` step, and the aggregator blocks the merge | D10.5 |
+| S24 | `patch` is dropped from the Dockerfile | the ESP-IDF fixtures that sort before it pass and `esp32s3-audio-opus.yaml` fails at CMake component discovery, isolating it to the `patch` step, and the aggregator blocks the merge | D10.3, D10.5 |
 
 The 5C live probe adds one read after a `main` publish: `docker buildx imagetools inspect` shows amd64 and arm64 for `latest`, `:SemVer2`, and `:<esphome version>`, the Docker Hub overview matches `Docker/README.md`, and the image runs as the non-root user (`docker run --user 1001:100 ... esphome version`).
 
