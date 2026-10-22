@@ -333,6 +333,16 @@ The paths filter lists `Docker/**`, `version.json`, `upstream-version.json`, and
 
 Two properties are deliberate. The head ref does **not** match a merge-bot rule, so the PR waits for a person. Upstream ships a single-stage runtime image and this one splits builder from final, so a package upstream adds may belong in either stage or neither. And the file is not a shipped input: no build step reads it, so committing it never fires the publisher's pin-push trigger. Merging the PR records the new snapshot and closes the signal, so any Dockerfile change it implies belongs in that same PR.
 
+The final stage omits the upstream names below on purpose, because nothing this image runs needs them. A name that upstream adds gets either a Dockerfile entry or a row here.
+
+| Package | Why the final stage omits it |
+| --- | --- |
+| `build-essential` | The builder stage installs it to build the virtual environment, and nothing compiles native host code at run time. |
+| `libcairo2` | ESPHome renders an SVG `image:` source with `resvg_py`, a self-contained wheel that links no cairo library. |
+| `libmagic1t64` | ESPHome detects an audio file's type with `puremagic`, which is pure Python. |
+| `iputils-ping` | The dashboard pings devices through `icmplib` sockets, and no code path runs a `ping` binary. |
+| `openssh-client` | `ssh` exits at start under a uid with no passwd entry, which is how this image runs. An `https://` git source works instead. |
+
 The watcher stays a repository-owned job rather than a second caller of `check-upstream-version-task.yml`. The hub task runs one hook path, `.github/actions/resolve-upstream`, which this repository's tracker already uses, and it accepts only a `name -> version` object of strings, where the watcher records a package list.
 
 ### The Image Compile Test
