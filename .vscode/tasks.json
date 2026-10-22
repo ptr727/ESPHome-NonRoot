@@ -1,7 +1,9 @@
 {
-    // VS Code tasks. Lint group - the local full doc-lint surface: the same tools and scope as the CI lint set
-    // (these run Docker at :latest, so versions can drift from CI's pinned actions). Run on demand. Every repo
-    // carries these. This repo has no compiled language, so there is no build or clean group.
+    // The Lint group is the local full doc-lint surface, run on demand and mirroring the CI lint set.
+    // The Docker tasks run at :latest, so versions can drift from CI's pinned actions.
+    // Lint: Prose and Lint: EOL run the commit hook's two gates natively, in whole-repo mode rather than diff-scoped.
+    // Every repo carries these.
+    // This repo has no compiled language, so there is no build or clean group.
     "version": "2.0.0",
     "tasks": [
         {
