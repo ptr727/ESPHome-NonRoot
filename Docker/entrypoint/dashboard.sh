@@ -1,5 +1,29 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: dashboard.sh [-h | --help]
+
+Seed the version history preference from ESPHOME_VERSION_HISTORY (default false), then launch the device-builder dashboard on /config.
+entrypoint.sh runs it after cache.sh.
+
+  -h, --help  Print this help and exit.
+EOF
+}
+
+if (($# > 0)); then
+    case "$1" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "dashboard.sh: unknown argument '$1', see dashboard.sh --help" >&2
+        exit 2
+        ;;
+    esac
+fi
 
 # Version history auto-commits /config YAML to git, unsigned and under a foreign identity, and the default is on.
 # The store is RAM-canonical with a debounced write, so the setting must be seeded before the dashboard starts.

@@ -92,6 +92,66 @@ runs:
           type=registry,ref=${{ steps.entry.outputs.cache-repo }}:buildcache-develop
         build-args: ${{ steps.entry.outputs.build-args }}
 
+    # It runs before the compile, so an argument break fails in seconds rather than after the toolchain downloads.
+    - name: Check entrypoint arguments step
+      if: ${{ steps.decide.outputs.compile == 'true' }}
+      shell: bash
+      run: |
+        set -Eeuo pipefail
+        image=esphome-nonroot:compile-test
+        out="$(mktemp)"
+        err="$(mktemp)"
+        failed=0
+        fail() {
+          echo "::error::$1"
+          failed=1
+        }
+
+        # A refusal is the result under test rather than a failure of the step, and the timeout ends a regression that launches the dashboard instead.
+        run() {
+          local code=0
+          timeout 120 docker run --rm --user 1000:1000 "$@" > "$out" 2> "$err" || code=$?
+          echo "$code"
+        }
+        tail_of() {
+          cat "$out" "$err" | tail -n 5
+        }
+
+        for script in entrypoint cache dashboard; do
+          entry=(--entrypoint "/entrypoint/$script.sh")
+          help=""
+          for flag in --help -h; do
+            code="$(run "${entry[@]}" "$image" "$flag")"
+            if [[ "$code" != 0 ]] || ! grep -q "^Usage: $script.sh" "$out"; then
+              fail "$script.sh $flag exited $code without its usage line: $(tail_of)"
+            elif [[ -z "$help" ]]; then
+              help="$(cat "$out")"
+            elif [[ "$(cat "$out")" != "$help" ]]; then
+              fail "$script.sh -h and --help print different text"
+            fi
+          done
+          code="$(run "${entry[@]}" "$image" --no-such-option)"
+          if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
+            fail "$script.sh --no-such-option exited $code without refusing it: $(tail_of)"
+          fi
+        done
+
+        code="$(run "$image" entrypoint --no-such-option)"
+        if [[ "$code" == 0 || -s "$out" ]] || ! grep -q "unknown" "$err"; then
+          fail "entrypoint.sh entrypoint --no-such-option exited $code without refusing it: $(tail_of)"
+        fi
+
+        code="$(run "$image" esphome --help)"
+        if [[ "$code" != 0 ]] || ! grep -qi "^usage: esphome" "$out"; then
+          fail "esphome --help exited $code without esphome's own usage line: $(tail_of)"
+        fi
+        code="$(run "$image" esphome version)"
+        if [[ "$code" != 0 ]] || ! grep -q "Version" "$out"; then
+          fail "esphome version exited $code without a version: $(tail_of)"
+        fi
+
+        exit "$failed"
+
     - name: Compile test configurations step
       if: ${{ steps.decide.outputs.compile == 'true' }}
       shell: bash

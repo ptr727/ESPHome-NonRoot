@@ -357,6 +357,8 @@ A composite action cannot read secrets, so the compile test pulls the public bas
 
 It exists because a build-only smoke cannot see this class of break: ESPHome downloads its toolchains on first compile, and those binaries link against system libraries, so a missing runtime package surfaces only when a compile actually runs. Each fixture in `.github/compile-test/` is validated with `esphome config` and only then compiled, so a configuration break and a toolchain break give distinct signals, and the non-root uid asserts the property this image exists to provide. Passing a command bypasses the image entrypoint, so the run invokes `/entrypoint/cache.sh` first: the cache is initialized the way a real container start does, and that script, otherwise exercised by nothing, is covered too.
 
+Before the compile, the hook checks the entrypoint scripts' own arguments. Each of `entrypoint.sh`, `cache.sh`, and `dashboard.sh` must answer `--help` and `-h` with its usage line and refuse an unknown argument, and a passed `esphome --help` and `esphome version` must still reach `esphome` rather than the entrypoint. It runs first so that an argument break fails in seconds, before any toolchain download.
+
 The fixtures are chosen to span the *execution environments* a consumer hits, plus the configure-time `patch` step, not to enumerate boards. Each adds a dimension the others cannot reach:
 
 | Fixture | Dimension it covers |

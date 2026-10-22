@@ -1,5 +1,29 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: cache.sh [-h | --help]
+
+Create the /cache subdirectories the image environment points at, clear /tmp, and prune the PlatformIO cache.
+entrypoint.sh runs it before the dashboard. Run it first when a command passed to the image bypasses the dashboard.
+
+  -h, --help  Print this help and exit.
+EOF
+}
+
+if (($# > 0)); then
+    case "$1" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "cache.sh: unknown argument '$1', see cache.sh --help" >&2
+        exit 2
+        ;;
+    esac
+fi
 
 # TODO: Keep in sync with Dockerfile
 
