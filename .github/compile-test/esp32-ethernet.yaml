@@ -1,5 +1,4 @@
-# ESP32 on ESP-IDF with a wired Ethernet PHY, covering the LAN driver path the wifi
-# configurations never compile.
+# ESP32 on ESP-IDF with a wired Ethernet PHY, covering the LAN driver path the wifi configurations never compile.
 # Modeled on esphome/bluetooth-proxies olimex/olimex-esp32-poe-iso.yaml.
 
 esphome:

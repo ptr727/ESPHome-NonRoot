@@ -1,4 +1,4 @@
-# ESP32 (Xtensa) on ESP-IDF with the BLE stack - the widest component surface of the set.
+# ESP32 (Xtensa) on ESP-IDF with the BLE stack, the widest component surface of the set.
 # Modeled on esphome/bluetooth-proxies esp32-generic/esp32-generic.yaml.
 
 esphome:

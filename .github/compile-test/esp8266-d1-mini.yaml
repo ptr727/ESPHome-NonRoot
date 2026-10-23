@@ -1,5 +1,4 @@
-# ESP8266, which builds through PlatformIO and the Arduino framework rather than ESP-IDF -
-# a different build system, not just a different target.
+# ESP8266 builds through PlatformIO and the Arduino framework rather than ESP-IDF, so it exercises a different build system and not just a different target.
 # Modeled on esphome/firmware esphome-web/esp8266.yaml, on the d1_mini board.
 
 esphome:

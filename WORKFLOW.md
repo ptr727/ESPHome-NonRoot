@@ -364,9 +364,9 @@ The fixtures are chosen to span the *execution environments* a consumer hits, pl
 | Fixture | Dimension it covers |
 | --- | --- |
 | `esp32-bluetooth-proxy.yaml` | Xtensa ESP-IDF, and the widest component surface (BLE stack) |
-| `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF - a separate compiler binary, not just another board |
+| `esp32c6-bluetooth-proxy.yaml` | RISC-V ESP-IDF, a separate compiler binary rather than just another board |
 | `esp32-ethernet.yaml` | wired Ethernet PHY drivers, which the wifi configurations never compile |
-| `esp8266-d1-mini.yaml` | PlatformIO + Arduino - a different build system, not a different target |
+| `esp8266-d1-mini.yaml` | PlatformIO + Arduino, a different build system rather than a different target |
 | `esp32s3-audio-opus.yaml` | an IDF component that runs `patch` during CMake component discovery, a host tool no other fixture calls |
 
 They are hand-authored and checked in, each naming the upstream project it is modeled on, so a refresh has a reference point. Those projects are `esphome/bluetooth-proxies`, `esphome/firmware`, and `sonocotta/esp32-audio-dock`. Neither fetching those projects at run time nor generating configurations from `esphome wizard` is used. Both couple a daily monitor to something outside this repo that can change under it. A scheduled job whose common failure is its own breakage also stops being believed. Checked-in fixtures rot too, since an ESPHome schema change fails `esphome config`, but that rot is loud, obvious, and a one-line fix. Detecting upstream drift is the dependency watcher's job, not this one's.

@@ -12,14 +12,14 @@ ESPHome docker container that supports non-root operation.
   - Disabled Device Builder's version history feature by default: it auto-commits every YAML change under `/config` to git, unsigned, authored `ESPHome Device Builder <device-builder@esphome.io>`, and skipping hooks, which lands commits in the user's own repository where `/config` is a bind mount into one ([version history][device-builder-version-history-link]). Upstream documents the behavior as intended and will not change the default, so the entrypoint writes the preference before the dashboard starts. It warns and continues if `/config` cannot be written or holds a malformed preferences file, leaving the upstream default in place. Set `ESPHOME_VERSION_HISTORY=true` to keep the upstream behavior.
   - Added a daily upstream-dependency watcher that snapshots the package list ESPHome's own base image installs and opens a pull request for review when that list changes.
 - Version 1.8:
-  - Reworked the CI/CD pipeline to a branch-scoped, one-branch-per-run model: a weekly scheduled run and a path-scoped push on a tracked-upstream-version change publish `main` (stable, Docker `latest`), a manual dispatch publishes the branch it is started from, and the daily upstream-version tracker keeps `upstream-version.json` current; ordinary merges no longer publish.
+  - Reworked the CI/CD pipeline to a branch-scoped, one-branch-per-run model. A weekly scheduled run and a path-scoped push on a tracked-upstream-version change publish `main` (stable, Docker `latest`). A manual dispatch publishes the branch it is started from. The daily upstream-version tracker keeps `upstream-version.json` current. Ordinary merges no longer publish.
   - Version-tagged the container: images also publish a `:SemVer2` tag (`X.Y.<height>`) alongside the moving `latest` / `develop` and pinned `:<esphome-version>` tags, and each version gets a GitHub release.
   - Added `WORKFLOW.md` (the canonical CI/CD specification) and `repo-config/` (rulesets and repository settings as code).
 - Version 1.7:
   - Migrated the dashboard to ESPHome's new [`esphome-device-builder`][device-builder-link] package ([#60][issue-60-link]).
   - Switched the image build to a `uv` virtual environment copied into the slim final stage.
   - Pinned and auto-tracked the `esphome-device-builder` version alongside `esphome`.
-  - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting; device-builder always uses mDNS with a ping fallback.
+  - Removed the no-op `ESPHOME_DASHBOARD_USE_PING` setting. Device Builder always uses mDNS with a ping fallback.
 - Version 1.6:
   - Support `tmpfs` for optional `/tmp` volume, use `/tmp` instead of `/cache/tmp` for temp files.
   - Make `/cache` volume mount optional.
