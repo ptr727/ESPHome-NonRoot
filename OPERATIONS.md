@@ -33,6 +33,8 @@ docker buildx build --load --platform linux/amd64 --tag esphome:testing --file .
 docker compose --file ./Docker/Compose.yml up --detach
 ```
 
+The build names `linux/amd64`, which an arm64 host can build only under the emulation the multi-platform step below installs. On an arm64 host, substitute `--platform linux/arm64` to build natively with no emulator. The compose stack pins no platform, so it runs either image.
+
 The dashboard is then at `http://localhost:6052`. `docker exec -it --user 1001:100 esphome-test /bin/bash` attaches a shell as the non-root user, and `docker compose --file ./Docker/Compose.yml down --volumes` destroys the stack and its test volumes.
 
 Only a `main` publish builds arm64, so exercise an arm64 change locally with a multi-platform build. The platform that is not the host's own runs under emulation. Docker Desktop ships it, and a Linux Docker Engine host lacks it until the `binfmt` step installs it. Run the `binfmt` step once per boot, unless the host registers QEMU at boot, and `docker buildx create` once per machine. The build leaves its result in the build cache rather than loading an image to run:
