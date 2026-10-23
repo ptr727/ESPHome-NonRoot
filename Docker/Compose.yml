@@ -1,4 +1,5 @@
 # Build: docker buildx build --load --platform linux/amd64 --tag esphome:testing --file ./Docker/Dockerfile ./Docker
+# Build on an arm64 host: substitute --platform linux/arm64 to build natively, see OPERATIONS.md
 # Launch stack: docker compose --file ./Docker/Compose.yml up --detach
 # Open browser: http://localhost:6052
 # Attach shell: docker exec -it --user 1001:100 esphome-test /bin/bash
