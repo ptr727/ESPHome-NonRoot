@@ -42,7 +42,7 @@ jobs:
   # The same reusable gate the publisher runs, which adds the prose gate on a pull request and change-gates the compile test.
   validate:
     name: Validate job
-    uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@f610e4229f2acbb60d69f6d9386b341c81514534 # 2.0.1148
+    uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@63cf1c9436876d55889260ce43d3900da2fd9b47 # 2.0.1166
     permissions:
       contents: read
 
@@ -52,7 +52,7 @@ jobs:
     name: Smoke build job
     needs: [changes]
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.release == 'true'
-    uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@f610e4229f2acbb60d69f6d9386b341c81514534 # 2.0.1148
+    uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@63cf1c9436876d55889260ce43d3900da2fd9b47 # 2.0.1166
     permissions:
       contents: read
     secrets:
