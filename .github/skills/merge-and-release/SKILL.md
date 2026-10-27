@@ -61,10 +61,10 @@ skill covers all of it, scoped down by what the maintainer actually asks for.
 1. Identify the open develop -> main promotion PR for this repo, stop and report if none is open.
 2. Record the promotion's live head, `gh pr view [number] --repo owner/repo --json headRefOid
    --jq .headRefOid`. Then, from a hub checkout, `scripts/` is not carried into downstream repos,
-   run `scripts/pr_review.py status [number] --repo owner/repo` on it and confirm the
+   run `uv run --no-project --script scripts/pr_review.py status [number] --repo owner/repo` on it and confirm the
    pr-review-conduct Merge Gate. Stop and report exactly what is missing rather than merging on a
-   partial gate. A `status` exit `45` is not a partial gate where the promotion meets the one case
-   that skill's Merge Gate item 2 states. Check that case again on every re-run below, and record
+   partial gate. A digest reading `coverage=none` is not a partial gate where the promotion meets the
+   one case that skill's Merge Gate item 2 states. Check that case again on every re-run below, and record
    its evidence for the head step 3 merges, as that item says.
    Confirm the digest's `head=` is a prefix of the recorded SHA, re-running both where it is not,
    so the SHA step 3 merges is the one the gate verified. Where drive-pr's ready report named a
@@ -174,7 +174,7 @@ skill covers all of it, scoped down by what the maintainer actually asks for.
      than reading an empty answer as safe: `gh pr list --head "<branch>" --base develop --state
      merged --repo owner/repo --json number --jq 'if length == 1 then .[0].number else
      error("expected exactly one merged PR for this head, got \(length)") end'`. Then run
-     `python3 scripts/pr_review.py cleanup <number> --repo owner/repo --checkout <base-clone>`
+     `uv run --no-project --script scripts/pr_review.py cleanup <number> --repo owner/repo --checkout <base-clone>`
      from a hub checkout outside the worktree it removes, `<base-clone>` being the repository's
      primary clone, per `repo-worktree` "Listing and Cleanup". It re-reads that pull request and
      repeats the merged, base, head-repository, and tip checks in code, refuses a permanent or
@@ -186,7 +186,7 @@ skill covers all of it, scoped down by what the maintainer actually asks for.
      any other exit stops and reports: `1` is a refusal, `2` an unanswered read or an unconfirmed
      delete, and `64` a target under an owner other than the hub checkout's own `origin` or that
      `origin` unreadable, a registry refusal being a `1`. It runs under the host-safety
-     installer's `Bash(python3 scripts/pr_review.py:*)` allow rule, which is what lets auto mode
+     installer's `Bash(uv run --no-project --script scripts/pr_review.py:*)` allow rule, which is what lets auto mode
      complete it.
      It also refuses while another open pull request in the repository has the branch as its head or base, naming each.
      Where this seat cannot run `cleanup`, report the cleanup to the maintainer instead of running its steps by hand, naming the pull request number and `--repo`.
@@ -194,7 +194,7 @@ skill covers all of it, scoped down by what the maintainer actually asks for.
      Never apply this sweep to `develop` or `main`
      themselves, only to feature branches a drive-pr loop created.
    - What no single pull request names: run
-     `python3 scripts/pr_review.py cleanup --sweep --repo owner/repo --checkout <base-clone>`
+     `uv run --no-project --script scripts/pr_review.py cleanup --sweep --repo owner/repo --checkout <base-clone>`
      and report what it lists. It writes nothing but a fetch, and `--apply` runs only on the
      maintainer's go-ahead, since the report reaches other sessions' finished work too.
 

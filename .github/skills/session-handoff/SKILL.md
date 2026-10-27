@@ -1,17 +1,18 @@
 ---
 name: session-handoff
 description: >-
-  Writes and resumes the ptr727/ProjectTemplate fleet's session handoff, a link in a chain of
-  issues rather than a file: one open issue per track per repository, carrying the `handoff` label
-  and naming its predecessor, which is then commented on and closed. Use this whenever ending a
+  Writes and resumes the ptr727/ProjectTemplate fleet's session handoff, a standing issue rather
+  than a file: one open issue per track per repository, carrying the `handoff` label, its body the
+  current handoff, replaced in place at each session close once the outgoing body is archived on
+  the same issue as a comment. Use this whenever ending a
   session or a round of work, whenever starting or resuming one, whenever asked for a handoff or
   for what the previous round did, whenever the maintainer says only "resume the handoff" or names
   none, which stands for the whole attended procedure this skill states, and whenever about to
   re-attempt something a previous round may already have tried, the moment that earns this skill,
   since a session that does not know a chain exists never goes looking for one. Every session
   writing one, except an `unattended-handoff` seat, ends in the same order: lessons recorded, the
-  link, the parked decision queue presented, then memories saved last. Triggers even when the
-  session feels too short to be worth a handoff, because the rounds that produce nothing worth
+  handoff written, the parked decision queue presented, then memories saved last. Triggers even when
+  the session feels too short to be worth a handoff, because the rounds that produce nothing worth
   writing down are exactly the rounds a later session repeats. The rule is `AGENTS.md` "Session
   Scope" and the mechanics are the hub's `scripts/handoff.py`. Where a sibling skill owns the
   moment, it wins: `backlog-burndown` owns a multi-round run's reporting, `unattended-handoff`
@@ -31,10 +32,10 @@ been attempted, and the shape the handoff actually had, one overwritten file on 
 shape that cannot hold it.
 
 The chain closes each of those rather than making it impossible. The label and the metadata block
-are what make a link findable from any machine, the one-open-per-track invariant is what answers
-which link is current, and every closed link stays readable to every session after it. Where the
-invariant is broken the chain refuses and says so, which is a state a reader can act on rather than
-one that reads as an answer.
+are what make a handoff findable from any machine, the one-open-per-track invariant is what answers
+which handoff is current, and every archived round stays readable on the same issue to every
+session after it. Where the invariant is broken the chain refuses and says so, which is a state a
+reader can act on rather than one that reads as an answer.
 
 The rule is `AGENTS.md` "Session Scope", which keeps it, and it names the handoff's sections and
 sets the size rule over them. This skill is the judgment that rule cannot state: what actually earns
@@ -50,8 +51,8 @@ without trusting the parts of it that have gone stale.
   there the chain is the durable record rather than a pointer to one.
 - **It records work to do next, and it is not itself backlog work.** It carries none of the labels
   that classify work to be done, and every enumeration that ranks or counts the open backlog filters
-  the `handoff` label out, since a track in use always has an open link and counting it inflates the
-  backlog by one per track forever.
+  the `handoff` label out, since a track in use always has an open issue and counting it inflates
+  the backlog by one per track forever.
 - **It is not a place to ask a question.** A question waiting on the maintainer is an issue carrying
   the `decision` label. The handoff records that queue, and "The Parked Decision Queue" below
   requires the session to put the questions themselves to the user in the same act, since a
@@ -61,7 +62,8 @@ without trusting the parts of it that have gone stale.
 
 - **One open handoff issue per track per repository.** A track is a short kebab-case slug naming a
   lane of work, and a session that names no track uses `default`. Parallel lanes each name their
-  own, so each closes its own predecessor and none reads another's state as current.
+  own, so none reads another's state as current. The issue is created when the track starts and
+  closed when its work is complete. It is never closed and replaced per session.
 - **A platform lane is for work that needs its platform.** A platform track is one kept for a single
   host platform, such as `wsl` or `windows`. It takes an issue only when its defect reproduces, or
   its fix can be verified, on that platform alone. It also needs that no Linux host outside WSL can
@@ -78,31 +80,38 @@ without trusting the parts of it that have gone stale.
   a platform, the session finding it files each such part as its own issue for its platform's lane.
   The original is narrowed to the rest, or closed in favor of those issues where nothing is left. A
   session that may not write issues names the unsplit issue in its report or handoff instead. An
-  issue for a platform whose lane was closed out reopens that lane with `new`, which chains onto the
-  closed link. A platform lane is closed out with no successor once none of its next steps needs its
-  platform. Before that, each remaining step with no issue of its own is filed as one. The lane's
-  last link carries the outcome as a comment, as `AGENTS.md` "Session Scope" closes a track whose
-  work is complete.
+  issue for a platform whose lane was closed reopens that lane with `new`, which files a new issue
+  continuing from the closed one. A platform lane is closed with `close` once none of its next steps
+  needs its platform. Before that, each remaining step with no issue of its own is filed as one. The
+  closing comment carries the outcome, as `AGENTS.md` "Session Scope" closes a track whose work is
+  complete.
 - **The title is for humans**, shaped `Session Handoff [<track>]: <subject>`, which `new` composes
-  from the track and the subject it is given, so what a session writes is the subject alone.
-  Nothing parses the title, so a maintainer is free to rename one.
-- **The chain is machine-readable from one HTML comment on the body's last line**, rendered
-  invisible, so a retitled or hand-edited issue still chains:
-  `<!-- handoff: v1 track=<slug> round=<n> previous=<issue number or none> -->`.
-- **Closing the loop runs in one order**: create the new issue, comment the forward link on the
-  previous one, then close the previous one. Creating first means a failure at any later step leaves
-  a discoverable new issue rather than a closed chain with no successor, and `link` is what finishes
-  a run that stopped between those steps.
+  from the track and the subject it is given at every round, so what a session writes is the
+  subject alone. Nothing parses the title, so a maintainer is free to rename one.
+- **The issue is machine-readable from one HTML comment on the body's last line**, rendered
+  invisible, so a retitled or hand-edited issue still reads:
+  `<!-- handoff: v1 track=<slug> round=<n> previous=<issue number or none> -->`. The round
+  advances at each session close. `previous=` names the closed issue the track continues from, and
+  stays fixed while the round moves. Each archived round ends in a line of its own,
+  `<!-- handoff-round: v1 track=<slug> round=<n> closed=<YYYY-MM-DD> -->`, which is how a reader
+  tells a round from an ordinary comment.
+- **A session close runs in one order**: append the outgoing body to the issue as a comment headed
+  with its round and close date, then replace the body and advance the round. Archiving first means
+  a failure between the two leaves the outgoing round in both places rather than in neither, and a
+  rerun of `new` finds it archived and only replaces the body.
 - **The invariant a reader checks** is exactly one open issue carrying `handoff` for a given track in
   a given repository, read from each issue's metadata block rather than from the label, since an
   issue carrying the label and no block belongs to no readable track and blocks the count rather
-  than joining it. Two or more on one track is a defect to report, never one to resolve by picking,
-  and a run interrupted between the steps above is the one shape of it that `link` settles
-  rather than a human.
-- **Zero open on a track is two different states.** The track has never had a handoff, or its lane
-  was closed out and its newest link is closed. `new` chains onto the newest link either way, open
-  or closed, because starting a second chain beside one that exists orphans every link already
-  written.
+  than joining it. Two or more on one track is a defect to report, never one to resolve by picking.
+- **Zero open on a track is two different states.** The track has never had a handoff, or it was
+  closed when its work was complete. In the second state `new` continues from the newest closed
+  issue on the track, naming it as `previous=` and starting one round above it, because starting a
+  second chain beside one that exists orphans every round already written. In the first it starts
+  at round 1 with `previous=none`.
+- **Whatever open issue a track holds is its standing issue**, including one whose body has never
+  been replaced in place and whose `previous=` names a chain of closed issues behind it. `new`
+  archives its body and edits it like any other, since it is the one open `handoff` issue on the
+  track, and the walk still reaches the closed issues through `previous=`.
 - **The handoff lives in the repository holding the work the next session resumes.** A session that
   spanned repositories writes it there and names the others in the state section "What Goes in the
   Body" below describes, rather than filing one handoff per repository.
@@ -164,22 +173,30 @@ section is the pointer to what to read rather than the answer, and `AGENTS.md` "
 already says stale context is worse than absent. A handoff is context by construction, so this is
 that rule applied to the one artifact built to outlive the session that wrote it.
 
-Read the current link's comments too, with `gh issue view "<n>" --repo OWNER/NAME --comments`, since
-`resume` prints only the body, and a parking comment or a closing session's answers land in the
-comments.
+Read the issue's other comments too, since `resume` prints only the body and an index of the
+archived rounds, and a parking comment or a closing session's answers land in the comments between
+them. Read them with the command below, which leaves out each archived round, since a long track
+holds many of them in full, and keeps only visible comments from an account with write access,
+since anyone can comment on a public issue. A comment counts as a round where one of its lines is
+a round mark:
+
+```sh
+gh issue view "<n>" --repo OWNER/NAME --json comments --jq '.comments[] | select((.authorAssociation | IN("OWNER", "MEMBER", "COLLABORATOR")) and (.isMinimized | not) and (.body | test("(^|\n)<!--[ \t]*handoff-round:[ \t]*v1[ \t][^>]*-->[ \t\r]*(\n|$)") | not)) | "\(.createdAt)\n\(.body)\n"'
+```
 
 Read the chain before re-attempting anything. `resume` prints the current body and indexes the
-closed links behind it, and `chain --grep` searches the bodies it walks for a regular expression,
-which is how a session answers whether a path has already been tried without reading every round.
-The points below bound that answer. The walk starts at one track's newest link and follows each
-marker's `previous=` from there, which is normally that one lane and is in fact whatever the markers
-name, so every link prints its own track and a predecessor on another lane shows up rather than
-passing unseen. The walk stops at `--limit` and names the link it stopped short of, so a capped
+archived rounds behind it, and `chain --grep` searches every round it walks for a regular
+expression, which is how a session answers whether a path has already been tried without reading
+every round. The points below bound that answer. The walk starts at one track's issue, lists its
+body and then its archived rounds newest first, and then follows the block's `previous=` to the
+closed issue the track continues from, which is normally that one lane and is in fact whatever the
+markers name, so every round prints its own track and an issue on another lane shows up rather than
+passing unseen. The walk stops at `--limit` and names the round it stopped short of, so a capped
 search never reads as an exhaustive one. And `--grep` takes a regular expression, so a literal
 string carrying a regex character is escaped or it matches something other than what was typed. On
 a track with no open handoff `resume` refuses rather than printing an empty body, and `chain` falls
-back to that track's newest closed link, so the read side of a lane that was closed out is `chain`
-rather than `resume`.
+back to that track's newest closed issue, so the read side of a closed track is `chain` rather than
+`resume`.
 
 Re-derive a count rather than copying one, and read it with an explicit page size. `gh issue list`
 returns 30 rows unless told otherwise, and a truncated count reads exactly like a repository with
@@ -223,14 +240,15 @@ the whole procedure below. Run every step without being reminded of any of them.
    its own question with its answers as the options, the recommended one first and marked as the
    recommendation, and every one carrying its reason, per "The Parked Decision Queue" below. The
    numbered list is the fallback where no prompt exists.
-6. **Close the session** per "Closing a Session" below, which records lessons, writes the next link
-   with `new`, presents the parked decision queue, and saves memories last. An `auto-*` lane is the
-   exception, since it holds one issue. Where that issue is done, comment the outcome on the link
-   and close it with no successor, as `unattended-handoff` closes such a lane out. Where work
-   remains, write its next link on the same track without `blocked`, its next steps naming the
-   decision issue and the answer, which hands it back to the unattended loop. Either way the
-   `blocked` label left on in step 3 goes with the link it was on, and the parked decision queue
-   is still presented, since the exception covers only the link.
+6. **Close the session** per "Closing a Session" below, which records lessons, writes the next round
+   with `new`, presents the parked decision queue, and saves memories last. Where the issue carries
+   the `blocked` label left on in step 3, take it off once the next round is written, with
+   `gh issue edit "<n>" --repo OWNER/NAME --remove-label blocked`, since the round it marked is
+   archived. An `auto-*` lane differs in one way, since it holds one piece of work. Where that work
+   is done, end the track with `close` instead, the outcome as its comment, as `unattended-handoff`
+   closes such a lane. Where work remains, the next round's next steps name the decision issue and
+   the answer, and taking `blocked` off hands the lane back to the unattended loop. Either way the
+   parked decision queue is still presented.
 
 ## Closing a Session
 
@@ -239,19 +257,19 @@ closes as that skill states. Each step leaves the chain whole if the session is 
 it.
 
 1. **Record what was learned** per `GOVERNANCE.md` "Durable Knowledge and Self-Improvement", which
-   says where a lesson goes, before the link is written, so its "New learnings" section points at a
-   record that exists.
-2. **Write the link**, per "Running the Chain" below, or close the lane out where its work is done.
-   The link is written before the closing questions are put, since a prompt blocks until someone
-   answers and an unanswered one must not cost the round its handoff.
+   says where a lesson goes, before the handoff is written, so its "New learnings" section points at
+   a record that exists.
+2. **Write the handoff** with `new`, per "Running the Chain" below, or end the track with `close`
+   where its work is done. The handoff is written before the closing questions are put, since a
+   prompt blocks until someone answers and an unanswered one must not cost the round its handoff.
 3. **Present the parked decision queue** in the same act, per "The Parked Decision Queue" below.
-   Record each answer given on its issue, where one was asked and answered. Where a link was
-   written, comment those answers onto it together with the queue's count and list after them,
-   since the body keeps the count it was written with and a resume reads the link's comments.
+   Record each answer given on its issue, where one was asked and answered. Where a handoff was
+   written, comment those answers onto its issue together with the queue's count and list after
+   them, since the body keeps the count it was written with and a resume reads the issue's comments.
 4. **Save memories last.** Where the host keeps a per-user memory, what goes there is the
    environment-specific nuance "Durable Knowledge and Self-Improvement" leaves to memory, such as a
    quirk of this machine or this account, saved as the session's final act. Never the round's
-   state, which the link holds, and never a lesson, which step 1 already recorded.
+   state, which the issue holds, and never a lesson, which step 1 already recorded.
 
 ## The Parked Decision Queue
 
@@ -290,32 +308,30 @@ falls to the next session that has one. The rules below settle which case applie
 The mechanics are the hub's `scripts/handoff.py`, run from a hub checkout, per `GOVERNANCE.md`
 "Hub-Hosted Tooling". Every subcommand takes `--repo`, with no default, because an issue number
 resolves in every repository and a chain read out of the wrong one is well formed. `current`,
-`resume`, `chain`, and `new` each take an optional `--track` defaulting to `default`, and `link`
-and `tracks` take none, since a pair of issue numbers and a whole-repository survey each name
-their own scope. A session working a named lane passes `--track` on each subcommand that
-accepts it. Omitting it does more than read the wrong chain, since `new` then files onto `default` and
-comments on whatever link that lane has, closing it too where it was open.
+`resume`, `chain`, `new`, and `close` each take an optional `--track` defaulting to `default`, and
+`tracks` takes none, since a whole-repository survey names its own scope. A session working a named
+lane passes `--track` on each subcommand that accepts it. Omitting it does more than read the wrong
+chain, since `new` then archives and rewrites whatever `default` holds, and `close` closes it.
 
 - **`current` and `resume`** answer where a track stands, `resume` adding the body itself and an
-  index of the closed links behind it.
-- **`chain`** starts at one track's newest link and walks `previous=` backwards from there,
-  following whatever the markers name and saying so where that leaves the track, `--grep`
-  filtering the listing by a regular expression over the bodies while the notices print
-  regardless.
+  index of the archived rounds behind it.
+- **`chain`** lists one track's rounds newest first, the body, then each archived round, then the
+  closed issue `previous=` names and its own rounds, following whatever the markers name and saying
+  so where that leaves the track, `--grep` filtering the listing by a regular expression over the
+  round texts while the notices print regardless.
 - **`tracks`** surveys every open handoff, one carrying no metadata block included, and it is the
   one command that reports that state rather than refusing over it. That state is settled by a
   hand edit, adding the block to the issue's body or taking the label off it, since no read can
   place an issue on a track until its own block says which track that is. With `--json` it prints
   the same rows as an array of number, title, track, labels, and updatedAt, the track null for
   an issue whose block is absent or unreadable, which is what a picker ranks by.
-- **`new`** performs as many of the chain's steps as the track has links for. On a track
-  with no link at all it creates and stops, since there is nothing to comment on or close. On one
-  whose newest link is closed it creates and comments, since the close already happened. Only a
-  track with an open head takes every step. **`link`** finishes a run that stopped between those steps,
-  and separately repairs a successor whose block names no predecessor, so its own writes are the
-  comment, the close, and that body edit. The edit reaches only the repair case, since `new`
-  embeds the predecessor in the block at create time, so a run interrupted after the create
-  already names it.
+- **`new`** is the one way a handoff is written. On a track with no open issue it creates one and
+  stops. On a track with one it appends the outgoing body as an archived round, then replaces the
+  title and body and advances the round. Either way it prints the issue number. A rerun after a run
+  that stopped between the two finds the round archived and only replaces the body, and one after a
+  run that finished finds the body current and writes nothing.
+- **`close`** is the one way a track ends. It comments the outcome given in `--body-file` on the
+  track's issue, then closes it, and a rerun after the comment landed only closes.
 
 ```sh
 handoff="<hub-checkout>/scripts/handoff.py"   # in the hub itself, scripts/handoff.py
@@ -324,12 +340,12 @@ python3 "$handoff" resume  --repo OWNER/NAME --track "<slug>" --history 5
 python3 "$handoff" chain   --repo OWNER/NAME --track "<slug>" --grep "an escaped regex"
 python3 "$handoff" new     --repo OWNER/NAME --track "<slug>" --title "<subject>" \
   --body-file "<path>" --dry-run
-python3 "$handoff" link    --repo OWNER/NAME --new "<successor>" --previous "<predecessor>"
+python3 "$handoff" close   --repo OWNER/NAME --track "<slug>" --body-file "<path>" --dry-run
 python3 "$handoff" tracks  --repo OWNER/NAME [--json]
 ```
 
-Read `--dry-run` output before the first real `new` of a session, since the run can close an issue.
-It is accepted by `new` and `link`, the subcommands that write, and by no other.
+Read `--dry-run` output before the first real `new` of a session, since the run replaces a body. It
+is accepted by `new` and `close`, the subcommands that write, and by no other.
 
 Exit `0` is success, `1` a refusal the caller can act on, a usage error included, and `2` the
 command not having run to an answer, so a refusal and a failure to reach one never share a code. A
@@ -342,25 +358,23 @@ A fork under the registry's owner that the registry does not list, such as one k
 upstream contribution per `upstream-contribution-workflow`, can host a chain to keep a session's
 state without taking on any fleet configuration. Missing the label there, a read prints a warning
 and answers as an empty chain does, and `new` refuses until it is given `--create-label`, which
-creates the one `handoff` label, confirms it, and then files the first link. Issues turned off stop
-it before any write, naming the command that turns them on. Never apply the fleet label set to such
-a fork. A repository under another owner, or an unregistered one of the owner's that is not a fork,
-refuses before any write. `new` and `link` refuse both whatever the label state, since a label on
-such a repository opens no write there, and that refusal bounds no read.
+creates the one `handoff` label, confirms it, and then files the track's issue. Issues turned off
+stop it before any write, naming the command that turns them on. Never apply the fleet label set to
+such a fork. A repository under another owner, or an unregistered one of the owner's that is not a
+fork, refuses before any write. `new` and `close` refuse both whatever the label state, since a
+label on such a repository opens no write there, and that refusal bounds no read.
 
-Creating an issue, commenting on one, closing one, and editing a body are each outward-facing
-writes. `new` creates, comments, and closes, the label riding inside the one create call rather than
-being a write of its own, and `new --create-label` adds one write ahead of those, the label itself.
-`link` edits a body, comments, and closes. Each of them is bound by
-`GOVERNANCE.md` "Repository Boundaries and Write Safety" exactly as any other write is. Point them
-at the repository `AGENTS.md` "Session Scope" sends the link to, the one holding the work the next
-session resumes, and at no other. `link` also reaches an issue this chain never created, since the
-caller names both numbers and its refusals ask for a block and a label to be added by hand first, so
-the two issues it is given are chosen deliberately rather than swept up.
+Creating an issue, commenting on one, editing one, and closing one are each outward-facing writes.
+`new` creates, or comments and edits, the label riding inside the one create call rather than being
+a write of its own, and `new --create-label` adds one write ahead of those, the label itself.
+`close` comments and closes. Each of them is bound by `GOVERNANCE.md` "Repository Boundaries and
+Write Safety" exactly as any other write is. Point them at the repository `AGENTS.md` "Session
+Scope" sends the handoff to, the one holding the work the next session resumes, and at no other.
 
-Where the caller names an issue, which is `link` alone, it reads both live before writing and
-writes only what those reads returned. Every other identifier a write targets is captured from a
-read in the same run, and the one identifier no read could have supplied, the new issue's own
-number, is parsed from the create's confirmation rather than constructed. No write's output is suppressed or forced to success, and a close is
-confirmed by reading the state back, because a write that appears to have failed may have succeeded
-on the server.
+Every identifier a write targets is captured from a read in the same run, and the one identifier no
+read could have supplied, a new issue's own number, is parsed from the create's confirmation rather
+than constructed. The body archived is the one read immediately before the archive, and the body is
+read again immediately before it is replaced, so an edit landing in between refuses rather than
+being overwritten. No write's output is suppressed or forced to success, and an edit and a close
+are each confirmed by reading the issue back, because a write that appears to have failed may have
+succeeded on the server.
