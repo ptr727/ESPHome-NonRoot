@@ -275,7 +275,7 @@ since git then runs whatever that directory holds, and nothing where it holds no
   helper worktree needs no pull request, but its commit must be contained in the branch whose
   completed operation created it.
 - **A pull request merged into `develop` is cleaned up by one command.** Run
-  `python3 scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`
+  `uv run --no-project --script scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`
   from a hub checkout outside the worktree it removes, `<base-clone>` being the repository's
   primary clone. It reads the branch from the pull request and deletes the remote branch. It then
   removes every worktree holding the branch without force, deletes the local branch, and
@@ -285,8 +285,8 @@ since git then runs whatever that directory holds, and nothing where it holds no
   session changed a tree in between, and its output then names what was already deleted. Any exit
   other than `0` stops and is reported as it stands rather than finished by hand. The raw
   `git worktree remove`, `git branch -D`, and remote delete it replaces are not on the host-safety
-  permission allowlist, and the command is. `scripts/README.md` in the hub holds the full
-  contract.
+  permission allowlist, and the command is. It forwards to `scripts/pr_cleanup.py`, and
+  `scripts/README.md` "`pr_cleanup.py`" in the hub holds the full contract.
 - **What no merged pull request into `develop` covers is removed by hand.** That is a promotion's
   worktree, a detached helper worktree, and a temporary standalone clone. Confirm the tree is
   clean, then remove the exact path with `git worktree remove <exact-path>`, or delete the exact
@@ -307,7 +307,7 @@ since git then runs whatever that directory holds, and nothing where it holds no
   release does not leave the base clone on `main`. Stop and report a dirty base clone or a
   non-fast-forward instead of switching or reconciling it.
 - **What an interrupted or abandoned session left behind is swept.** Run
-  `python3 scripts/pr_review.py cleanup --sweep --repo <owner>/<repo> --checkout <base-clone>`
+  `uv run --no-project --script scripts/pr_review.py cleanup --sweep --repo <owner>/<repo> --checkout <base-clone>`
   from a hub checkout. It fetches and prunes `origin` and writes nothing else, and it reports
   each worktree and branch that is clean, idle past `--min-age-hours` (default 24), and provably
   finished. Adding `--apply` removes what the report lists through the same checks, the remote

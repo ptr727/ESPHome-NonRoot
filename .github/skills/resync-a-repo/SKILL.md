@@ -31,7 +31,7 @@ change from one resync to the next.
 
 Read RESYNC.md section 0. A repo with no instruction set at all, or a partial one, is not this
 skill's job, it is STANDUP.md sections 1A and 2 instead, since an absent carried file is a
-baseline that never arrived rather than drift to converge. Run `python3 spec/audit.py <RepoName>`,
+baseline that never arrived rather than drift to converge. Run `uv run --no-project --script spec/audit.py <RepoName>`,
 the target's `registry/repos.json` `name` field rather than an `owner/repo` slug or a checkout
 path, and read whether the findings are letters (absent) or drift (present but stale) before doing
 anything else. The finding kind names the procedure the repo is owed.
@@ -45,7 +45,7 @@ may be using, the maintainer's own primary checkout included, even one that look
 hub and for the target repo alike, create a worktree of your own off that base clone and work
 there, per `repo-worktree`. Remove each one when the run ends, per that skill's "Listing and
 Cleanup". A merged pull request's worktree goes through
-`python3 scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`. A
+`uv run --no-project --script scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`. A
 hub worktree that only read the hub is removed by hand once it is clean, its branch with it. On a machine carrying the hub's agent-safety install, Claude Code also
 refuses a mutating git command run directly in a primary checkout, though its rules classify git
 and gh commands only, so a plain file write is never denied and the re-vendoring this skill exists
@@ -53,11 +53,11 @@ to govern goes uncaught. A compound command is judged whole, so a copy chained t
 write does not run either. Prose is the enforcement here, and following it is not optional. Verify
 the host with `python3 scripts/host_gate.py --repo <path-to-target-worktree>`, run from your hub
 worktree, since `scripts/` is hub-hosted and no carrier holds it. Then run the audit end to end,
-`RESYNC.md` section 2. `python3 spec/audit.py <RepoName>` measures the target's ground-truth
+`RESYNC.md` section 2. `uv run --no-project --script spec/audit.py <RepoName>` measures the target's ground-truth
 branch, which the registry's `groundTruthBranch` names and which is `main` for every cataloged
 repo today, never `develop`. That is the invocation "Confirm the procedure before starting"
 already ran, run again here. Convergence lands on a ref `main` does not hold yet, so a run that
-previews in-flight work names that ref: `python3 spec/audit.py --branch <ref> <RepoName>`. Use it
+previews in-flight work names that ref: `uv run --no-project --script spec/audit.py --branch <ref> <RepoName>`. Use it
 to check whether a fix landed, since a run against `main` still reports what the in-flight ref
 already fixed. Section 2 carries two further commands that neither of these replaces. A finding is
 a snapshot, so quote the run stamp in anything derived from it and re-run before acting on a
@@ -87,7 +87,7 @@ re-measure against `develop` and base the branch for the steps below on `develop
 5. **Settings, rulesets, and secrets.** Run
    `repo-config/configure.sh check "<owner>/<repo>" release` (substitute `operational` for an
    operational repo) from the hub at `main`, then `apply` for what it reports, never from a
-   carried copy. Run `python3 spec/audit.py <RepoName>` from the same checkout for secrets.
+   carried copy. Run `uv run --no-project --script spec/audit.py <RepoName>` from the same checkout for secrets.
 6. **Intent files last, and by hand,** since nothing mechanical judges these.
 
 Reconcile the registry entry (`status`, `types`, `releaseTrigger`, `workflowModel`,

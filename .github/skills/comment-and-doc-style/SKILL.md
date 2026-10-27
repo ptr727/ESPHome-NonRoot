@@ -317,9 +317,15 @@ silent pass, a letter of a recorded name excepted per the bullet below.
 - **Tier 3, always legitimate.** Scientific and unit symbols whose ASCII form would be a lie:
   micro (U+00B5), degree (U+00B0), ohm (U+2126), pi (U+03C0), superscript two and three (U+00B2,
   U+00B3), section (U+00A7). Keep the symbol, never approximate it away or spell it out.
+- **Tier 4, emoji callout markers.** Each is admitted alone or followed by VARIATION SELECTOR-16
+  (U+FE0F): warning (U+26A0), information (U+2139), check mark (U+2705), cross mark (U+274C), memo
+  as the note marker (U+1F4DD), and light bulb (U+1F4A1). The gate keeps reporting every other
+  emoji, and a U+FE0F not directly after a listed marker. A downstream repository needs no markup
+  to carry one, and an agent may write one only where it is mirroring a callout a developer typed.
 - **Unicode a developer deliberately typed** stays regardless of tier, such as emoji used for
-  emphasis or as callout markers. Never strip a developer's own characters, this is developer
-  authored text and not a license for the agent to add its own.
+  emphasis. Never strip a developer's own characters, this is developer authored text and not a
+  license for the agent to add its own. Among emoji the gate admits only the tier-4 markers, so
+  another developer-typed emoji is classified here before it passes.
 - **A letter in a recorded name keeps its actual spelling.** A person's or a place's name that a
   document records as data is written with its own letters and the marks they carry, since
   folding one to ASCII records a different name. Anywhere else a letter the agent writes that no

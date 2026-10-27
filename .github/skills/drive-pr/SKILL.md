@@ -83,7 +83,10 @@ promotion PR once the fix lands, is the early exit this skill exists to prevent.
    that skill's carried-content records instead precede the commit, because that ledger is tracked.
    A driver that cannot dispatch a subagent follows that skill's "Running It".
    Then push the branch and open the feature -> develop PR if it does not exist yet. Attest the
-   pass on it, per `pr-review-conduct` "Expected review loop" step 1. A pass's
+   pass on it, per `pr-review-conduct` "Expected review loop" step 1. Every draft of a pull
+   request's body, the opening one and each later rewrite, goes in a file named for its
+   repository and branch. A shared name such as `pr-body.md` lets a concurrent driver's draft
+   land on the wrong pull request. A pass's
    edit budget can be spent on this push or a later one. Where it is, write each `introduced`
    finding still open into the pull request's body with its class, per `local-strict-review`
    "Disposing of Findings". A later push adds its own to any list already there. Step 3 gives
@@ -97,14 +100,18 @@ promotion PR once the fix lands, is the early exit this skill exists to prevent.
    obstacle to route around, and that
    skill's refusal table says what each refusal means and what clears it.
 3. Drive pr-review-conduct's review loop on it to the Merge Gate, disposing of every finding per
-   "Disposing of Every Finding" below.
+   "Disposing of Every Finding" below. Request no Copilot round on this feature PR. Its `wait` reads
+   step 2's attestation as `coverage=local` and requests none, unless a partial round or a truncated
+   review history is on record. Exit `49` means the head carries no attestation, so run and record a
+   pass over it, push, and attest. A promotion re-reviews content its feature PRs already carried,
+   so the hosted review runs once per change, at the promotion in step 6.
 4. Merge the feature PR into
    develop, `gh pr merge <number> --squash --repo <owner>/<repo>`. Never `--delete-branch` on this
    call, it is run from inside the task's own worktree per step 1, where the feature branch is
    checked out, and `gh pr merge --delete-branch` needs to switch that worktree to the base branch
    to delete it, which fails when `develop` is already checked out somewhere else, the ordinary
    case in this layout. Instead run repo-worktree's post-merge cleanup with
-   `python3 scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`,
+   `uv run --no-project --script scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`,
    run from a hub checkout outside the task's worktree, `<base-clone>` being the repository's
    primary clone. It deletes the remote branch, then removes the task's worktree and local branch.
    It decides its local refusals before the remote delete, and `repo-worktree` "Listing and
@@ -118,7 +125,7 @@ promotion PR once the fix lands, is the early exit this skill exists to prevent.
    than deleting by hand: `1` is a refusal, a moved tip among them, `2` a read that did not answer
    or a delete it could not confirm, and `64` a target under an owner other than the hub
    checkout's own `origin`, or that `origin` unreadable. A registry refusal is a `1`. It runs
-   under the host-safety installer's `Bash(python3 scripts/pr_review.py:*)` allow rule,
+   under the host-safety installer's `Bash(uv run --no-project --script scripts/pr_review.py:*)` allow rule,
    which is what lets auto mode complete it.
    It also refuses while another open pull request in the repository has the branch as its head or base.
    It names each, since the delete would close or retarget it.
@@ -153,8 +160,8 @@ maintainer when".
 
 1. **Real, so fix it, and fix the class rather than the instance.** A reviewer samples rather
    than enumerates, so sweep for the finding's siblings before replying and fix each one sitting
-   in a file the diff already touches or that this change itself made wrong, filing the rest, per
-   `GOVERNANCE.md` "Verification Discipline". That sweep is owed the first time the finding is
+   in a file the diff already touches or that this change itself made wrong. Each of the rest takes
+   the outcome a `pre-existing` finding takes under outcome 4, per `GOVERNANCE.md` "Verification Discipline". That sweep is owed the first time the finding is
    raised, not once it recurs. Take the fix through `local-strict-review` the same way the push
    that opened the pull request went, per `pr-review-conduct` "Expected review loop", then reply
    with the fixing commit SHA. A branch already reviewed once has not been reviewed for the fix, which
@@ -183,11 +190,40 @@ maintainer when".
    turn, before moving to other work. A plan to ask later is resolution by silence the moment
    attention moves elsewhere. If the maintainer is not reachable right now, leave the thread open
    and say so, rather than treating the intention to ask as the asking.
-4. **Real and worth doing later, so file the issue first, then reply with its link.** A deferral
-   noted only in a thread is lost the moment the PR merges. File it in the repository where the
-   fix has to land, which for a finding against carried content is the repository that authors
-   that content rather than the one carrying it, since an issue filed where nobody may make the
-   fix is a deferral nobody can close.
+4. **Deferred past this pull request, or on text it did not touch, so record it by its class.**
+   An `introduced` finding fixable here and deliberately left as is takes outcome 3 instead.
+   The class is the one `local-strict-review` "Disposing of Findings" defines, and the first
+   bullet that fits decides:
+   - A `pre-existing` finding on a canonical Markdown unit keeps the per-unit tracker
+     `pr-review-conduct` "Merge Gate" item 3 describes, since that already costs one link per unit.
+   - A `pre-existing` correctness defect with a stated failure is filed once as its own issue,
+     labeled `pre-existing`. Such a finding names an input or a state and the wrong output or the
+     crash it produces. Its body line goes under a `Pre-existing findings, filed` heading and
+     links that issue. A thread raising it is answered with that issue's link and resolved.
+   - A `style`, wording, consolidation, or restatement finding on text this change did not touch
+     is dropped. It gets one line under a `Dropped findings` heading and nothing else. It gets no
+     decline text, no issue, and no reply beyond a pointer to that line, which resolves any
+     thread.
+   - Any other `pre-existing` finding, from a local pass or a PR-hosted review, is listed in the
+     pull request body with its location and its class. No issue is filed for it. The body line
+     is its outcome, and a thread raising it is answered with a pointer to that line and resolved.
+   - Any other deferral is filed as an issue first, and the reply carries its link. A deferral
+     noted only in a thread is lost the moment the PR merges.
+
+   The body keeps every other unfiled `pre-existing` line, the fourth bullet's, under one
+   heading, `Pre-existing findings, not filed`. Each line under these headings carries its
+   location and its class. The headings stay apart from the open `introduced` findings a spent
+   edit budget puts in the body, per `local-strict-review` "Disposing of Findings". A reviewer's
+   suppressed finding has no thread, so its pointer is an answer per `pr-review-conduct`
+   "Answering a suppressed finding". That answer is `Listed in the body` for a listed or dropped
+   finding, and `Deferred to <issue>` for a filed one. A local-pass finding owes no pointer
+   beyond its body line. A sibling that outcome 1's class sweep leaves unfixed takes the
+   bullet a `pre-existing` finding would take. An issue goes in the repository where
+   the fix has to land. For a finding against carried content, that is the repository authoring
+   the content rather than the one carrying it. An issue filed where nobody may make the fix is
+   a deferral nobody can close. Filing every `pre-existing` finding is the expensive path. From
+   2026-10-16 to 2026-10-23, 108 of 329 non-handoff issues filed across four fleet repositories
+   carried `pre-existing`. Each one costs a lane, a pull request, and a review once worked.
 5. **Keeps recurring although the class was swept, so the rule is what needs fixing.** A finding
    raised repeatedly against correct code means the code is not communicating something: add the
    comment, sharpen the name, narrow the interface, or fix the rule if the rule is wrong.
@@ -216,5 +252,6 @@ instance's outcome is context for the new one, never a standing answer to reuse 
 
 - A genuine design trade-off, a recurring finding pattern, or an architectural redesign proposal
   each escalate per pr-review-conduct's own list, restated there, not duplicated here.
-- An unrecognized review shape blocks the gate on its own, file an issue naming it and ask, never
-  guess what new wording probably meant.
+- A part of the review the digest prints under `UNPLACED ON THE HEAD` holds the gate until its
+  outcomes are acknowledged per pr-review-conduct's Merge Gate item 4. Never guess what the new
+  wording probably meant. Only an item that cannot be told to be a finding or not goes to the maintainer.
