@@ -61,9 +61,9 @@ configuration alone marks the lint-only one:
   README, and CI all run the unpinned latest here. `.py` files follow the repo's LF line-ending
   default (per GOVERNANCE.md's "Line Endings" section). There is no pytest suite, and `unittest` is
   the runner instead. The directory still owes tests, written with the standard
-  library's `unittest` so they run under bare `python3` with nothing installed, as
-  `test_<script>.py` under a `tests/` directory beside the scripts it exercises and their
-  `pyproject.toml` (`<scripts-dir>/tests/`), where the validator looks for it, kept apart so a
+  library's `unittest` so they need no test runner installed. Each is a `test_<script>.py`
+  under a `tests/` directory beside the scripts it exercises and their `pyproject.toml`
+  (`<scripts-dir>/tests/`), where the validator looks for it. That directory stays apart so a
   test never reads as a tool. Within the scripts directory the name carries the kind: a gate
   that checks and exits non-zero on a finding takes a `_lint` or `_gate` suffix, and a utility
   that does work takes none. Any repo carrying Python
@@ -71,7 +71,8 @@ configuration alone marks the lint-only one:
   coverage report to Codecov. The hub validator runs them in each directory the caller declares
   in its `python-directories` input, which the registry's `pythonDirectories` mirrors. From inside
   a lint-only directory it runs `uvx ruff@latest check`, `uvx ruff@latest format --check`,
-  `uvx mypy@latest`, and `uvx coverage@latest run -m unittest discover -s tests`, then writes
+  `uvx mypy@latest`, and `uvx coverage@latest run -m unittest discover -s tests`, adding
+  `--with-requirements tests/requirements.txt` to that last where the directory carries one, then writes
   `coverage.xml` and uploads it best-effort per `WORKFLOW.md` D1.6, with no threshold adopted. A
   declared directory with no `tests/` fails that job.
 

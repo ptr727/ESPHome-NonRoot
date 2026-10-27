@@ -267,6 +267,8 @@ Brief on `AGENTS.md` "Context and Delegation Discipline"'s subagent shape.
 - **The brief requires the `Closes on promotion:` line** in the pull request body, listing exactly
   the issues this group fixes. A worker never reads this skill, and `drive-pr` does not ask for the
   line, so a brief that omits it produces a pull request nothing can derive a closing set from.
+  It also has the worker draft that body, and each rewrite of it, in a file named for its branch.
+  Workers sharing a scratch directory and one file name each publish the other's draft.
 - **The brief names the files this group owns and the files it must not touch.** A subagent never
   reads this skill, so a claim it was never given is a claim it cannot respect. State this group's
   claimed set, state that any other group's file is out of bounds, and state the duty that makes
@@ -284,7 +286,7 @@ Write Safety" forbids.
 So the whole procedure moves to the orchestrator, which runs it against the base clone at the round's
 cleanup step, while no worker is live in a tree it touches.
 It carries the remote half of `drive-pr`'s post-merge cleanup too.
-For a merged group both halves are one command, `python3 scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`, run from a hub checkout once for each merged group, `<base-clone>` being the repository's primary clone.
+For a merged group both halves are one command, `uv run --no-project --script scripts/pr_review.py cleanup <number> --repo <owner>/<repo> --checkout <base-clone>`, run from a hub checkout once for each merged group, `<base-clone>` being the repository's primary clone.
 It deletes the remote branch, then removes the group's worktree and local branch, per `repo-worktree` "Listing and Cleanup", which also says what its exit leaves to do.
 Taking that step from the worker without naming a new owner would leave a live remote branch behind every group.
 `cleanup` holds the delete's checks, among them the tip against the pull request's `headRefOid`.
@@ -324,12 +326,13 @@ A worker still live, a promotion fix included, keeps its worktree until the next
 
 ### Choosing the Worker's Model Tier
 
-`AGENTS.md` "Delegation" owns the model-tier rule and names the tiers. Read it there. This is only
-what it leaves to judgment here. The tier is chosen per group rather than defaulted, since a
+`AGENTS.md` "Model Tiers" owns the model-tier rule and names the tiers, carried under "Model Tiers"
+below. This is only what it leaves to judgment here. The tier is chosen per group rather than defaulted, since a
 stronger tier produces better work and takes fewer review rounds to land it. That often
 costs less than a cheaper worker looping. The tier is `frontier` or `standard`, never `bulk`, since
 every worker judges its pull request's review findings. It is `highest` only where the maintainer
-named it for this run. Groups of these kinds are never tiered
+named it for this run and launched the session with it allowed, per "Model Tiers" below. Where a
+dispatch at it is refused, ask the maintainer rather than dispatching lower. Groups of these kinds are never tiered
 below `frontier`:
 
 - One touching **carried canonical content**, as `GOVERNANCE.md` "Verification Discipline" bounds
@@ -533,6 +536,31 @@ The run ends at one of the points below, and they are different endings.
 Report at every round boundary and at each ending: what merged to develop, what the promotion pull
 request carries, what was newly filed, what is stopped and on which question, what was held back and
 on which blocker, and what the next round would pick.
+
+## Model Tiers
+
+`AGENTS.md` "Model Tiers" keeps the tier rule, carried here whole as a generated include. A tier
+this skill names then resolves to its model even where a carried `AGENTS.md` predates the table.
+
+<!-- include: AGENTS.md > Model Tiers -->
+
+A rule, a Skill, or a brief names a model tier, never a model. A model release is then an edit to the table below and to the hub's `spec/model-tiers.json`. That file states the same mapping as data, and the hub's spec gate holds the two equal. Reasoning effort is a separate axis stated beside the tier, such as `bulk` at low effort.
+
+- **`frontier`** is the fleet's default reasoning tier, for orchestrating, rule text, design, spec logic, and adversarial review. It is not the most capable model available, which is `highest`.
+- **`standard`** is ordinary implementation and driving a pull request. Judging a review finding is never mechanical, however often it repeats, so it runs at `standard` or above. A `standard` driver's evidence-backed decline of a finding raised on its pull request stands, since that pull request's reviewers and its merge gate check it.
+- **`bulk`** is the cheapest model that does the work correctly. It is for high fan-out mechanical work, such as an extraction or a status check.
+- **`highest`** is the most capable model available, and only the maintainer selects it. The maintainer chooses it for the session itself, or allows it for the session's subagents at launch. The host's agent-safety kit reads that launch setting, `FLEET_ALLOW_HIGHEST=1` on Claude Code. Naming the tier in a prompt does not set it. A maintainer naming it partway through a session restarts the session with it allowed, and an agent never sets it. Without that setting, the kit refuses a dispatch that names it. A dispatch naming no model runs at its agent definition's model where one is set, and otherwise at the session's own. A fork always runs at the session's model, whatever it names. So a session launched on `highest` names a tier on every dispatch meant to run below it, and uses no fork for such work. A session never reaches for it because a task looks hard.
+
+| Tool | `highest` | `frontier` | `standard` | `bulk` |
+| --- | --- | --- | --- | --- |
+| Claude Code | `fable` | `opus` | `sonnet` | `haiku` |
+
+Each cell is the name that tool's subagent dispatch takes, which follows the latest model of its family. A tool with no row here, or one that cannot name a model per subagent, runs every tier at the session's own model.
+
+- **A tier resolves only through this table.** A word such as "frontier", "strongest", or "most capable" never resolves to `highest`. The industry's "frontier model" is the opposite of what this tier means here. A session that cannot see this table names no model rather than guessing one, so the subagent runs at the session's own model.
+- **An orchestrating seat runs at `frontier` and names a tier on every dispatch.** It defaults a subagent to `frontier`, and picks `standard` or `bulk` deliberately for execution or mechanical work. A dispatch that names no model inherits whatever the session runs on, which is a choice nobody made.
+
+<!-- /include -->
 
 ## Mechanics Live Elsewhere
 

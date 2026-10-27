@@ -72,7 +72,7 @@ Bounds: read-only. No edit, no stage, no commit, no push, no PR-hosted write of 
 
 Before dispatching, grep the tree for other statements of each rule the diff adds or changes, and add each file holding one to the `Paths:` floor, so a statement the diff has put in disagreement is read rather than missed.
 
-**Model tier:** `frontier`, the tier `AGENTS.md` "Delegation" names for adversarial review, which this pass is. Where `frontier` is not reachable, run the pass on the strongest tier below it that is, even the one that authored the change. A second, adversarially-prompted look still catches what the authoring pass's own "looks ready" judgment did not.
+**Model tier:** `frontier`, the tier "Model Tiers" below names for adversarial review, which this pass is. Where `frontier` is not reachable, run the pass on the strongest tier below it that is, even the one that authored the change. A second, adversarially-prompted look still catches what the authoring pass's own "looks ready" judgment did not.
 
 Reachable means the tier this session can name when it dispatches the reviewer, rather than the tier this session is itself running on. A session deliberately tiered down for execution work, a worker dispatched by an orchestrator being the ordinary case, names `frontier` for the reviewer where its harness lets it, since tiering down the author is the reason the reviewer must not follow it down. What a given harness and account actually permit varies, so treat this as the tier to ask for rather than one to assume. Where a dispatch exposes no way to name a tier, take what it gives and run the pass, for the reason the fallback above states. A seat that cannot dispatch a subagent hands the pass to whoever dispatched it. The seat commits, runs `python3 <hub-checkout>/scripts/local_review.py status --target <target>` in its worktree, and hands back its worktree path, target, and `contentDigest`. The dispatcher fills the brief's `<worktree>` slot and runs the reviewer. It then runs the record command from "Recording the Pass" in that worktree, with `--reviewer agent-skill --target <target> --expect-digest <digest>`. It returns the findings. Each fix commit repeats this cycle, and the seat pushes only when a record matches its content. The brief dispatching the seat states whether the dispatcher can continue that seat. Where the dispatcher cannot, or under `unattended-handoff`, the seat stops, reports, and does not push. Where nobody dispatched the seat, it reports to the maintainer that it could not run the pass, and does not push. Either way the push waits rather than the pass being quietly skipped. The headless `run --backend` route under "Recording the Pass" is not the substitute: it runs a vendor CLI against its own review, which never carries the brief above, so it satisfies the rule this section states only where that separate route is what a capture point asked for.
 
@@ -126,10 +126,10 @@ Bounds: read-only. Report a rule that looks incomplete rather than guessing at w
 ```
 
 ```sh
-python3 scripts/canonical_review.py sweep     # the units it asks for this round, with their digests
+uv run --no-project --script scripts/canonical_review.py sweep     # the units it asks for this round, with their digests
 # exit 1 where it named any, which is the sweep working rather than the command failing
 # run the pass above over each unit it named, then, per unit:
-python3 scripts/canonical_review.py record --reviewer agent-skill --target develop --findings '<count>' --unit '<key>=<digest>'
+uv run --no-project --script scripts/canonical_review.py record --reviewer agent-skill --target develop --findings '<count>' --unit '<key>=<digest>'
 ```
 
 These run in the authoring repository itself, which is the only repository this pass ever runs in, so the engine path is the plain one and there is no downstream side needing the `<hub-checkout>/` form the pass above shows for its own reach. Each resolves the repository from the working directory rather than from where the script sits, so the directory a command runs in is what decides which tree it measures, while the unit model and the manifest reader come from the checkout the script itself lives in. Running one checkout's copy against another's tree therefore measures the second tree by the first's rules, so run them in the tree being measured. `record` additionally stamps each pass with the merge-base against `--target`, which is provenance rather than coverage. The line above names it rather than leaning on the default, since a sweep's own branch is based on `develop`, and a `main`-based branch passes `--target main` instead.
@@ -148,7 +148,7 @@ Each bullet is a rule down to its `Why:` line, which is rationale rather than ru
   - `Why:` a local finding and a PR-hosted one deserve the same dispositions, and one home for the list is what stops two copies of it drifting apart.
 - **The agent disposing of a pass's findings classes each one `style`, `introduced`, or `pre-existing`, in that order.** `style` is a preference between defensible forms. `introduced` is any other finding on text this change wrote, rewrote, or removed, on text this change should have written, on a precondition this change left false elsewhere, or load-bearing for a decision this change puts to the maintainer. `pre-existing` is every other finding.
   - `Why:` the reviewer is asked to omit preferences and returns some anyway, and `style` is classed first so that a preference on text this change wrote is not owed a fix.
-- **Another round is owed only while an `introduced` finding is open.** Unless evidence disproves it, an `introduced` finding is fixed within the budget below, handed to the pull request once that budget is spent, or escalated where `pr-review-conduct` "Escalate to the maintainer when" says so. A `pre-existing` one is filed once and blocks nothing, and a `style` one is declined with evidence, per `pr-review-conduct` "Every finding ends in a listed outcome", the evidence being `fleet-code-review` "Review the Change"'s own rule to omit preferences.
+- **Another round is owed only while an `introduced` finding is open.** Unless evidence disproves it, an `introduced` finding is fixed within the budget below, handed to the pull request once that budget is spent, or escalated where `pr-review-conduct` "Escalate to the maintainer when" says so. A `pre-existing` one blocks nothing, and neither does a `style` one on text this change did not touch. `pr-review-conduct` "Every finding ends in a listed outcome" outcome 4 says how each is recorded. A `style` one on text this change wrote is declined with evidence per that section. The evidence is `fleet-code-review` "Review the Change"'s own rule to omit preferences.
   - `Why:` a finding count over prose never reaches zero, so a loop closing on "did it find anything" does not close, where one closing on the false claim, the unfollowable instruction, or the wrong behavior this change put there does.
 - **Two rounds of edits answer a pass, one budget per push and one per sweep issue.** Where an `introduced` finding is still open after the second round, editing stops. The pull request's body lists each remaining finding with its class. Its review loop then gives each one an outcome under `pr-review-conduct` before it merges, whether or not a hosted reviewer raises it again. A spent budget is not an escalation. A remaining finding goes to the maintainer only where `pr-review-conduct` "Escalate to the maintainer when" names its case.
   - `Why:` past the second round nearly every finding is against text the previous round's fix wrote, so the rounds are producing the defects they find rather than removing them.
@@ -175,6 +175,31 @@ In the hub, `.husky/pre-push` checks the receipt at the push itself, so the mome
 | The recorded pass was run against X and this check measured Y, printed under the missing-pass headline | The hook reads `develop` and nothing else, so a branch based elsewhere is measured against `develop` whatever the pass targeted, and the engine deliberately prints no record command, since the one it would print records a pass over a diff nobody read | One more pass against the branch this work actually targets, where it does target the measured one. Where it does not, the gate cannot judge the branch at all and the bypass is its answer |
 
 This table is the fleet's one enumeration of these, and every other surface states the principle and routes here rather than listing the shapes. That is deliberate: every review round that added a shape also left a restatement of it somewhere else, and keeping one table is what stops the next round doing the same.
+
+## Model Tiers
+
+`AGENTS.md` "Model Tiers" keeps the tier rule, carried here whole as a generated include. A tier
+this skill names then resolves to its model even where a carried `AGENTS.md` predates the table.
+
+<!-- include: AGENTS.md > Model Tiers -->
+
+A rule, a Skill, or a brief names a model tier, never a model. A model release is then an edit to the table below and to the hub's `spec/model-tiers.json`. That file states the same mapping as data, and the hub's spec gate holds the two equal. Reasoning effort is a separate axis stated beside the tier, such as `bulk` at low effort.
+
+- **`frontier`** is the fleet's default reasoning tier, for orchestrating, rule text, design, spec logic, and adversarial review. It is not the most capable model available, which is `highest`.
+- **`standard`** is ordinary implementation and driving a pull request. Judging a review finding is never mechanical, however often it repeats, so it runs at `standard` or above. A `standard` driver's evidence-backed decline of a finding raised on its pull request stands, since that pull request's reviewers and its merge gate check it.
+- **`bulk`** is the cheapest model that does the work correctly. It is for high fan-out mechanical work, such as an extraction or a status check.
+- **`highest`** is the most capable model available, and only the maintainer selects it. The maintainer chooses it for the session itself, or allows it for the session's subagents at launch. The host's agent-safety kit reads that launch setting, `FLEET_ALLOW_HIGHEST=1` on Claude Code. Naming the tier in a prompt does not set it. A maintainer naming it partway through a session restarts the session with it allowed, and an agent never sets it. Without that setting, the kit refuses a dispatch that names it. A dispatch naming no model runs at its agent definition's model where one is set, and otherwise at the session's own. A fork always runs at the session's model, whatever it names. So a session launched on `highest` names a tier on every dispatch meant to run below it, and uses no fork for such work. A session never reaches for it because a task looks hard.
+
+| Tool | `highest` | `frontier` | `standard` | `bulk` |
+| --- | --- | --- | --- | --- |
+| Claude Code | `fable` | `opus` | `sonnet` | `haiku` |
+
+Each cell is the name that tool's subagent dispatch takes, which follows the latest model of its family. A tool with no row here, or one that cannot name a model per subagent, runs every tier at the session's own model.
+
+- **A tier resolves only through this table.** A word such as "frontier", "strongest", or "most capable" never resolves to `highest`. The industry's "frontier model" is the opposite of what this tier means here. A session that cannot see this table names no model rather than guessing one, so the subagent runs at the session's own model.
+- **An orchestrating seat runs at `frontier` and names a tier on every dispatch.** It defaults a subagent to `frontier`, and picks `standard` or `bulk` deliberately for execution or mechanical work. A dispatch that names no model inherits whatever the session runs on, which is a choice nobody made.
+
+<!-- /include -->
 
 ## Mechanics Live Elsewhere
 

@@ -77,6 +77,14 @@ depend on Python either. Everything else is Python, with a test under its own sc
   stale silently, where a comment carrying a reason fails visibly when the reason stops being
   true.
 
+## Parsing Structured Formats
+
+<!-- include: CODESTYLE.md > Parsing Structured Formats -->
+
+- **A program reading a structured format uses a maintained parser rather than a hand-written one, where a field-tested parser exists for the runtime in use.** That covers YAML, Markdown, TOML, JSON, a programming language's comments or strings, and a shell command line. The standard library's own parsers count, such as Python's `json`, `tomllib`, `ast`, `tokenize`, and `html.parser`. A hand-written reader converges on the format's full grammar one review finding at a time, and every script that grows one pays that cost again.
+
+<!-- /include -->
+
 ## Command-Line Arguments
 
 <!-- include: CODESTYLE.md > Command-Line Arguments -->
