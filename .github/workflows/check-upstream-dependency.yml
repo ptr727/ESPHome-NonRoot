@@ -36,32 +36,13 @@ jobs:
           client-id: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
           private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
 
-      - name: Check for a held review pull request step
-        id: held
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          BOT_LOGIN: ${{ steps.app-token.outputs.app-slug }}[bot]
-        run: |
-          set -euo pipefail
-
-          prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --head upstream-dependency-develop --base develop --state open --json url,isCrossRepository,commits)"
-          held="$(jq -r --arg bot "$BOT_LOGIN" '[.[] | select(.isCrossRepository | not) | select(any(.commits[]; (.authors | length) == 0 or any(.authors[]; .login != $bot)))] | first | .url // ""' <<<"$prs")"
-          if [ -n "$held" ]; then
-            echo "::notice::Holding: $held carries a commit not authored by $BOT_LOGIN. The first run after it merges picks up any further upstream change."
-            echo "hold=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "hold=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout code step
-        if: steps.held.outputs.hold == 'false'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: develop
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Resolve upstream dependency step
-        if: steps.held.outputs.hold == 'false'
         id: resolve
         env:
           DOCKER_BASE_URL: https://raw.githubusercontent.com/esphome/docker-base/main/debian/Dockerfile
@@ -114,6 +95,27 @@ jobs:
             echo "Decide per package whether this image needs it before merging - upstream ships a single-stage runtime image, so not every entry applies here. Merging records the new snapshot and closes the signal, so make any Dockerfile change in this pull request."
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Check for a held review pull request step
+        id: held
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BOT_LOGIN: ${{ steps.app-token.outputs.app-slug }}[bot]
+        run: |
+          set -euo pipefail
+
+          number="$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=develop&head=$GITHUB_REPOSITORY_OWNER:upstream-dependency-develop" --jq '.[0].number // empty')"
+          held=""
+          if [ -n "$number" ]; then
+            held="$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json url,commits \
+              | jq -r --arg bot "$BOT_LOGIN" 'select(any(.commits[]; (.authors | length) == 0 or any(.authors[]; .login != $bot))) | .url')"
+          fi
+          if [ -n "$held" ]; then
+            echo "::notice::Holding: $held carries a commit not authored by $BOT_LOGIN. The first run after it merges picks up any further upstream change."
+            echo "hold=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hold=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Open review pull request step
         if: steps.held.outputs.hold == 'false'
