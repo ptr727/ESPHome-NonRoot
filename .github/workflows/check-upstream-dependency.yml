@@ -44,8 +44,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --head upstream-dependency-develop --base develop --state open --json url,commits)"
-          held="$(jq -r --arg bot "$BOT_LOGIN" '[.[] | select([.commits[].authors[].login] | any(. != $bot))] | first | .url // ""' <<<"$prs")"
+          prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --head upstream-dependency-develop --base develop --state open --json url,isCrossRepository,commits)"
+          held="$(jq -r --arg bot "$BOT_LOGIN" '[.[] | select(.isCrossRepository | not) | select([.commits[].authors[].login] | any(. != $bot))] | first | .url // ""' <<<"$prs")"
           if [ -n "$held" ]; then
             echo "::notice::Holding: $held carries a commit not authored by $BOT_LOGIN. The first run after it merges picks up any further upstream change."
             echo "hold=true" >> "$GITHUB_OUTPUT"
