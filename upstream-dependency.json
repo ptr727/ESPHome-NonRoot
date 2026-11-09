@@ -7,6 +7,7 @@
     "iputils-ping",
     "libcairo2",
     "libmagic1t64",
+    "libssl-dev",
     "libusb-1.0-0",
     "openssh-client",
     "patch"
