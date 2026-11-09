@@ -1,10 +1,9 @@
 name: Test pull request action
 
-# CI for every pull request into main or develop, a thin caller onto the hub's reusable validate and build-release tasks.
+# CI for every pull request, a thin caller onto the hub's reusable validate and build-release tasks.
 # CI never publishes, since the publisher runs on schedule, dispatch, or a bot pin push.
 on:
   pull_request:
-    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
@@ -73,8 +72,9 @@ jobs:
 
   # Single required status check, whose name is the ruleset-bound context in the live branch rulesets.
   # Do not rename it without updating the rulesets in lockstep, and it must succeed, not merely not fail.
+  # Only a pull_request run takes that name, so a dispatch on a pull request's head cannot post the required check.
   check-workflow-status:
-    name: Check pull request workflow status job
+    name: ${{ github.event_name == 'pull_request' && 'Check pull request workflow status job' || 'Check workflow status job' }}
     runs-on: ubuntu-latest
     permissions: {}
     needs: [changes, validate, smoke-build]
