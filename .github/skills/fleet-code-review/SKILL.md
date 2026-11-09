@@ -63,7 +63,7 @@ A change is cheapest to shape before it is written. Hardening nothing calls for,
 - **A defect class seen a second time gets one primitive, and every site moves onto it.** A check written at each site repeats its own platform and edge-case defects at every site. A read that can block on a named pipe, for one, meets a new platform difference at each site that guards it alone. One reader that opens without blocking and judges the open descriptor closes that class everywhere. Sites in files a change does not touch move in a change of their own, filed as one issue naming each.
 - **Complexity is a cost that needs a reason.** Code that answers no requirement and no realistic threat is removed rather than maintained, since each later review and each later change reads it again.
 
-`GOVERNANCE.md` "Design Before Code" keeps the full rules, and the `fleet-code-review` Skill at `.agents/skills/fleet-code-review/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo, carries it whole as a generated include and surfaces it wherever a change is reviewed.
+`GOVERNANCE.md` "Design Before Code" keeps the full rules. The `fleet-code-review` Skill at `.agents/skills/fleet-code-review/SKILL.md` in the hub carries it whole as a generated include and surfaces it wherever a change is reviewed. That path is not a repo-relative link, since it is hub-local and not carried into every fleet repo.
 
 <!-- /include -->
 
@@ -79,7 +79,7 @@ Hardening is spent where a failure can actually occur. A defense against a case 
 - **A review finding asking for hardening the bullets above rule out is itself declined**, with no fix and no issue. The decline cites this section and the input or deployment that rules the case out. This binds the reviewer as much as the author, so a reviewer does not raise such a finding. A review brief asks after races, coercions, and platform differences only where the code's deployment can produce one.
 - **A repository names its own boundaries where the classes above leave them unclear.** Its `OPERATIONS.md` lists which concrete inputs are trusted and which are not, under `Configuration Layout`. A session or a reviewer then applies this section without re-deriving it. A repository naming none uses the classes above.
 
-`GOVERNANCE.md` "Trust Boundaries and Hardening Effort" keeps the full rules, and the `fleet-code-review` Skill at `.agents/skills/fleet-code-review/SKILL.md` in the hub, not a repo-relative link since that path is hub-local and not carried into every fleet repo, carries it whole as a generated include and surfaces it wherever a change is reviewed.
+`GOVERNANCE.md` "Trust Boundaries and Hardening Effort" keeps the full rules. The `fleet-code-review` Skill at `.agents/skills/fleet-code-review/SKILL.md` in the hub carries it whole as a generated include and surfaces it wherever a change is reviewed. That path is not a repo-relative link, since it is hub-local and not carried into every fleet repo.
 
 <!-- /include -->
 
