@@ -74,7 +74,7 @@ jobs:
   # Single required status check, whose name is the ruleset-bound context in the live branch rulesets.
   # Do not rename it without updating the rulesets in lockstep, and it must succeed, not merely not fail.
   check-workflow-status:
-    name: Check pull request workflow status job
+    name: ${{ github.event_name == 'pull_request' && 'Check pull request workflow status job' || 'Check workflow status job' }}
     runs-on: ubuntu-latest
     permissions: {}
     needs: [changes, validate, smoke-build]
