@@ -1,10 +1,9 @@
 name: Test pull request action
 
-# CI for every pull request into main or develop, a thin caller onto the hub's reusable validate and build-release tasks.
+# CI for every pull request, a thin caller onto the hub's reusable validate and build-release tasks.
 # CI never publishes, since the publisher runs on schedule, dispatch, or a bot pin push.
 on:
   pull_request:
-    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
