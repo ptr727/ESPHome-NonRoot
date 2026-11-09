@@ -48,7 +48,7 @@ jobs:
           DOCKER_BASE_URL: https://raw.githubusercontent.com/esphome/docker-base/main/debian/Dockerfile
           STATE_FILE: upstream-dependency.json
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
 
           # Only the `base` stage feeds the ESPHome runtime image, so drop the ha-addon stage below it.
           # Upstream pins every package as name=version, and the snapshot keeps names only, so a Debian point release is not a diff.
@@ -102,7 +102,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           BOT_LOGIN: ${{ steps.app-token.outputs.app-slug }}[bot]
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
 
           number="$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=develop&head=$GITHUB_REPOSITORY_OWNER:upstream-dependency-develop" --jq '.[0].number // empty')"
           held=""
