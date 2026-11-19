@@ -22,7 +22,7 @@ jobs:
 
   check-upstream-version:
     name: Check upstream version job
-    uses: ptr727/ProjectTemplate/.github/workflows/check-upstream-version-task.yml@59adddf8f03ff69427d4d97972cf766fa25a5aa3 # 2.0.1461
+    uses: ptr727/ProjectTemplate/.github/workflows/check-upstream-version-task.yml@795aae7521e5c43f4c0c2727ab2375e789c9a4d2 # 2.0.1465
     secrets:
       CODEGEN_APP_CLIENT_ID: ${{ secrets.CODEGEN_APP_CLIENT_ID }}
       CODEGEN_APP_PRIVATE_KEY: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
