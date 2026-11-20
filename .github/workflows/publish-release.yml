@@ -33,7 +33,7 @@ jobs:
   # Single source of the release-gate decision (publish or not, stable or not), reused by every job below.
   plan:
     name: Plan release job
-    uses: ptr727/ProjectTemplate/.github/workflows/publish-plan-task.yml@795aae7521e5c43f4c0c2727ab2375e789c9a4d2 # 2.0.1465
+    uses: ptr727/ProjectTemplate/.github/workflows/publish-plan-task.yml@54fc130383d62bcad11277666615b31760bbb00a # 2.0.1481
     with:
       event_name: ${{ github.event_name }}
       actor: ${{ github.actor }}
@@ -45,7 +45,7 @@ jobs:
     name: Validate job
     needs: [plan]
     if: ${{ needs.plan.outputs.publish == 'true' }}
-    uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@795aae7521e5c43f4c0c2727ab2375e789c9a4d2 # 2.0.1465
+    uses: ptr727/ProjectTemplate/.github/workflows/validate-task.yml@54fc130383d62bcad11277666615b31760bbb00a # 2.0.1481
     permissions:
       contents: read
 
@@ -54,7 +54,7 @@ jobs:
     name: Publish project release job
     needs: [plan, validate]
     if: ${{ needs.plan.outputs.publish == 'true' && needs.validate.result == 'success' }}
-    uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@795aae7521e5c43f4c0c2727ab2375e789c9a4d2 # 2.0.1465
+    uses: ptr727/ProjectTemplate/.github/workflows/build-release-task.yml@54fc130383d62bcad11277666615b31760bbb00a # 2.0.1481
     permissions:
       contents: write
       # Lets the hub github-release job delete its transfer artifacts and dispatch a superseded release, though a Docker-only release uploads none.
@@ -83,7 +83,7 @@ jobs:
     name: Publish Docker Hub readme job
     needs: [plan, publish]
     if: ${{ needs.plan.outputs.publish == 'true' && needs.publish.result == 'success' }}
-    uses: ptr727/ProjectTemplate/.github/workflows/publish-docker-readme-task.yml@795aae7521e5c43f4c0c2727ab2375e789c9a4d2 # 2.0.1465
+    uses: ptr727/ProjectTemplate/.github/workflows/publish-docker-readme-task.yml@54fc130383d62bcad11277666615b31760bbb00a # 2.0.1481
     permissions:
       contents: read
     secrets:
